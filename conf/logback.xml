@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="MainAppender"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/mqtt.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${user.home}/logs/mqtt.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>10</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyy-MM-dd HH:mm:ss:SSS,GMT+8} %p [%logger{0}] %m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="AsyncMainAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="MainAppender"/>
+    </appender>
+
+    <appender name="RmqAppender"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/rmq.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${user.home}/logs/rmq.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>10</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %p [%logger{0}] %m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="AsyncRmqAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="RmqAppender"/>
+    </appender>
+
+
+    <appender name="StatAppender"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${user.home}/logs/stat.log</file>
+        <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${user.home}/logs/stat.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>10</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyy-MM-dd HH:mm:ss,GMT+8} %m%n</pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="AsyncStatAppender" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="StatAppender"/>
+    </appender>
+
+    <root>
+        <level value="info"/>
+        <appender-ref ref="AsyncMainAppender"/>
+    </root>
+
+    <logger name="StatLogger" additivity="false">
+        <level value="info"/>
+        <appender-ref ref="AsyncStatAppender"/>
+    </logger>
+
+    <logger name="RocketmqClient" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="AsyncRmqAppender"/>
+    </logger>
+
+    <logger name="RocketmqRemoting" additivity="false">
+        <level value="INFO"/>
+        <appender-ref ref="AsyncRmqAppender"/>
+    </logger>
+
+</configuration>

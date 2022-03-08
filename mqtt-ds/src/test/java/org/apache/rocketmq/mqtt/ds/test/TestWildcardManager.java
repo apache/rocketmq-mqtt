@@ -53,6 +53,23 @@ public class TestWildcardManager {
 
         Set<String> set =  wildcardManager.matchQueueSetByMsgTopic(TopicUtils.normalizeTopic("test/a"),"");
         Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("test/+")));
+        Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("test/a")));
+    }
+
+    @Test
+    public void testForP2P() throws IllegalAccessException, InterruptedException {
+        WildcardManager wildcardManager = new WildcardManager();
+        MetaPersistManager metaPersistManager = mock(MetaPersistManager.class);
+        FieldUtils.writeDeclaredField(wildcardManager, "metaPersistManager", metaPersistManager, true);
+
+        when(metaPersistManager.getAllFirstTopics()).thenReturn(new HashSet<>(Arrays.asList("test")));
+        when(metaPersistManager.getWildcards(any())).thenReturn(new HashSet<>(Arrays.asList(TopicUtils.normalizeTopic("test/+"))));
+
+        wildcardManager.init();
+        Thread.sleep(1000L);
+
+        Set<String> set =  wildcardManager.matchQueueSetByMsgTopic(TopicUtils.normalizeTopic("test/p2p/GID_sdasa@@@2222"),"");
+        Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("/p2p/GID_sdasa@@@2222/")));
     }
 
 }

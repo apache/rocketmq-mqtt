@@ -88,20 +88,17 @@ public class WildcardManager {
     }
 
     public Set<String> matchQueueSetByMsgTopic(String pubTopic, String namespace) {
+        Set<String> queueNames = new HashSet<>();
         if (StringUtils.isBlank(pubTopic)) {
-            return new HashSet<>();
+            return queueNames;
         }
-        String queueName = pubTopic;
         MqttTopic mqttTopic = TopicUtils.decode(pubTopic);
         String secondTopic = TopicUtils.normalizeSecondTopic(mqttTopic.getSecondTopic());
         if (TopicUtils.isP2P(secondTopic)) {
             String p2Peer = TopicUtils.getP2Peer(mqttTopic, namespace);
-            queueName = TopicUtils.getP2pTopic(p2Peer);
-        }
-        Set<String> queueNames = new HashSet<>();
-        queueNames.add(queueName);
-
-        if (!TopicUtils.isP2P(secondTopic)) {
+            queueNames.add(TopicUtils.getP2pTopic(p2Peer));
+        } else {
+            queueNames.add(pubTopic);
             Set<String> wildcards = matchWildcards(pubTopic);
             if (wildcards != null && !wildcards.isEmpty()) {
                 for (String wildcard : wildcards) {

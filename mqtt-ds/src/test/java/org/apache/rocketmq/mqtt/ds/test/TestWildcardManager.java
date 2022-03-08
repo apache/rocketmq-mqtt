@@ -54,6 +54,7 @@ public class TestWildcardManager {
         Set<String> set =  wildcardManager.matchQueueSetByMsgTopic(TopicUtils.normalizeTopic("test/a"),"");
         Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("test/+")));
         Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("test/a")));
+        Assert.assertTrue(set.size() == 2);
     }
 
     @Test
@@ -70,6 +71,7 @@ public class TestWildcardManager {
 
         Set<String> set =  wildcardManager.matchQueueSetByMsgTopic(TopicUtils.normalizeTopic("test/p2p/GID_sdasa@@@2222"),"");
         Assert.assertTrue(set.contains(TopicUtils.normalizeTopic("/p2p/GID_sdasa@@@2222/")));
+        Assert.assertTrue(set.size() == 1);
     }
 
 }

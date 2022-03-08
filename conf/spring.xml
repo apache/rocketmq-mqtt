@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        classpath:/org/springframework/beans/factory/xml/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context
+        classpath:/org/springframework/context/config/spring-context-4.1.xsd
+        http://www.springframework.org/schema/tool
+        classpath:/org/springframework/beans/factory/xml/spring-tool-4.1.xsd
+        http://www.springframework.org/schema/task
+        classpath:/org/springframework/scheduling/config/spring-task-4.1.xsd"
+       default-autowire="byName">
+
+    <context:component-scan base-package="org.apache.rocketmq.mqtt.ds"/>
+    <context:component-scan base-package="org.apache.rocketmq.mqtt.cs"/>
+
+
+    <bean id="authManager" class="org.apache.rocketmq.mqtt.ds.auth.AuthManagerSample" init-method="init"/>
+
+    <bean id="metaPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample" init-method="init"/>
+
+
+</beans>

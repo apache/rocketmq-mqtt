@@ -156,6 +156,7 @@
                 <configuration>
                     <excludes>
                         <exclude>.travis.yml</exclude>
+                        <exclude>.asf.yaml</exclude>
                         <exclude>CONTRIBUTING.md</exclude>
                         <exclude>bin/README.md</exclude>
                         <exclude>.github/*</exclude>

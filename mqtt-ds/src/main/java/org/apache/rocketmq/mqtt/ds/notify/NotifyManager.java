@@ -29,8 +29,8 @@ import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
-import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
@@ -195,18 +195,19 @@ public class NotifyManager {
             messageEvent.setPubTopic(message.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC));
             return;
         }
-        if (StringUtils.isNotBlank(message.getUserProperty(LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH))) {
+        if (StringUtils.isNotBlank(message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {
             // maybe from rmq
-            String s = message.getUserProperty(LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH);
-            String[] lmqSet = s.split(LmqQueueStore.MULTI_DISPATCH_QUEUE_SPLITTER);
+            String s = message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH);
+            String[] lmqSet = s.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
             for (String lmq : lmqSet) {
                 if (TopicUtils.isWildCard(lmq)) {
                     continue;
                 }
-                if (!lmq.contains(LmqQueueStore.LMQ_PREFIX)) {
+                if (!lmq.contains(MixAll.LMQ_PREFIX)) {
                     continue;
                 }
-                messageEvent.setPubTopic(lmq.replace(LmqQueueStore.LMQ_PREFIX, ""));
+                String originQueue = lmq.replace(MixAll.LMQ_PREFIX, "");
+                messageEvent.setPubTopic(StringUtils.replace(originQueue, "%","/"));
             }
         }
     }

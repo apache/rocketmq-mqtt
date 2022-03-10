@@ -26,7 +26,6 @@ import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.header.QueryConsumerOffsetRequestHeader;
 import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHeader;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
-import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
@@ -81,8 +80,8 @@ public class LmqOffsetStoreManager implements LmqOffsetStore {
                     String brokerAddress = tmpBrokerAddressMap.get(queue.getBrokerName());
                     QueueOffset queueOffset = each.getValue();
                     UpdateConsumerOffsetRequestHeader updateHeader = new UpdateConsumerOffsetRequestHeader();
-                    updateHeader.setTopic(queue.getQueueName());
-                    updateHeader.setConsumerGroup(LmqQueueStore.LMQ_PREFIX + clientId);
+                    updateHeader.setTopic(StringUtils.replace(queue.getQueueName(), "/","%"));
+                    updateHeader.setConsumerGroup(MixAll.LMQ_PREFIX + clientId);
                     updateHeader.setQueueId((int) queue.getQueueId());
                     updateHeader.setCommitOffset(queueOffset.getOffset());
                     defaultMQPullConsumer
@@ -112,8 +111,8 @@ public class LmqOffsetStoreManager implements LmqOffsetStore {
                 map.put(queue, queueOffset);
                 try {
                     QueryConsumerOffsetRequestHeader queryHeader = new QueryConsumerOffsetRequestHeader();
-                    queryHeader.setTopic(queue.getQueueName());
-                    queryHeader.setConsumerGroup(LmqQueueStore.LMQ_PREFIX + clientId);
+                    queryHeader.setTopic(StringUtils.replace(queue.getQueueName(), "/","%"));
+                    queryHeader.setConsumerGroup(MixAll.LMQ_PREFIX + clientId);
                     queryHeader.setQueueId((int) queue.getQueueId());
                     long offset = defaultMQPullConsumer
                             .getDefaultMQPullConsumerImpl()

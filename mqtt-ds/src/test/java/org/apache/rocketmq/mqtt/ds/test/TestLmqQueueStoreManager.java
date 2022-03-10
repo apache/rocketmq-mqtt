@@ -31,6 +31,7 @@ import org.apache.rocketmq.client.impl.consumer.RebalanceImpl;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
@@ -50,7 +51,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.apache.rocketmq.mqtt.common.facade.LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -92,7 +92,7 @@ public class TestLmqQueueStoreManager {
         lmqQueueStoreManager.putMessage(queues, message);
         ArgumentCaptor<org.apache.rocketmq.common.message.Message> argumentCaptor = ArgumentCaptor.forClass(org.apache.rocketmq.common.message.Message.class);
         verify(defaultMQProducer).send(argumentCaptor.capture(), any(SendCallback.class));
-        Assert.assertTrue(null != argumentCaptor.getValue().getUserProperty(PROPERTY_INNER_MULTI_DISPATCH));
+        Assert.assertTrue(null != argumentCaptor.getValue().getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH));
     }
 
     @Test

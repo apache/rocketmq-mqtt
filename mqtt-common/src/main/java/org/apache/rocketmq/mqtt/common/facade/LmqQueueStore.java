@@ -27,10 +27,6 @@ import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 
 public interface LmqQueueStore {
-    String LMQ_PREFIX = "%LMQ%";
-    String PROPERTY_INNER_MULTI_DISPATCH = "INNER_MULTI_DISPATCH";
-    String PROPERTY_INNER_MULTI_QUEUE_OFFSET = "INNER_MULTI_QUEUE_OFFSET";
-    String MULTI_DISPATCH_QUEUE_SPLITTER = ",";
 
     /**
      * put message and atomic dispatch to multiple queues

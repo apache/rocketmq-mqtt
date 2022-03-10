@@ -22,8 +22,9 @@ import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
@@ -66,10 +67,10 @@ public class RocketMQProducer {
     }
 
     private static void setLmq(Message msg, Set<String> queues) {
-        msg.putUserProperty(LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH,
+        msg.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH,
                 StringUtils.join(
-                        queues.stream().map(s -> LmqQueueStore.LMQ_PREFIX + s).collect(Collectors.toSet()),
-                        LmqQueueStore.MULTI_DISPATCH_QUEUE_SPLITTER));
+                        queues.stream().map(s -> StringUtils.replace(s, "/", "%")).map(s -> MixAll.LMQ_PREFIX + s).collect(Collectors.toSet()),
+                        MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
     }
 
     private static void sendMessage(int i) throws MQBrokerException, RemotingException, InterruptedException, MQClientException {

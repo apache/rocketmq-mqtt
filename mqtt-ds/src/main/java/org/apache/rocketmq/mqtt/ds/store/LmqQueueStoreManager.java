@@ -126,15 +126,16 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         message.setOffset(parseLmqOffset(queue, mqMessage));
         if (StringUtils.isNotBlank(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC))) {
             message.setOriginTopic(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC));
-        } else if (StringUtils.isNotBlank(message.getUserProperty(LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH))) {
+        } else if (StringUtils.isNotBlank(message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {
             // maybe from rmq
-            String s = message.getUserProperty(LmqQueueStore.PROPERTY_INNER_MULTI_DISPATCH);
-            String[] lmqSet = s.split(LmqQueueStore.MULTI_DISPATCH_QUEUE_SPLITTER);
+            String s = message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH);
+            String[] lmqSet = s.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
             for (String lmq : lmqSet) {
                 if (TopicUtils.isWildCard(lmq)) {
                     continue;
                 }
-                message.setOriginTopic(lmq.replace(LmqQueueStore.LMQ_PREFIX, ""));
+                String originQueue = lmq.replace(MixAll.LMQ_PREFIX, "");
+                message.setOriginTopic(StringUtils.replace(originQueue, "%","/"));
             }
         }
         message.setFirstTopic(mqMessage.getTopic());
@@ -154,18 +155,18 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     private long parseLmqOffset(Queue queue, MessageExt mqMessage) {
-        String multiDispatchQueue = mqMessage.getProperty(PROPERTY_INNER_MULTI_DISPATCH);
+        String multiDispatchQueue = mqMessage.getProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH);
         if (StringUtils.isBlank(multiDispatchQueue)) {
             return mqMessage.getQueueOffset();
         }
-        String multiQueueOffset = mqMessage.getProperty(PROPERTY_INNER_MULTI_QUEUE_OFFSET);
+        String multiQueueOffset = mqMessage.getProperty(MessageConst.PROPERTY_INNER_MULTI_QUEUE_OFFSET);
         if (StringUtils.isBlank(multiQueueOffset)) {
             return mqMessage.getQueueOffset();
         }
-        String[] queues = multiDispatchQueue.split(MULTI_DISPATCH_QUEUE_SPLITTER);
-        String[] queueOffsets = multiQueueOffset.split(MULTI_DISPATCH_QUEUE_SPLITTER);
+        String[] queues = multiDispatchQueue.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
+        String[] queueOffsets = multiQueueOffset.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
         for (int i = 0; i < queues.length; i++) {
-            if ((LMQ_PREFIX + queue.getQueueName()).equals(queues[i])) {
+            if ((MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%")).equals(queues[i])) {
                 return Long.parseLong(queueOffsets[i]);
             }
         }
@@ -177,10 +178,10 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         CompletableFuture<StoreResult> result = new CompletableFuture<>();
         org.apache.rocketmq.common.message.Message mqMessage = toMQMessage(message);
         mqMessage.setTags(Constants.MQTT_TAG);
-        mqMessage.putUserProperty(PROPERTY_INNER_MULTI_DISPATCH,
+        mqMessage.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH,
                 StringUtils.join(
-                        queues.stream().map(s -> LMQ_PREFIX + s).collect(Collectors.toSet()),
-                        MULTI_DISPATCH_QUEUE_SPLITTER));
+                        queues.stream().map(s -> StringUtils.replace(s, "/", "%")).map(s -> MixAll.LMQ_PREFIX + s).collect(Collectors.toSet()),
+                        MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
         try {
             long start = System.currentTimeMillis();
             defaultMQProducer.send(mqMessage,
@@ -210,7 +211,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         try {
             MessageQueue messageQueue = new MessageQueue(firstTopic, queue.getBrokerName(), (int) queue.getQueueId());
             long start = System.currentTimeMillis();
-            String lmqTopic = LMQ_PREFIX + queue.getQueueName();
+            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
             pull(lmqTopic, messageQueue, queueOffset.getOffset(), (int) count, new PullCallback() {
                 @Override
                 public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
@@ -409,7 +410,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     private long maxOffset(Queue queue) throws MQClientException {
-        String lmqTopic = LMQ_PREFIX + queue.getQueueName();
+        String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
         MQClientInstance mQClientFactory = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getRebalanceImpl().getmQClientFactory();
         String brokerAddr = mQClientFactory.findBrokerAddressInPublish(queue.getBrokerName());
         if (null == brokerAddr) {

@@ -1,20 +1,18 @@
 /*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.rocketmq.mqtt.cs.channel;
@@ -43,7 +41,7 @@ public class DefaultChannelManager implements ChannelManager {
     private static Logger logger = LoggerFactory.getLogger(DefaultChannelManager.class);
     private Map<String, Channel> channelMap = new ConcurrentHashMap<>(1024);
     private HashedWheelTimer hashedWheelTimer;
-    private static int MinBlankChannelSeconds = 10;
+    private static int minBlankChannelSeconds = 10;
     private ScheduledThreadPoolExecutor scheduler;
 
     @Resource
@@ -62,7 +60,7 @@ public class DefaultChannelManager implements ChannelManager {
         hashedWheelTimer = new HashedWheelTimer(1, TimeUnit.SECONDS);
         hashedWheelTimer.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            for(Channel channel : channelMap.values()) {
+            for (Channel channel : channelMap.values()) {
                 closeConnect(channel, ChannelCloseFrom.SERVER, "ServerShutdown");
             }
         }));
@@ -77,7 +75,7 @@ public class DefaultChannelManager implements ChannelManager {
         }
         ChannelInfo.touch(channel);
         channelMap.put(ChannelInfo.getId(channel), channel);
-        hashedWheelTimer.newTimeout(timeout -> doPing(timeout, channel), MinBlankChannelSeconds, TimeUnit.SECONDS);
+        hashedWheelTimer.newTimeout(timeout -> doPing(timeout, channel), minBlankChannelSeconds, TimeUnit.SECONDS);
     }
 
     private void doPing(Timeout timeout, Channel channel) {

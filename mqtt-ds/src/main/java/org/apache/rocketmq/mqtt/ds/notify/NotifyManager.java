@@ -1,20 +1,18 @@
 /*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.rocketmq.mqtt.ds.notify;
@@ -53,7 +51,11 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -68,7 +70,7 @@ public class NotifyManager {
     private ScheduledThreadPoolExecutor scheduler;
     private Set<String> topics = new HashSet<>();
     private Map<String, AtomicInteger> nodeFail = new ConcurrentHashMap<>();
-    private final int NODE_FAIL_MAX_NUM = 3;
+    private static final int NODE_FAIL_MAX_NUM = 3;
     private NettyRemotingClient remotingClient;
     private DefaultMQProducer defaultMQProducer;
 
@@ -120,7 +122,7 @@ public class NotifyManager {
         if (tmp == null || tmp.isEmpty()) {
             return;
         }
-        Set<String> _topicList = new HashSet<>();
+        Set<String> thisTopicList = new HashSet<>();
         for (String topic : tmp) {
             try {
                 if (topic.equals(serviceConf.getClientRetryTopic())) {
@@ -128,7 +130,7 @@ public class NotifyManager {
                     continue;
                 }
                 firstTopicManager.checkFirstTopicIfCreated(topic);
-                _topicList.add(topic);
+                thisTopicList.add(topic);
                 if (!topics.contains(topic)) {
                     subscribe(topic);
                     topics.add(topic);
@@ -140,7 +142,7 @@ public class NotifyManager {
         Iterator<String> iterator = topics.iterator();
         while (iterator.hasNext()) {
             String topic = iterator.next();
-            if (!_topicList.contains(topic)) {
+            if (!thisTopicList.contains(topic)) {
                 iterator.remove();
                 unsubscribe(topic);
             }

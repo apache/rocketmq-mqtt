@@ -46,7 +46,7 @@ public class TestDefaultChannelManager {
         FieldUtils.writeDeclaredField(defaultChannelManager, "sessionLoop", sessionLoop, true);
         FieldUtils.writeDeclaredField(defaultChannelManager, "connectConf", mock(ConnectConf.class), true);
         FieldUtils.writeDeclaredField(defaultChannelManager, "retryDriver", mock(RetryDriver.class), true);
-        FieldUtils.writeStaticField(DefaultChannelManager.class, "MinBlankChannelSeconds", 1, true);
+        FieldUtils.writeStaticField(DefaultChannelManager.class, "minBlankChannelSeconds", 1, true);
         defaultChannelManager.init();
         NioSocketChannel channel = spy(new NioSocketChannel());
         when(channel.isActive()).thenReturn(false);

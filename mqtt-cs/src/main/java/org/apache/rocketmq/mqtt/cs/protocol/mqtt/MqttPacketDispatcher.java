@@ -1,20 +1,18 @@
 /*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt;
@@ -23,7 +21,12 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPubAckMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
+import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
@@ -32,7 +35,16 @@ import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.*;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttDisconnectHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPubAckHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPubCompHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPubRecHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPubRelHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPublishHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttSubscribeHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttUnSubscribeHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

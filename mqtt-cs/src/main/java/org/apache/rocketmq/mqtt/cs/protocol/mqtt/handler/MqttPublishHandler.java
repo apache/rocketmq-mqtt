@@ -65,17 +65,18 @@ public class MqttPublishHandler implements MqttPacketHandler<MqttPublishMessage>
         final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
         Channel channel = ctx.channel();
         String channelId = ChannelInfo.getId(channel);
+
+        if (!upstreamHookResult.isSuccess()) {
+            channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, upstreamHookResult.getRemark());
+            return;
+        }
+
         final boolean isQos2Message = isQos2Message(mqttMessage);
         if (isQos2Message) {
             if (inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId())) {
                 doResponse(ctx, mqttMessage);
                 return;
             }
-        }
-        String remark = upstreamHookResult.getRemark();
-        if (!upstreamHookResult.isSuccess()) {
-            channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
-            return;
         }
         doResponse(ctx, mqttMessage);
         if (isQos2Message) {

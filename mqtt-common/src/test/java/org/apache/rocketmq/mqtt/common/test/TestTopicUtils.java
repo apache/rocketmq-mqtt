@@ -6,10 +6,6 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- * @author wangfan8@xiaomi.com
- * @date 2022/3/11
- */
 public class TestTopicUtils {
 
   @Test

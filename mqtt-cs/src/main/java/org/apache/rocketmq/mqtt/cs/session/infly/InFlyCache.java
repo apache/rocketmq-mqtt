@@ -61,9 +61,7 @@ public class InFlyCache {
 
     public void put(CacheType cacheType, String channelId, int mqttMsgId) {
         ConcurrentMap<String, Set<Integer>> cache = whichCache(cacheType);
-        if (!cache.containsKey(channelId)) {
-            cache.putIfAbsent(channelId, new HashSet<>());
-        }
+        cache.putIfAbsent(channelId, new HashSet<>());
         Set<Integer> idCache = cache.get(channelId);
         if (idCache == null) {
             return;
@@ -111,9 +109,7 @@ public class InFlyCache {
             pendingDown.setSubscription(subscription);
             pendingDown.setQueue(queue);
             pendingDown.setSeqId(message.getOffset());
-            if (!cache.containsKey(channelId)) {
-                cache.putIfAbsent(channelId, new ConcurrentHashMap<>(16));
-            }
+            cache.putIfAbsent(channelId, new ConcurrentHashMap<>(16));
             cache.get(channelId).put(mqttMsgId, pendingDown);
             return pendingDown;
         }

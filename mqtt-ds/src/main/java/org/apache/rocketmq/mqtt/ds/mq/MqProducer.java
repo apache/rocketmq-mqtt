@@ -27,16 +27,16 @@ import java.util.Properties;
 
 public class MqProducer   {
 
-    private DefaultMQProducer defaultMQProducer;
+    private final DefaultMQProducer defaultMQProducer;
 
     public MqProducer(Properties properties) {
         defaultMQProducer = new DefaultMQProducer();
         defaultMQProducer.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
-        defaultMQProducer.setInstanceName(buildIntanceName());
+        defaultMQProducer.setInstanceName(buildInstanceName());
         defaultMQProducer.setVipChannelEnabled(false);
     }
 
-    public String buildIntanceName() {
+    public String buildInstanceName() {
         return Integer.toString(UtilAll.getPid())
                 + "#" + System.nanoTime();
     }

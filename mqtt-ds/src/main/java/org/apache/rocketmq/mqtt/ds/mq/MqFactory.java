@@ -60,7 +60,7 @@ public class MqFactory {
     public static DefaultMQProducer buildDefaultMQProducer(String group, String nameSrv) {
         DefaultMQProducer defaultMQProducer = new DefaultMQProducer();
         defaultMQProducer.setNamesrvAddr(nameSrv);
-        defaultMQProducer.setInstanceName(buildIntanceName());
+        defaultMQProducer.setInstanceName(buildInstanceName());
         defaultMQProducer.setVipChannelEnabled(false);
         defaultMQProducer.setProducerGroup(group);
         return defaultMQProducer;
@@ -76,7 +76,7 @@ public class MqFactory {
             defaultMQPushConsumer.setConsumeThreadMin(Integer.valueOf((String) properties.get("threadNum")));
             defaultMQPushConsumer.setConsumeThreadMax(Integer.valueOf((String) properties.get("threadNum")));
         }
-        defaultMQPushConsumer.setInstanceName(buildIntanceName());
+        defaultMQPushConsumer.setInstanceName(buildInstanceName());
         defaultMQPushConsumer.setVipChannelEnabled(false);
         defaultMQPushConsumer.setConsumerGroup(group);
         if (messageListener instanceof MessageListenerOrderly) {
@@ -90,7 +90,7 @@ public class MqFactory {
     public static DefaultMQPullConsumer buildDefaultMQPullConsumer(String group, String nameSrv) {
         DefaultMQPullConsumer defaultMQPullConsumer = new DefaultMQPullConsumer();
         defaultMQPullConsumer.setNamesrvAddr(nameSrv);
-        defaultMQPullConsumer.setInstanceName(buildIntanceName());
+        defaultMQPullConsumer.setInstanceName(buildInstanceName());
         defaultMQPullConsumer.setVipChannelEnabled(false);
         defaultMQPullConsumer.setConsumerGroup(group);
         return defaultMQPullConsumer;
@@ -104,7 +104,7 @@ public class MqFactory {
         return defaultMQAdminExt;
     }
 
-    public static String buildIntanceName() {
+    public static String buildInstanceName() {
         return Integer.toString(UtilAll.getPid())
                 + "#" + System.nanoTime();
     }

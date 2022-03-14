@@ -130,7 +130,6 @@ public class LmqOffsetStoreManagerTest {
             long offset1 = offsetMap.get(queue).getOffset();
             Assert.assertTrue(offset1 == 10L);
         });
-        verify(mqClientAPI).queryConsumerOffset(any(), any(), anyLong());
 
     }
 }

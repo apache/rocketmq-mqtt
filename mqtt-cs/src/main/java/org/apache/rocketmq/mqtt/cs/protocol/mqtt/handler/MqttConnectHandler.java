@@ -68,13 +68,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
         ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
         ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        ChannelInfo.setFuture(channel, ChannelInfo.FUTURE_CONNECT, future);
-        scheduler.schedule(() -> {
-            if (!future.isDone()) {
-                future.complete(null);
-            }
-        }, 1, TimeUnit.SECONDS);
+
         String remark = upstreamHookResult.getRemark();
         if (!upstreamHookResult.isSuccess()) {
             byte connAckCode = (byte) upstreamHookResult.getSubCode();
@@ -87,6 +81,15 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
             return;
         }
+
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        ChannelInfo.setFuture(channel, ChannelInfo.FUTURE_CONNECT, future);
+        scheduler.schedule(() -> {
+            if (!future.isDone()) {
+                future.complete(null);
+            }
+        }, 1, TimeUnit.SECONDS);
+
         try {
             MqttConnAckMessage mqttConnAckMessage = getMqttConnAckMessage(MqttConnectReturnCode.CONNECTION_ACCEPTED);
             future.thenAccept(aVoid -> {

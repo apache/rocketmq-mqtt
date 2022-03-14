@@ -69,13 +69,17 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     @Resource
     private ConnectConf connectConf;
 
-    private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
-
+    private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage, HookResult upstreamHookResult) {
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Channel channel = ctx.channel();
+        if (!upstreamHookResult.isSuccess()) {
+            channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, upstreamHookResult.getRemark());
+            return;
+        }
+
         CompletableFuture<Void> future = new CompletableFuture<>();
         ChannelInfo.setFuture(channel, ChannelInfo.FUTURE_SUBSCRIBE, future);
         scheduler.schedule(() -> {
@@ -83,11 +87,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                 future.complete(null);
             }
         },1,TimeUnit.SECONDS);
-        String remark = upstreamHookResult.getRemark();
-        if (!upstreamHookResult.isSuccess()) {
-            channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
-            return;
-        }
         try {
             MqttSubscribePayload payload = mqttMessage.payload();
             List<MqttTopicSubscription> mqttTopicSubscriptions = payload.topicSubscriptions();

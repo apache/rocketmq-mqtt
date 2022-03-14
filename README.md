@@ -9,7 +9,7 @@ A new MQTT protocol architecture model, based on which RocketMQ can better suppo
 
 ## Architecture
 The relevant architecture design is introduced in [RIP-33](https://docs.google.com/document/d/1AD1GkV9mqE_YFA97uVem4SmB8ZJSXiJZvzt7-K6Jons/edit#).
-The queue model of MQTT needs to be based on the light message queue, For the design of the specific light message queue, please refer to the [RIP-28(LMQ)-wiki](https://github.com/apache/rocketmq/wiki/RIP-28-Light-message-queue-(LMQ\)) of [RocketMQ](https://github.com/apache/rocketmq).
+The queue model of MQTT needs to be based on the light message queue, For the design of the specific light message queue, please refer to the [RIP-28(LMQ)-wiki](https://github.com/apache/rocketmq/wiki/RIP-28-Light-message-queue-%28LMQ%29) of [RocketMQ](https://github.com/apache/rocketmq).
 
 ## Get Started
 

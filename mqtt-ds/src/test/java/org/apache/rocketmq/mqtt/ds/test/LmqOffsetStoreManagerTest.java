@@ -20,6 +20,8 @@ package org.apache.rocketmq.mqtt.ds.test;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
@@ -118,18 +120,20 @@ public class LmqOffsetStoreManagerTest {
         when(defaultMQPullConsumerImpl.getRebalanceImpl()).thenReturn(rebalanceImpl);
         MQClientInstance mqClientInstance = mock(MQClientInstance.class);
         when(rebalanceImpl.getmQClientFactory()).thenReturn(mqClientInstance);
-
+        //
         MQClientAPIImpl mqClientAPI = mock(MQClientAPIImpl.class);
         when(mqClientInstance.getMQClientAPIImpl()).thenReturn(mqClientAPI);
 
         when(mqClientAPI.queryConsumerOffset(any(), any(), anyLong())).thenReturn(10L);
 
         CompletableFuture<Map<Queue, QueueOffset>> offset = lmqOffsetStoreManager.getOffset(clientId, subscription);
-
+        CountDownLatch countDownLatch = new CountDownLatch(1);
         offset.whenComplete((offsetMap, throwable) -> {
             long offset1 = offsetMap.get(queue).getOffset();
             Assert.assertTrue(offset1 == 10L);
+            countDownLatch.countDown();
         });
-
+        countDownLatch.await(3, TimeUnit.SECONDS);
+        verify(mqClientAPI).queryConsumerOffset(any(), any(), anyLong());
     }
 }

@@ -8,13 +8,16 @@
 A new MQTT protocol architecture model, based on which RocketMQ can better support messages from terminals such as IoT devices and Mobile APP. Based on the RocketMQ message unified storage engine, it supports both MQTT terminal and server message sending and receiving.
 
 ## Architecture
-The relevant architecture design is introduced in [RIP-33](https://docs.google.com/document/d/1AD1GkV9mqE_YFA97uVem4SmB8ZJSXiJZvzt7-K6Jons/edit#)
-
+The relevant architecture design is introduced in [RIP-33](https://docs.google.com/document/d/1AD1GkV9mqE_YFA97uVem4SmB8ZJSXiJZvzt7-K6Jons/edit#).
+The queue model of MQTT needs to be based on the light message queue, For the design of the specific light message queue, please refer to the [RIP-28(LMQ)-wiki](https://github.com/apache/rocketmq/wiki/RIP-28-Light-message-queue-(LMQ) of [RocketMQ](https://github.com/apache/rocketmq).
 
 ## Get Started
 
 ### Prerequisites
-The queue model of MQTT needs to be based on the lightweight queue feature ([RIP-28](https://github.com/apache/rocketmq/pull/3694)) of RocketMQ. RocketMQ has only supported this feature since version 4.9.3. Please ensure that the installed version of RocketMQ already supports this feature.
+The queue model of MQTT needs to be based on the light message queue feature ([RIP-28](https://github.com/apache/rocketmq/pull/3694)) of RocketMQ. RocketMQ has only supported this feature since version 4.9.3. Please ensure that the installed version of RocketMQ already supports this feature.
+
+For the quick start of light message queues, please refer to [Example_LMQ](https://github.com/apache/rocketmq/blob/develop/docs/cn/Example_LMQ.md) of RocketMQ. 
+
 
 1. Clone
 ```shell

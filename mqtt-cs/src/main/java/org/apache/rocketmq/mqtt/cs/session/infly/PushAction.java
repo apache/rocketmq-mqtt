@@ -136,6 +136,10 @@ public class PushAction {
     }
 
     public void rollNextByAck(Session session, int mqttId) {
+        if (session == null) {
+            return;
+        }
+        mqttMsgId.releaseId(mqttId, session.getClientId());
         InFlyCache.PendingDown pendingDown = inFlyCache.getPendingDownCache().get(session.getChannelId(), mqttId);
         if (pendingDown == null) {
             return;
@@ -144,7 +148,7 @@ public class PushAction {
     }
 
     public void rollNext(Session session, int mqttId) {
-        if (session == null || session.isDestroyed()) {
+        if (session == null) {
             return;
         }
         mqttMsgId.releaseId(mqttId, session.getClientId());

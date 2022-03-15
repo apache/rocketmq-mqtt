@@ -60,7 +60,7 @@ public class MqttMsgId {
         synchronized (msgIdEntry) {
             int startingMessageId = msgIdEntry.nextMsgId;
             int loopCount = 0;
-            int maxLoopCount = 2;
+            int maxLoopCount = 1;
             do {
                 msgIdEntry.nextMsgId++;
                 if (msgIdEntry.nextMsgId > MAX_MSG_ID) {
@@ -69,7 +69,7 @@ public class MqttMsgId {
                 if (msgIdEntry.nextMsgId == startingMessageId) {
                     loopCount++;
                     if (loopCount >= maxLoopCount) {
-                        msgIdEntry.nextMsgId++;
+                        msgIdEntry.inUseMsgIds.clear();
                         break;
                     }
                 }

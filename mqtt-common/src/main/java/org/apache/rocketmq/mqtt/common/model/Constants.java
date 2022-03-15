@@ -21,8 +21,8 @@ public class Constants {
     public static final String NAMESPACE_SPLITER = "%";
     public static final String MQTT_TOPIC_DELIMITER = "/";
 
-    public static final String ADDFLAG = "+";
-    public static final String JINFLAG = "#";
+    public static final String PLUS_SIGN = "+";
+    public static final String NUMBER_SIGN = "#";
 
     public static final String P2P = "/p2p/";
     public static final String RETRY = "/retry/";

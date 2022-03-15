@@ -30,11 +30,11 @@ public class MqPullConsumer {
     public MqPullConsumer(Properties properties) {
         defaultMQPullConsumer = new DefaultMQPullConsumer();
         defaultMQPullConsumer.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
-        defaultMQPullConsumer.setInstanceName(this.buildIntanceName());
+        defaultMQPullConsumer.setInstanceName(this.buildInstanceName());
         defaultMQPullConsumer.setVipChannelEnabled(false);
     }
 
-    public String buildIntanceName() {
+    public String buildInstanceName() {
         return Integer.toString(UtilAll.getPid())
                 + "#" + System.nanoTime();
     }

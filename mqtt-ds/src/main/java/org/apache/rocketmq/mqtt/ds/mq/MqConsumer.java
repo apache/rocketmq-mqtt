@@ -40,11 +40,11 @@ public class MqConsumer  {
             defaultMQPushConsumer.setConsumeThreadMin(Integer.valueOf((String)properties.get("threadNum")));
             defaultMQPushConsumer.setConsumeThreadMax(Integer.valueOf((String)properties.get("threadNum")));
         }
-        defaultMQPushConsumer.setInstanceName(this.buildIntanceName());
+        defaultMQPushConsumer.setInstanceName(this.buildInstanceName());
         defaultMQPushConsumer.setVipChannelEnabled(false);
     }
 
-    public String buildIntanceName() {
+    public String buildInstanceName() {
         return Integer.toString(UtilAll.getPid())
                 + "#" + System.nanoTime();
     }

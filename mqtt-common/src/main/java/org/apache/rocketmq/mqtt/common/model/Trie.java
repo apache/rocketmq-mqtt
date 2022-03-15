@@ -148,27 +148,27 @@ public class Trie<K, V> {
                 builder.delete(start, builder.length());
             }
             //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.JINFLAG);
+            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
             if (jinMatch != null) {
                 int start = builder.length();
-                builder.append(Constants.JINFLAG).append(Constants.MQTT_TOPIC_DELIMITER);
+                builder.append(Constants.NUMBER_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
                 result.addAll(findValuePath(jinMatch, topicArray, level + 1, maxLevel, builder, true));
                 builder.delete(start, builder.length());
             }
             //match the +
-            TrieNode jiaMatch = currentNode.children.get(Constants.ADDFLAG);
+            TrieNode jiaMatch = currentNode.children.get(Constants.PLUS_SIGN);
             if (jiaMatch != null) {
                 int start = builder.length();
-                builder.append(Constants.ADDFLAG).append(Constants.MQTT_TOPIC_DELIMITER);
+                builder.append(Constants.PLUS_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
                 result.addAll(findValuePath(jiaMatch, topicArray, level + 1, maxLevel, builder, false));
                 builder.delete(start, builder.length());
             }
         } else {
             //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.JINFLAG);
+            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
             if (jinMatch != null) {
                 int start = builder.length();
-                builder.append(Constants.JINFLAG).append(Constants.MQTT_TOPIC_DELIMITER);
+                builder.append(Constants.NUMBER_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
                 result.addAll(findValuePath(jinMatch, topicArray, level + 1, maxLevel, builder, true));
                 builder.delete(start, builder.length());
             }
@@ -207,19 +207,19 @@ public class Trie<K, V> {
                 result.putAll(findValueSet(trieNode, topicArray, level + 1, maxLevel, false));
             }
             //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.JINFLAG);
+            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
             if (jinMatch != null) {
                 result.putAll(findValueSet(jinMatch, topicArray, level + 1, maxLevel, true));
             }
             //match the +
-            TrieNode jiaMatch = currentNode.children.get(Constants.ADDFLAG);
+            TrieNode jiaMatch = currentNode.children.get(Constants.PLUS_SIGN);
             if (jiaMatch != null) {
                 result.putAll(findValueSet(jiaMatch, topicArray, level + 1, maxLevel, false));
             }
             return result;
         } else {
             //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.JINFLAG);
+            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
             if (jinMatch != null) {
                 result.putAll(findValueSet(jinMatch, topicArray, level + 1, maxLevel, true));
             }

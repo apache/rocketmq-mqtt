@@ -120,9 +120,7 @@ public class MatchAction {
             }
 
             synchronized (topicCache) {
-                if (!topicCache.containsKey(topicFilter)) {
-                    topicCache.putIfAbsent(topicFilter, new HashSet<>());
-                }
+                topicCache.putIfAbsent(topicFilter, new HashSet<>());
                 topicCache.get(topicFilter).add(channelId);
             }
         }

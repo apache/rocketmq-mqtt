@@ -99,9 +99,7 @@ public class WildcardManager {
             queueNames.add(pubTopic);
             Set<String> wildcards = matchWildcards(pubTopic);
             if (wildcards != null && !wildcards.isEmpty()) {
-                for (String wildcard : wildcards) {
-                    queueNames.add(wildcard);
-                }
+                queueNames.addAll(wildcards);
             }
         }
         return queueNames;

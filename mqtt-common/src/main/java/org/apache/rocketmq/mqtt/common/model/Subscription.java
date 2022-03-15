@@ -38,7 +38,7 @@ public class Subscription {
 
     public boolean isWildCard() {
         return topicFilter != null &&
-                (topicFilter.contains(Constants.JINFLAG) || topicFilter.contains(Constants.ADDFLAG));
+                (topicFilter.contains(Constants.NUMBER_SIGN) || topicFilter.contains(Constants.PLUS_SIGN));
     }
 
     public String toFirstTopic() {

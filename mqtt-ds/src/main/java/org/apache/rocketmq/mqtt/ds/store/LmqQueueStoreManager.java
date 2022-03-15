@@ -180,7 +180,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         mqMessage.setTags(Constants.MQTT_TAG);
         mqMessage.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH,
                 StringUtils.join(
-                        queues.stream().map(s -> StringUtils.replace(s, "/", "%")).map(s -> MixAll.LMQ_PREFIX + s).collect(Collectors.toSet()),
+                        queues.stream().map(s -> MixAll.LMQ_PREFIX + StringUtils.replace(s, "/", "%")).collect(Collectors.toSet()),
                         MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
         try {
             long start = System.currentTimeMillis();

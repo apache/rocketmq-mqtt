@@ -94,7 +94,6 @@ public class NotifyManager {
         defaultMQPushConsumer.setConsumeThreadMax(64);
 
         defaultMQProducer = MqFactory.buildDefaultMQProducer(MixAll.CID_RMQ_SYS_PREFIX + "NotifyRetrySend", serviceConf.getProperties());
-        defaultMQProducer.start();
 
         try {
             defaultMQPushConsumer.start();

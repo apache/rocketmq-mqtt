@@ -223,7 +223,10 @@ public class NotifyManager {
                 AtomicInteger nodeFailCount = nodeFail.get(node);
                 if (nodeFailCount == null) {
                     nodeFailCount = new AtomicInteger();
-                    nodeFail.putIfAbsent(node, nodeFailCount);
+                    AtomicInteger old = nodeFail.putIfAbsent(node, nodeFailCount);
+                    if (old != null) {
+                        nodeFailCount = old;
+                    }
                 }
                 if (nodeFailCount.get() > NODE_FAIL_MAX_NUM) {
                     sendEventRetryMsg(messageEvents, 1, node, 0);

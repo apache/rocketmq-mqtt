@@ -24,5 +24,11 @@ import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import java.util.concurrent.CompletableFuture;
 
 public interface UpstreamProcessor {
+    /**
+     * process mqtt upstream packet
+     * @param context
+     * @param message
+     * @return
+     */
     CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message);
 }

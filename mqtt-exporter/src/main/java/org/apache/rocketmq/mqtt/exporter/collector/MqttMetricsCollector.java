@@ -157,7 +157,7 @@ public class MqttMetricsCollector {
         return sb.toString();
     }
 
-    public static void shutDown() {
+    public static void shutdown() {
         if (httpServer != null) {
             httpServer.close();
         }

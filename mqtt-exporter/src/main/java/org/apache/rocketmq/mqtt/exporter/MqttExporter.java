@@ -46,6 +46,6 @@ public class MqttExporter {
     }
 
     public void shutdown() {
-        MqttMetricsCollector.shutDown();
+        MqttMetricsCollector.shutdown();
     }
 }

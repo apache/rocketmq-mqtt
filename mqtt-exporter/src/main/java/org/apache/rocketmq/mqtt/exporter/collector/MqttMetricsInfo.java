@@ -22,14 +22,14 @@ import java.util.Arrays;
 import io.prometheus.client.Collector.Type;
 
 public enum MqttMetricsInfo {
-    DEMO_TPS(Type.COUNTER, SubSystem.CS, "tps_total", "broker timer tps.", null,
-        "hostName", "hostIp", "type"),
-    DEMO_GAUGE(Type.GAUGE, SubSystem.DS,"demo_gauge", "broker timer latency in microsecond.",
+    DEMO_TPS(Type.COUNTER, SubSystem.CS, "tps_total", "demo tps.", null,
+        "hostName", "hostIp"),
+    DEMO_GAUGE(Type.GAUGE, SubSystem.DS,"demo_gauge", "demo gauge status.",
         null,
-        "hostName", "hostIp", "type"),
-    DEMO_LATENCY(Type.HISTOGRAM, SubSystem.DS,"demo_latency", "broker timer latency in microsecond.",
+        "hostName", "hostIp"),
+    DEMO_LATENCY(Type.HISTOGRAM, SubSystem.DS,"demo_latency", "latency in microsecond.",
         new double[] {100, 300, 500, 1000, 3000, 5000, 10000, 50000},
-        "hostName", "hostIp", "type");
+        "hostName", "hostIp");
 
     private final Type type;
     private final SubSystem subSystem;

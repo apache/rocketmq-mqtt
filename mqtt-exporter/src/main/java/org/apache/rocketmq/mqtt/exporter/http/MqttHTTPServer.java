@@ -60,7 +60,7 @@ import io.prometheus.client.exporter.common.TextFormat;
  * Example Usage:
  * <pre>
  * {@code
- * MQHTTPServer server = new MQHTTPServer(1234);
+ * MqttHTTPServer server = new MqttHTTPServer(1234);
  * }
  * </pre>
  */

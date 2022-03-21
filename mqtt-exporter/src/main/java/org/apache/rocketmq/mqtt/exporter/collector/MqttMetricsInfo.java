@@ -29,7 +29,12 @@ public enum MqttMetricsInfo {
         "hostName", "hostIp"),
     DEMO_LATENCY(Type.HISTOGRAM, SubSystem.DS,"demo_latency", "latency in microsecond.",
         new double[] {100, 300, 500, 1000, 3000, 5000, 10000, 50000},
-        "hostName", "hostIp");
+        "hostName", "hostIp"),
+    PULL_STATUS_TPS(Type.COUNTER, SubSystem.DS, "pull_status_tps_total", "ds pull msg status tps.", null,
+        "hostName", "hostIp", "pullStatus"),
+    PULL_CACHE_STATUS_TPS(Type.COUNTER, SubSystem.CS, "pull_cache_status_tps_total", "ds pull cache status tps.", null,
+        "hostName", "hostIp", "pullCacheStatus");
+
 
     private final Type type;
     private final SubSystem subSystem;

@@ -19,8 +19,6 @@
 
 package org.apache.rocketmq.mqtt.common.test;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.util.NamespaceUtil;
 import org.junit.Assert;
 import org.junit.Before;

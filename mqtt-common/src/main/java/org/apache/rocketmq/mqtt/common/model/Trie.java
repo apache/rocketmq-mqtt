@@ -17,7 +17,6 @@
 
 package org.apache.rocketmq.mqtt.common.model;
 
-
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 
 import java.util.HashMap;
@@ -77,13 +76,9 @@ public class Trie<K, V> {
             }
             V oldValue = currentNode.valueSet.remove(valueKey);
             //clean the empty node
-            while (currentNode.children.isEmpty() && currentNode.valueSet.isEmpty()) {
-                if (currentNode.parentNode != null) {
-                    currentNode.parentNode.children.remove(keyArray[--level]);
-                    currentNode = currentNode.parentNode;
-                } else {
-                    break;
-                }
+            while (currentNode.children.isEmpty() && currentNode.valueSet.isEmpty() && currentNode.parentNode != null) {
+                currentNode.parentNode.children.remove(keyArray[--level]);
+                currentNode = currentNode.parentNode;
             }
             return oldValue;
         } catch (Throwable e) {
@@ -136,10 +131,24 @@ public class Trie<K, V> {
     }
 
     private Set<String> findValuePath(TrieNode<K, V> currentNode, String[] topicArray, int level, int maxLevel,
-                                      StringBuilder builder, boolean isJinFlag) {
+                                      StringBuilder builder, boolean isNumberSign) {
         Set<String> result = new HashSet<>();
+        // match end of path
+        boolean isPathEnd = (level == maxLevel || isNumberSign) && !currentNode.valueSet.isEmpty() && builder.length() > 0;
+        if (isPathEnd) {
+            result.add(TopicUtils.normalizeTopic(builder.toString().substring(0, builder.length() - 1)));
+        }
+        // match the '#'
+        TrieNode numberMatch = currentNode.children.get(Constants.NUMBER_SIGN);
+        if (numberMatch != null) {
+            int start = builder.length();
+            builder.append(Constants.NUMBER_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
+            result.addAll(findValuePath(numberMatch, topicArray, level + 1, maxLevel, builder, true));
+            builder.delete(start, builder.length());
+        }
+        // match the mqtt-topic path
         if (level < maxLevel && !currentNode.children.isEmpty()) {
-            //first match the precise
+            // match the precise
             TrieNode trieNode = currentNode.children.get(topicArray[level]);
             if (trieNode != null) {
                 int start = builder.length();
@@ -147,34 +156,13 @@ public class Trie<K, V> {
                 result.addAll(findValuePath(trieNode, topicArray, level + 1, maxLevel, builder, false));
                 builder.delete(start, builder.length());
             }
-            //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
-            if (jinMatch != null) {
-                int start = builder.length();
-                builder.append(Constants.NUMBER_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
-                result.addAll(findValuePath(jinMatch, topicArray, level + 1, maxLevel, builder, true));
-                builder.delete(start, builder.length());
-            }
-            //match the +
-            TrieNode jiaMatch = currentNode.children.get(Constants.PLUS_SIGN);
-            if (jiaMatch != null) {
+            // match the '+'
+            TrieNode plusMatch = currentNode.children.get(Constants.PLUS_SIGN);
+            if (plusMatch != null) {
                 int start = builder.length();
                 builder.append(Constants.PLUS_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
-                result.addAll(findValuePath(jiaMatch, topicArray, level + 1, maxLevel, builder, false));
+                result.addAll(findValuePath(plusMatch, topicArray, level + 1, maxLevel, builder, false));
                 builder.delete(start, builder.length());
-            }
-        } else {
-            //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
-            if (jinMatch != null) {
-                int start = builder.length();
-                builder.append(Constants.NUMBER_SIGN).append(Constants.MQTT_TOPIC_DELIMITER);
-                result.addAll(findValuePath(jinMatch, topicArray, level + 1, maxLevel, builder, true));
-                builder.delete(start, builder.length());
-            }
-            boolean jin = (level == maxLevel || isJinFlag) && !currentNode.valueSet.isEmpty() && builder.length() > 0;
-            if (jin) {
-                result.add(TopicUtils.normalizeTopic(builder.toString().substring(0, builder.length() - 1)));
             }
         }
         return result;
@@ -198,36 +186,31 @@ public class Trie<K, V> {
     }
 
     private Map<K, V> findValueSet(TrieNode<K, V> currentNode, String[] topicArray, int level, int maxLevel,
-                                   boolean isJinFlag) {
+                                    boolean isNumberSign) {
         Map<K, V> result = new HashMap<>(16);
+        // match the mqtt-topic leaf or match the leaf node of trie
+        if (level == maxLevel || isNumberSign) {
+            result.putAll(currentNode.valueSet);
+        }
+        // match the '#'
+        TrieNode numberMatch = currentNode.children.get(Constants.NUMBER_SIGN);
+        if (numberMatch != null) {
+            result.putAll(findValueSet(numberMatch, topicArray, level + 1, maxLevel, true));
+        }
+        // match the mqtt-topic path
         if (level < maxLevel && !currentNode.children.isEmpty()) {
-            //first match the precise
+            // match the precise
             TrieNode trieNode = currentNode.children.get(topicArray[level]);
             if (trieNode != null) {
                 result.putAll(findValueSet(trieNode, topicArray, level + 1, maxLevel, false));
             }
-            //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
-            if (jinMatch != null) {
-                result.putAll(findValueSet(jinMatch, topicArray, level + 1, maxLevel, true));
+            // match the '+'
+            TrieNode plusMatch = currentNode.children.get(Constants.PLUS_SIGN);
+            if (plusMatch != null) {
+                result.putAll(findValueSet(plusMatch, topicArray, level + 1, maxLevel, false));
             }
-            //match the +
-            TrieNode jiaMatch = currentNode.children.get(Constants.PLUS_SIGN);
-            if (jiaMatch != null) {
-                result.putAll(findValueSet(jiaMatch, topicArray, level + 1, maxLevel, false));
-            }
-            return result;
-        } else {
-            //match the #
-            TrieNode jinMatch = currentNode.children.get(Constants.NUMBER_SIGN);
-            if (jinMatch != null) {
-                result.putAll(findValueSet(jinMatch, topicArray, level + 1, maxLevel, true));
-            }
-            if (level == maxLevel || isJinFlag) {
-                result.putAll(currentNode.valueSet);
-            }
-            return result;
         }
+        return result;
     }
 
     class TrieNode<K, V> {
@@ -239,5 +222,4 @@ public class Trie<K, V> {
             this.parentNode = parentNode;
         }
     }
-
 }

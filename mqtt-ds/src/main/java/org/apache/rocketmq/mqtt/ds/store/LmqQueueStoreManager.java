@@ -55,6 +55,7 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.mq.MqFactory;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -218,6 +219,11 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                     result.complete(toLmqPullResult(queue, pullResult));
                     StatUtil.addInvoke("lmqPull", System.currentTimeMillis() - start);
                     StatUtil.addPv(pullResult.getPullStatus().name(), 1);
+                    try {
+                        MqttMetricsCollector.collectPullStatusTps(1, pullResult.getPullStatus().name());
+                    } catch (Throwable e) {
+                        logger.error("collect prometheus error", e);
+                    }
                 }
 
                 @Override

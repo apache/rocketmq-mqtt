@@ -12,6 +12,7 @@
         <module>mqtt-common</module>
         <module>mqtt-cs</module>
         <module>mqtt-ds</module>
+        <module>mqtt-exporter</module>
         <module>mqtt-example</module>
     </modules>
 
@@ -23,6 +24,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <spring.version>4.3.16.RELEASE</spring.version>
         <rocket.version>4.9.3</rocket.version>
+        <prometheus.version>0.12.0</prometheus.version>
     </properties>
 
     <dependencyManagement>
@@ -30,6 +32,11 @@
             <dependency>
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>mqtt-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>mqtt-exporter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -111,6 +118,27 @@
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
                 <version>1.15</version>
+            </dependency>
+            <!--   for prometheus -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>simpleclient</artifactId>
+                <version>${prometheus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>simpleclient_hotspot</artifactId>
+                <version>${prometheus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>simpleclient_httpserver</artifactId>
+                <version>${prometheus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>19.0</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>

@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -33,6 +33,8 @@ import java.util.List;
 @Component
 public class ConnectHandler extends ChannelInboundHandlerAdapter {
     private static Logger logger = LoggerFactory.getLogger(ConnectHandler.class);
+
+    private final List<String> simpleExceptions = Collections.singletonList("Connection reset by peer");
 
     @Resource
     private ChannelManager channelManager;
@@ -49,7 +51,6 @@ public class ConnectHandler extends ChannelInboundHandlerAdapter {
         channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "be closed");
     }
 
-    public final List<String> simpleExceptions = Arrays.asList("Connection reset by peer");
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

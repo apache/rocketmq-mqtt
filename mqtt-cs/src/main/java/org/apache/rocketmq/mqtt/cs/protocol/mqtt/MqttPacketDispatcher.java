@@ -32,6 +32,7 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelDecodeException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -100,7 +101,7 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
             return;
         }
         if (!msg.decoderResult().isSuccess()) {
-            throw new RuntimeException(ChannelInfo.getClientId(ctx.channel()) + "," + msg.decoderResult());
+            throw new ChannelDecodeException(ChannelInfo.getClientId(ctx.channel()) + "," + msg.decoderResult());
         }
         ChannelInfo.touch(ctx.channel());
         CompletableFuture<HookResult> upstreamHookResult;

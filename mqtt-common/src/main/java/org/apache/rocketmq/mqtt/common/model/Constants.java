@@ -29,8 +29,8 @@ public class Constants {
 
     public static final String PROPERTY_NAMESPACE = "namespace";
     public static final String PROPERTY_ORIGIN_MQTT_TOPIC = "originMqttTopic";
-    public static final String PROPERTY_MQTT_QOS = "qoslevel";
-    public static final String PROPERTY_MQTT_CLEAN_SESSION = "cleansessionflag";
+    public static final String PROPERTY_MQTT_QOS = "qosLevel";
+    public static final String PROPERTY_MQTT_CLEAN_SESSION = "cleanSessionFlag";
     public static final String PROPERTY_MQTT_CLIENT = "clientId";
     public static final String PROPERTY_MQTT_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_MQTT_EXT_DATA = "extData";

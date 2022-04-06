@@ -93,7 +93,11 @@ public class ChannelInfo {
         if (!getInfo(channel).containsKey(CHANNEL_EXT_CHANGE_KEY)) {
             getInfo(channel).put(CHANNEL_EXT_CHANGE_KEY, false);
         }
-        return (boolean) getInfo(channel).get(CHANNEL_EXT_CHANGE_KEY);
+        Object obj = getInfo(channel).get(CHANNEL_EXT_CHANGE_KEY);
+        if (obj == null) {
+            return false;
+        }
+        return (boolean)obj;
     }
 
     public static String getId(Channel channel) {
@@ -110,7 +114,11 @@ public class ChannelInfo {
         if (!getInfo(channel).containsKey(CHANNEL_CLEAN_SESSION_KEY)) {
             getInfo(channel).put(CHANNEL_CLEAN_SESSION_KEY, true);
         }
-        return (Boolean) getInfo(channel).get(CHANNEL_CLEAN_SESSION_KEY);
+        Object obj = getInfo(channel).get(CHANNEL_CLEAN_SESSION_KEY);
+        if (obj == null) {
+            return true;
+        }
+        return (Boolean)obj;
     }
 
     public static void setCleanSessionFlag(Channel channel, Boolean cleanSessionFalg) {

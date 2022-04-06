@@ -56,6 +56,7 @@ import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.mq.MqFactory;
 import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
+import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,20 +191,32 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                         @Override
                         public void onSuccess(SendResult sendResult) {
                             result.complete(toStoreResult(sendResult));
-                            StatUtil.addInvoke("lmqWrite", System.currentTimeMillis() - start);
+                            long rt = System.currentTimeMillis() - start;
+                            StatUtil.addInvoke("lmqWrite", rt);
+                            collectLmqReadWriteMatchActionRt("lmqWrite", rt, true);
                         }
 
                         @Override
                         public void onException(Throwable e) {
                             logger.error("", e);
                             result.completeExceptionally(e);
-                            StatUtil.addInvoke("lmqWrite", System.currentTimeMillis() - start, false);
+                            long rt = System.currentTimeMillis() - start;
+                            StatUtil.addInvoke("lmqWrite", rt, false);
+                            collectLmqReadWriteMatchActionRt("lmqWrite", rt, false);
                         }
                     });
         } catch (Throwable e) {
             result.completeExceptionally(e);
         }
         return result;
+    }
+
+    private void collectLmqReadWriteMatchActionRt(String action, long rt, boolean status) {
+        try {
+            MqttMetricsCollector.collectLmqReadWriteMatchActionRt(rt, action, String.valueOf(status));
+        } catch (PrometheusException e) {
+            logger.error("", e);
+        }
     }
 
     @Override
@@ -217,7 +230,9 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                 @Override
                 public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
                     result.complete(toLmqPullResult(queue, pullResult));
-                    StatUtil.addInvoke("lmqPull", System.currentTimeMillis() - start);
+                    long rt = System.currentTimeMillis() - start;
+                    StatUtil.addInvoke("lmqPull", rt);
+                    collectLmqReadWriteMatchActionRt("lmqPull", rt, true);
                     StatUtil.addPv(pullResult.getPullStatus().name(), 1);
                     try {
                         MqttMetricsCollector.collectPullStatusTps(1, pullResult.getPullStatus().name());
@@ -230,7 +245,9 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                 public void onException(Throwable e) {
                     logger.error("", e);
                     result.completeExceptionally(e);
-                    StatUtil.addInvoke("lmqPull", System.currentTimeMillis() - start, false);
+                    long rt = System.currentTimeMillis() - start;
+                    StatUtil.addInvoke("lmqPull", rt, false);
+                    collectLmqReadWriteMatchActionRt("lmqPull", rt, false);
                 }
             });
         } catch (Throwable e) {

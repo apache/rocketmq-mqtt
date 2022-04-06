@@ -29,17 +29,20 @@ public class MqttExporter {
     private final String hostName;
     private final String hostIp;
     private final int exporterPort;
+    private final boolean exportJvmInfo;
 
-    public MqttExporter(String nameSpace, String hostName, String hostIp, int exporterPort) {
+    public MqttExporter(String nameSpace, String hostName, String hostIp, int exporterPort, boolean exportJvmInfo) {
         this.nameSpace = nameSpace;
         this.hostName = hostName;
         this.hostIp = hostIp;
         this.exporterPort = exporterPort;
+        this.exportJvmInfo = exportJvmInfo;
     }
 
     public void start() throws Exception {
-        // todo if start jvm exporter default
-        DefaultExports.initialize();
+        if (this.exportJvmInfo) {
+            DefaultExports.initialize();
+        }
         MqttMetricsCollector.initialize(this.nameSpace, this.hostName, this.hostIp, this.exporterPort);
         LOG.info("metrics exporter start success");
 

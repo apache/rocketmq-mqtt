@@ -39,7 +39,7 @@ public class ExporterServer {
     public void init() throws Exception {
         if (connectConf.isEnablePrometheus()) {
             this.mqttExporter = new MqttExporter(NAMESPACE, HOST_INFO.getName(), HOST_INFO.getAddress(),
-                connectConf.getExporterPort());
+                connectConf.getExporterPort(), connectConf.isExportJvmInfo());
             mqttExporter.start();
         }
     }

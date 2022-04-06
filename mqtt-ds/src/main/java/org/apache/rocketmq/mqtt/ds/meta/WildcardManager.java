@@ -24,6 +24,8 @@ import org.apache.rocketmq.mqtt.common.model.MqttTopic;
 import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
+import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -115,7 +117,17 @@ public class WildcardManager {
             }
             return trie.getNodePath(topic);
         } finally {
-            StatUtil.addInvoke("MatchWildcards", System.currentTimeMillis() - start);
+            long rt = System.currentTimeMillis() - start;
+            StatUtil.addInvoke("MatchWildcards", rt);
+            collectMatchActionMetrics(rt);
+        }
+    }
+
+    private void collectMatchActionMetrics(long rt) {
+        try {
+            MqttMetricsCollector.collectLmqReadWriteMatchActionRt(rt, "MatchWildcards", "unknown");
+        } catch (PrometheusException e) {
+            logger.error("collect MatchWildcards metrics error", e);
         }
     }
 

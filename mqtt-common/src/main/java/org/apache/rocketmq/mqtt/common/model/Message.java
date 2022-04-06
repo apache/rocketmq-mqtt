@@ -49,8 +49,8 @@ public class Message {
     public static String propertyUserProperties = "extData";
 
     public static String extPropertyMqttRealTopic = "mqttRealTopic";
-    public static String extPropertyQoS = "qoslevel";
-    public static String extPropertyCleanSessionFlag = "cleansessionflag";
+    public static String extPropertyQoS = "qosLevel";
+    public static String extPropertyCleanSessionFlag = "cleanSessionFlag";
     public static String extPropertyNamespaceId = "namespace";
     public static String extPropertyClientId = "clientId";
 

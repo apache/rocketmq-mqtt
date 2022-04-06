@@ -157,6 +157,10 @@ public class MqttMetricsCollector {
         collect(MqttMetricsInfo.PULL_CACHE_STATUS_TPS, val, labels);
     }
 
+    public static void collectLmqReadWriteMatchActionRt(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_MATCH_ACTION_RT, val, labels);
+    }
+
     private static String labels2String(String... labels) {
         StringBuilder sb = new StringBuilder(128);
         for (String label : labels) {

@@ -54,8 +54,7 @@ public class ConnectHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        if (cause.getMessage() != null && simpleExceptions.contains(cause.getMessage())) {
-        } else {
+        if (cause.getMessage() == null || !simpleExceptions.contains(cause.getMessage())) {
             logger.error("exceptionCaught {}", ctx.channel(), cause);
         }
         channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.SERVER, cause.getMessage());

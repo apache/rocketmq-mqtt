@@ -4,6 +4,7 @@
 [![CodeCov](https://codecov.io/gh/apache/rocketmq-mqtt/branch/main/graph/badge.svg)](https://codecov.io/gh/apache/rocketmq-mqtt)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/apache/rocketmq-mqtt.svg)](http://isitmaintained.com/project/apache/rocketmq-mqtt "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/apache/rocketmq-mqtt.svg)](http://isitmaintained.com/project/apache/rocketmq-mqtt "Percentage of issues still open")
+[![Twitter Follow](https://img.shields.io/twitter/follow/ApacheRocketMQ?style=social)](https://twitter.com/intent/follow?screen_name=ApacheRocketMQ)
 
 A new MQTT protocol architecture model, based on which RocketMQ can better support messages from terminals such as IoT devices and Mobile APP. Based on the RocketMQ message unified storage engine, it supports both MQTT terminal and server message sending and receiving.
 

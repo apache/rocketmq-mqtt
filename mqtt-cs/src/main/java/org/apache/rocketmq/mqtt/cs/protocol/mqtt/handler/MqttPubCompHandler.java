@@ -23,8 +23,7 @@ import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
-import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
-import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
+import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
@@ -40,12 +39,6 @@ public class MqttPubCompHandler implements MqttPacketHandler<MqttMessage> {
     private RetryDriver retryDriver;
 
     @Resource
-    private InFlyCache inFlyCache;
-
-    @Resource
-    private MqttMsgId mqttMsgId;
-
-    @Resource
     private PushAction pushAction;
 
     @Resource
@@ -59,7 +52,8 @@ public class MqttPubCompHandler implements MqttPacketHandler<MqttMessage> {
         retryDriver.unMountPubRel(variableHeader.messageId(), ChannelInfo.getId(ctx.channel()));
 
         //The Packet Identifier becomes available for reuse once the Sender has received the PUBCOMP Packet.
-        pushAction.rollNextByAck(sessionLoop.getSession(channelId), variableHeader.messageId());
+        Session session = sessionLoop.getSession(channelId);
+        pushAction.rollNextByAck(session, variableHeader.messageId());
     }
 
 }

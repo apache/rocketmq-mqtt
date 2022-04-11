@@ -23,6 +23,7 @@ import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
@@ -51,6 +52,7 @@ public class MqttPubAckHandler implements MqttPacketHandler<MqttPubAckMessage> {
     public void doHandler(ChannelHandlerContext ctx, MqttPubAckMessage mqttMessage, HookResult upstreamHookResult) {
         int messageId = mqttMessage.variableHeader().messageId();
         retryDriver.unMountPublish(messageId, ChannelInfo.getId(ctx.channel()));
-        pushAction.rollNextByAck(sessionLoop.getSession(ChannelInfo.getId(ctx.channel())), messageId);
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
+        pushAction.rollNextByAck(session, messageId);
     }
 }

@@ -33,7 +33,6 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
@@ -56,9 +55,6 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
     @Resource
     private SessionLoop sessionLoop;
 
-    @Resource
-    private ConnectConf connectConf;
-
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
     @Override
@@ -73,10 +69,6 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
         if (!upstreamHookResult.isSuccess()) {
             byte connAckCode = (byte) upstreamHookResult.getSubCode();
             MqttConnectReturnCode mqttConnectReturnCode = MqttConnectReturnCode.valueOf(connAckCode);
-            if (mqttConnectReturnCode == null) {
-                channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
-                return;
-            }
             channel.writeAndFlush(getMqttConnAckMessage(mqttConnectReturnCode));
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
             return;
@@ -84,6 +76,8 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
         CompletableFuture<Void> future = new CompletableFuture<>();
         ChannelInfo.setFuture(channel, ChannelInfo.FUTURE_CONNECT, future);
+
+        // use 'scheduler' to separate two i/o: 'ack to client' and 'session-load from rocketmq'
         scheduler.schedule(() -> {
             if (!future.isDone()) {
                 future.complete(null);

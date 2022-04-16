@@ -34,7 +34,6 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
@@ -54,20 +53,15 @@ import static io.netty.handler.codec.mqtt.MqttMessageType.SUBACK;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 
 
-
 @Component
 public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMessage> {
     private static Logger logger = LoggerFactory.getLogger(MqttSubscribeHandler.class);
-
 
     @Resource
     private SessionLoop sessionLoop;
 
     @Resource
     private ChannelManager channelManager;
-
-    @Resource
-    private ConnectConf connectConf;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
@@ -112,7 +106,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "SubscribeException");
         }
     }
-
 
     private MqttSubAckMessage getResponse(MqttSubscribeMessage mqttSubscribeMessage) {
         MqttSubscribePayload payload = mqttSubscribeMessage.payload();

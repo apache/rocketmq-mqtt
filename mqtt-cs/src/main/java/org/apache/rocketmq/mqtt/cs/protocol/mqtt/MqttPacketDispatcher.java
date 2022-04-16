@@ -35,7 +35,6 @@ import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelDecodeException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
-import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
@@ -91,9 +90,6 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
 
     @Resource
     private UpstreamHookManager upstreamHookManager;
-
-    @Resource
-    private ChannelManager channelManager;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {

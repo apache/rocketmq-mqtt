@@ -19,15 +19,12 @@
 
 package org.apache.rocketmq.mqtt.ds.test;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
-import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
@@ -48,11 +45,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestNotifyManager {

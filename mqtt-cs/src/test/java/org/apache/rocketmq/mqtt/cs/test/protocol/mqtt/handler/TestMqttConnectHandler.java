@@ -108,7 +108,7 @@ public class TestMqttConnectHandler {
 
         // wait scheduler execution
         try {
-            Thread.sleep(1000);
+            Thread.sleep(1100);
         } catch (InterruptedException ignored) {}
 
         verify(sessionLoop).loadSession(any(), any());
@@ -125,7 +125,7 @@ public class TestMqttConnectHandler {
 
         // wait scheduler execution
         try {
-            Thread.sleep(1000);
+            Thread.sleep(2000);
         } catch (InterruptedException ignored) {}
 
         verify(channel).writeAndFlush(any(MqttConnAckMessage.class));

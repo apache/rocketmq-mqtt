@@ -101,7 +101,7 @@ public class TestDefaultChannelManager {
         ChannelInfo.setKeepLive(channel, 1);
         Thread.sleep(1000);
         Assert.assertFalse(0 == defaultChannelManager.totalConn());
-        Thread.sleep(3000);
+        Thread.sleep(4000);
         Assert.assertTrue(0 == defaultChannelManager.totalConn());
     }
 

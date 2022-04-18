@@ -31,7 +31,7 @@ mvn clean package -DskipTests=true assembly:assembly
 ```
 3. Config
 ```shell
-cp -r  target/rocketmq-mqtt ~
+cp -r  target/rocketmq-mqtt/rocketmq-mqtt ~
 cd ~/rocketmq-mqtt
 cd conf
 ```

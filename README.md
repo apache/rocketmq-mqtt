@@ -18,6 +18,11 @@ The queue model of MQTT needs to be based on the light message queue, For the de
 The queue model of MQTT needs to be based on the light message queue feature ([RIP-28](https://github.com/apache/rocketmq/pull/3694)) of RocketMQ. RocketMQ has only supported this feature since version 4.9.3. Please ensure that the installed version of RocketMQ already supports this feature.
 
 For the quick start of light message queue, please refer to [Example_LMQ](https://github.com/apache/rocketmq/blob/develop/docs/cn/Example_LMQ.md) of RocketMQ. 
+For example, set the following parameters to true in broker.conf
+```
+enableLmq = true
+enableMultiDispatch = true
+```
 
 
 1. Clone

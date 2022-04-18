@@ -44,6 +44,7 @@ public class ConnectConfListener {
     private File confFile;
     private ScheduledThreadPoolExecutor scheduler;
     private AtomicLong gmt = new AtomicLong();
+    private long refreshSecs = 3;
 
     @PostConstruct
     public void start() {
@@ -65,7 +66,7 @@ public class ConnectConfListener {
             } catch (Exception e) {
                 logger.error("", e);
             }
-        }, 3, 3, TimeUnit.SECONDS);
+        }, refreshSecs, refreshSecs, TimeUnit.SECONDS);
     }
 
 }

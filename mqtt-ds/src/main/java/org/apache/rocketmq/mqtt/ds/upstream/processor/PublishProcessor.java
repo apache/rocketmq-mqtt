@@ -17,7 +17,7 @@
 
 package org.apache.rocketmq.mqtt.ds.upstream.processor;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
@@ -36,7 +36,6 @@ import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -66,10 +65,9 @@ public class PublishProcessor implements UpstreamProcessor {
         Message message = MessageUtil.toMessage(mqttPublishMessage);
         message.setMsgId(msgId);
         message.setBornTimestamp(System.currentTimeMillis());
-        message.setFirstTopic(mqttTopic.getFirstTopic());
-        CompletableFuture<StoreResult> storeResult = lmqQueueStore.putMessage(queueNames, message);
-        return storeResult.thenCompose(storeResult1 -> HookResult.newHookResult(HookResult.SUCCESS, null,
-                JSONObject.toJSONString(storeResult1).getBytes(StandardCharsets.UTF_8)));
+        CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
+        return storeResultFuture.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
+                JSON.toJSONBytes(storeResult)));
     }
 
 }

@@ -130,7 +130,7 @@ public class TopicUtils {
 
     public static boolean isWildCard(String topicFilter) {
         return topicFilter != null &&
-                (topicFilter.contains(Constants.JINFLAG) || topicFilter.contains(Constants.ADDFLAG));
+                (topicFilter.contains(Constants.NUMBER_SIGN) || topicFilter.contains(Constants.PLUS_SIGN));
     }
 
     public static boolean isMatch(String topic, String topicFilter) {
@@ -150,20 +150,21 @@ public class TopicUtils {
         for (int i = 0; i < minTopicLength; i++) {
             String sourceTopic = subscribeTopics[i];
 
-            if (!Constants.JINFLAG.equals(sourceTopic) &&
-                    !Constants.ADDFLAG.equals(sourceTopic)) {
+            if (!isWildCard(sourceTopic)) {
                 if (!sourceTopic.equals(messageTopics[i])) {
                     return false;
                 }
             }
             // multi level
-            if (Constants.JINFLAG.equals(sourceTopic)) {
-                return true;
+            // [MQTT-4.7.1-2] In either case '#' MUST be the last character specified in the Topic Filter
+            // and "t/t1#" is invalid
+            if (Constants.NUMBER_SIGN.equals(sourceTopic)) {
+                return i == sourceTopicLength - 1;
             }
             boolean last = i == minTopicLength - 1 &&
                     (sourceTopicLength == targetTopicLength ||
                             (sourceTopicLength == targetTopicLength + 1 &&
-                                    Constants.JINFLAG.equals(subscribeTopics[sourceTopicLength - 1])
+                                    Constants.NUMBER_SIGN.equals(subscribeTopics[sourceTopicLength - 1])
                             )
                     );
             if (last) {
@@ -183,11 +184,5 @@ public class TopicUtils {
 
     public static String wrapP2pLmq(String clientId) {
         return normalizeTopic(Constants.P2P + clientId);
-    }
-
-    public static void main(String[] args) {
-        String topic = "/t/t1/t2";
-        String topicFilter = "/t/t1/t2";
-        System.out.println(TopicUtils.isMatch(topic, topicFilter));
     }
 }

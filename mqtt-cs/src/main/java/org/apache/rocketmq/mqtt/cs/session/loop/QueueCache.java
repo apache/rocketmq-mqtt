@@ -32,6 +32,7 @@ import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -182,6 +183,7 @@ public class QueueCache {
                                         CompletableFuture<PullResult> callBackResult) {
         if (subscription.isP2p() || subscription.isRetry()) {
             StatUtil.addPv("NotPullCache", 1);
+            collectorPullCacheStatus("NotPullCache");
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -189,6 +191,7 @@ public class QueueCache {
         CacheEntry cacheEntry = cache.getIfPresent(queue);
         if (cacheEntry == null) {
             StatUtil.addPv("NoPullCache", 1);
+            collectorPullCacheStatus("NotPullCache");
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -196,6 +199,7 @@ public class QueueCache {
         if (cacheEntry.loading.get()) {
             if (System.currentTimeMillis() - cacheEntry.startLoadingT > 1000) {
                 StatUtil.addPv("LoadPullCacheTimeout", 1);
+                collectorPullCacheStatus("LoadPullCacheTimeout");
                 CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
                 callbackResult(pullResult, callBackResult);
                 return DONE;
@@ -206,10 +210,12 @@ public class QueueCache {
         List<Message> cacheMsgList = cacheEntry.messageList;
         if (cacheMsgList.isEmpty()) {
             if (loadEvent.get(queue) != null) {
+                collectorPullCacheStatus("EmptyPullCacheLATER");
                 StatUtil.addPv("EmptyPullCacheLATER", 1);
                 return LATER;
             }
             StatUtil.addPv("EmptyPullCache", 1);
+            collectorPullCacheStatus("EmptyPullCache");
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -217,6 +223,7 @@ public class QueueCache {
 
         if (queueOffset.getOffset() < cacheMsgList.get(0).getOffset()) {
             StatUtil.addPv("OutPullCache", 1);
+            collectorPullCacheStatus("OutPullCache");
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -235,9 +242,11 @@ public class QueueCache {
         if (resultMsgs.isEmpty()) {
             if (loadEvent.get(queue) != null) {
                 StatUtil.addPv("PullCacheLATER", 1);
+                collectorPullCacheStatus("PullCacheLATER");
                 return LATER;
             }
             StatUtil.addPv("OutPullCache2", 1);
+            collectorPullCacheStatus("OutPullCache2");
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -246,10 +255,19 @@ public class QueueCache {
         pullResult.setMessageList(resultMsgs);
         callBackResult.complete(pullResult);
         StatUtil.addPv("PullFromCache", 1);
+        collectorPullCacheStatus("PullFromCache");
         if (loadEvent.get(queue) != null) {
             return LATER;
         }
         return DONE;
+    }
+
+    private void collectorPullCacheStatus(String pullCacheStatus) {
+        try {
+            MqttMetricsCollector.collectPullCacheStatusTps(1, pullCacheStatus);
+        } catch (Throwable e) {
+            logger.error("", e);
+        }
     }
 
     private void loadCache(boolean isFirst, String firstTopic, Queue queue, QueueOffset queueOffset, int count,

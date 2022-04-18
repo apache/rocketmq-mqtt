@@ -103,7 +103,7 @@ public class DefaultChannelManager implements ChannelManager {
                 hashedWheelTimer.newTimeout(timeout.task(), delay, TimeUnit.MILLISECONDS);
             }
         } catch (Exception e) {
-            logger.error("", e);
+            logger.error("Exception when doPing: ", e);
         }
     }
 
@@ -114,22 +114,18 @@ public class DefaultChannelManager implements ChannelManager {
         if (clientId == null) {
             channelMap.remove(channelId);
             sessionLoop.unloadSession(clientId, channelId);
-            if (channel.isActive()) {
-                channel.close();
-            }
-            return;
+        } else {
+            //session maybe null
+            Session session = sessionLoop.unloadSession(clientId, channelId);
+            retryDriver.unloadSession(session);
+            channelMap.remove(channelId);
+            ChannelInfo.clear(channel);
         }
-
-        //session maybe null
-        Session session = sessionLoop.unloadSession(clientId, channelId);
-        retryDriver.unloadSession(session);
-        channelMap.remove(channelId);
-
-        ChannelInfo.clear(channel);
 
         if (channel.isActive()) {
             channel.close();
         }
+        logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
 
     @Override

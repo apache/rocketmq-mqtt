@@ -230,7 +230,10 @@ public class RetryDriver {
         Map<Integer, RetryMessage> noWaitRetryMsgMap = sessionNoWaitRetryMsgMap.get(channelId);
         if (noWaitRetryMsgMap == null) {
             noWaitRetryMsgMap = new ConcurrentHashMap<>(2);
-            sessionNoWaitRetryMsgMap.putIfAbsent(channelId, noWaitRetryMsgMap);
+            Map<Integer, RetryMessage> old = sessionNoWaitRetryMsgMap.putIfAbsent(channelId, noWaitRetryMsgMap);
+            if (old != null) {
+                noWaitRetryMsgMap = old;
+            }
         }
 
         if (!subscription.isRetry() &&

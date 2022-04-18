@@ -45,6 +45,9 @@ public class ConnectConf {
     private int pullBatchSize = 32;
     private int rpcListenPort = 7001;
     private int retryIntervalSeconds = 3;
+    private int exporterPort = 9090;
+    private boolean enablePrometheus = false;
+    private boolean exportJvmInfo = true;
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -178,5 +181,29 @@ public class ConnectConf {
 
     public void setRetryIntervalSeconds(int retryIntervalSeconds) {
         this.retryIntervalSeconds = retryIntervalSeconds;
+    }
+
+    public int getExporterPort() {
+        return exporterPort;
+    }
+
+    public void setExporterPort(int exporterPort) {
+        this.exporterPort = exporterPort;
+    }
+
+    public boolean isEnablePrometheus() {
+        return enablePrometheus;
+    }
+
+    public void setEnablePrometheus(boolean enablePrometheus) {
+        this.enablePrometheus = enablePrometheus;
+    }
+
+    public boolean isExportJvmInfo() {
+        return exportJvmInfo;
+    }
+
+    public void setExportJvmInfo(boolean exportJvmInfo) {
+        this.exportJvmInfo = exportJvmInfo;
     }
 }

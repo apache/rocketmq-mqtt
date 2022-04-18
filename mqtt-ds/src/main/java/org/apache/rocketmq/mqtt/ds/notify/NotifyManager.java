@@ -17,7 +17,7 @@
 
 package org.apache.rocketmq.mqtt.ds.notify;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
@@ -50,7 +50,6 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -94,7 +93,6 @@ public class NotifyManager {
         defaultMQPushConsumer.setConsumeThreadMax(64);
 
         defaultMQProducer = MqFactory.buildDefaultMQProducer(MixAll.CID_RMQ_SYS_PREFIX + "NotifyRetrySend", serviceConf.getProperties());
-        defaultMQProducer.start();
 
         try {
             defaultMQPushConsumer.start();
@@ -224,7 +222,10 @@ public class NotifyManager {
                 AtomicInteger nodeFailCount = nodeFail.get(node);
                 if (nodeFailCount == null) {
                     nodeFailCount = new AtomicInteger();
-                    nodeFail.putIfAbsent(node, nodeFailCount);
+                    AtomicInteger old = nodeFail.putIfAbsent(node, nodeFailCount);
+                    if (old != null) {
+                        nodeFailCount = old;
+                    }
                 }
                 if (nodeFailCount.get() > NODE_FAIL_MAX_NUM) {
                     sendEventRetryMsg(messageEvents, 1, node, 0);
@@ -267,7 +268,7 @@ public class NotifyManager {
     private RemotingCommand createMsgEventCommand(Set<MessageEvent> messageEvents) {
         RemotingCommand remotingCommand = RemotingCommand.createRequestCommand(RpcCode.CMD_NOTIFY_MQTT_MESSAGE,
                 null);
-        remotingCommand.setBody(JSONObject.toJSONString(messageEvents).getBytes(StandardCharsets.UTF_8));
+        remotingCommand.setBody(JSON.toJSONBytes(messageEvents));
         return remotingCommand;
     }
 
@@ -279,7 +280,7 @@ public class NotifyManager {
         }
         Message message = new Message();
         message.setTopic(serviceConf.getEventNotifyRetryTopic());
-        message.setBody(JSONObject.toJSONString(messageEvents).getBytes(StandardCharsets.UTF_8));
+        message.setBody(JSON.toJSONBytes(messageEvents));
         message.setDelayTimeLevel(delayLevel);
         message.putUserProperty(Constants.PROPERTY_MQTT_MSG_EVENT_RETRY_NODE, node);
         message.putUserProperty(Constants.PROPERTY_MQTT_MSG_EVENT_RETRY_TIME, String.valueOf(retryTime + 1));

@@ -17,7 +17,6 @@
 
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
@@ -44,11 +43,9 @@ import java.util.Set;
 import static io.netty.handler.codec.mqtt.MqttMessageType.UNSUBACK;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 
-
 @Component
 public class MqttUnSubscribeHandler implements MqttPacketHandler<MqttUnsubscribeMessage> {
     private static Logger logger = LoggerFactory.getLogger(MqttUnSubscribeHandler.class);
-
 
     @Resource
     private SessionLoop sessionLoop;
@@ -58,7 +55,6 @@ public class MqttUnSubscribeHandler implements MqttPacketHandler<MqttUnsubscribe
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttUnsubscribeMessage mqttMessage, HookResult upstreamHookResult) {
-        long start = System.currentTimeMillis();
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Channel channel = ctx.channel();
         String remark = upstreamHookResult.getRemark();

@@ -36,7 +36,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.ws.WebsocketEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -117,7 +117,7 @@ public class MqttServer {
                     pipeline.addLast("aggregator", new HttpObjectAggregator(connectConf.getMaxPacketSizeInByte() * 2));
                     pipeline.addLast("http-chunked", new ChunkedWriteHandler());
                     pipeline.addLast("websocket-handler", webSocketServerHandler);
-                    pipeline.addLast("websocket-encoder", new WebsocketEncoder());
+                    pipeline.addLast("websocket-encoder", new WebSocketEncoder());
                     pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
                     pipeline.addLast("encoder", MqttEncoder.INSTANCE);
                     pipeline.addLast("dispatcher", mqttPacketDispatcher);

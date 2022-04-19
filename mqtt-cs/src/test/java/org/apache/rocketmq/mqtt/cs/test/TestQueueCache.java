@@ -22,7 +22,11 @@ package org.apache.rocketmq.mqtt.cs.test;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.model.*;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.PullResult;
+import org.apache.rocketmq.mqtt.common.model.Queue;
+import org.apache.rocketmq.mqtt.common.model.QueueOffset;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.loop.QueueCache;
@@ -40,7 +44,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

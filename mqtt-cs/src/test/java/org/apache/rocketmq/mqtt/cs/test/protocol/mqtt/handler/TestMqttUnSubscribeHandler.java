@@ -19,22 +19,21 @@ package org.apache.rocketmq.mqtt.cs.test.protocol.mqtt.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.mqtt.MqttConnAckMessage;
-import io.netty.handler.codec.mqtt.MqttConnectMessage;
-import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
+import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
+import io.netty.handler.codec.mqtt.MqttUnsubscribePayload;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.DefaultChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttUnSubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,17 +41,31 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestMqttConnectHandler {
-    private MqttConnectHandler connectHandler;
-    private MqttConnectMessage connectMessage;
+public class TestMqttUnSubscribeHandler {
+    private final int messageId = 666;
+    private final MqttMessageIdVariableHeader idVariableHeader = MqttMessageIdVariableHeader.from(messageId);
+    private final String topicFilter = "test/unSubscribe/#/";
+
+    private MqttFixedHeader mqttFixedHeader;
+    private MqttUnsubscribePayload unsubscribePayload;
+    private MqttUnsubscribeMessage unsubscribeMessage;
+    private List<String> topicList;
+
+    private MqttUnSubscribeHandler unSubscribeHandler;
 
     @Spy
     private NioSocketChannel channel;
@@ -67,69 +80,45 @@ public class TestMqttConnectHandler {
     private SessionLoop sessionLoop;
 
     @Before
-    public void setUp() throws IllegalAccessException {
-        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
-        MqttConnectVariableHeader variableHeader = new MqttConnectVariableHeader(null, 0, false,
-            false, false, 0, false, true, 1);
-        MqttConnectPayload payload = new MqttConnectPayload("testConnHandler", null, (byte[]) null, null, null);
-        connectMessage = new MqttConnectMessage(mqttFixedHeader, variableHeader, payload);
+    public void setUp() throws Exception {
+        mqttFixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        topicList = new ArrayList<>();
+        topicList.add(topicFilter);
+        unsubscribePayload = new MqttUnsubscribePayload(topicList);
+        unsubscribeMessage = new MqttUnsubscribeMessage(mqttFixedHeader, idVariableHeader, unsubscribePayload);
 
-        connectHandler = new MqttConnectHandler();
-        FieldUtils.writeDeclaredField(connectHandler, "channelManager", channelManager, true);
-        FieldUtils.writeDeclaredField(connectHandler, "sessionLoop", sessionLoop, true);
+        unSubscribeHandler = new MqttUnSubscribeHandler();
+        FieldUtils.writeDeclaredField(unSubscribeHandler, "channelManager", channelManager, true);
+        FieldUtils.writeDeclaredField(unSubscribeHandler, "sessionLoop", sessionLoop, true);
 
         when(ctx.channel()).thenReturn(channel);
     }
 
-    @After
-    public void After() {}
-
     @Test
     public void testDoHandlerAuthFailed() {
         HookResult authFailHook = new HookResult(HookResult.FAIL,
-            MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
-        doReturn(null).when(channel).writeAndFlush(any());
+                MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
         doNothing().when(channelManager).closeConnect(channel, ChannelCloseFrom.SERVER, Remark.AUTH_FAILED);
 
-        connectHandler.doHandler(ctx, connectMessage, authFailHook);
+        unSubscribeHandler.doHandler(ctx, unsubscribeMessage, authFailHook);
 
-        verify(channel).writeAndFlush(any());
+        verify(ctx, times(2)).channel();
         verify(channelManager).closeConnect(channel, ChannelCloseFrom.SERVER, Remark.AUTH_FAILED);
-        verifyNoMoreInteractions(channelManager, sessionLoop);
-    }
-
-    @Test
-    public void testDoHandlerChannelInActive() {
-        HookResult hookResult = new HookResult(HookResult.SUCCESS, Remark.SUCCESS, null);
-        doReturn(false).when(channel).isActive();
-        doNothing().when(sessionLoop).loadSession(any(), any());
-
-        connectHandler.doHandler(ctx, connectMessage, hookResult);
-
-        // wait scheduler execution
-        try {
-            Thread.sleep(1100);
-        } catch (InterruptedException ignored) {}
-
-        verify(sessionLoop).loadSession(any(), any());
-        verifyNoMoreInteractions(channelManager, sessionLoop);
+        verifyNoMoreInteractions(channelManager, sessionLoop, ctx);
     }
 
     @Test
     public void testDoHandlerSuccess() {
         HookResult hookResult = new HookResult(HookResult.SUCCESS, Remark.SUCCESS, null);
-        doReturn(true).when(channel).isActive();
-        doNothing().when(sessionLoop).loadSession(any(), any());
+        doNothing().when(sessionLoop).removeSubscription(anyString(), anySet());
+        doReturn(null).when(channel).writeAndFlush(any(MqttUnsubAckMessage.class));
 
-        connectHandler.doHandler(ctx, connectMessage, hookResult);
+        unSubscribeHandler.doHandler(ctx, unsubscribeMessage, hookResult);
 
-        // wait scheduler execution
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException ignored) {}
-
-        verify(channel).writeAndFlush(any(MqttConnAckMessage.class));
-        verify(sessionLoop).loadSession(any(), any());
-        verifyNoMoreInteractions(channelManager, sessionLoop);
+        verify(ctx, times(3)).channel();
+        verify(sessionLoop).removeSubscription(anyString(), anySet());
+        verify(channel).writeAndFlush(any(MqttUnsubAckMessage.class));
+        verifyNoMoreInteractions(channelManager, sessionLoop, ctx);
     }
+
 }

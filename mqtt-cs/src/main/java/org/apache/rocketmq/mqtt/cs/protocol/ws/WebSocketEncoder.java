@@ -24,7 +24,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 
-public class WebsocketEncoder extends MessageToMessageEncoder<ByteBuf> {
+public class WebSocketEncoder extends MessageToMessageEncoder<ByteBuf> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {

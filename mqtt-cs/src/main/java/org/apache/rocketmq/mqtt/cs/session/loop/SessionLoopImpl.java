@@ -358,6 +358,8 @@ public class SessionLoopImpl implements SessionLoop {
                     }, 3, TimeUnit.SECONDS);
                     return;
                 }
+                session.addSubscription(subscriptions);
+                matchAction.addSubscription(session, subscriptions);
                 session.setLoaded();
                 notifyPullMessage(session, subscription, queue);
             });

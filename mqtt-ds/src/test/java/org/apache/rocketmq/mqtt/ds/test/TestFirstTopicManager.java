@@ -22,8 +22,10 @@ package org.apache.rocketmq.mqtt.ds.test;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.protocol.ResponseCode;
 import org.apache.rocketmq.common.protocol.route.BrokerData;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
@@ -38,13 +40,19 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -91,6 +99,18 @@ public class TestFirstTopicManager {
         Assert.assertFalse(topicExistCache.getIfPresent("test") == null);
         Assert.assertTrue("test".equals(firstTopicManager.getBrokerAddressMap("test").keySet().iterator().next()));
         Assert.assertTrue("test".equals(firstTopicManager.getReadableBrokers("test").iterator().next()));
+    }
+
+    @Test
+    public void notExistTopicRoute() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException, InvocationTargetException, NoSuchMethodException {
+        FirstTopicManager firstTopicManager = new FirstTopicManager();
+        DefaultMQAdminExt defaultMQAdminExt = mock(DefaultMQAdminExt.class);
+        FieldUtils.writeDeclaredField(firstTopicManager, "defaultMQAdminExt", defaultMQAdminExt, true);
+        when(defaultMQAdminExt.examineTopicRouteInfo(anyString())).thenThrow(new MQClientException(ResponseCode.TOPIC_NOT_EXIST, ""));
+        Map<String, Set<String>> readableBrokers = mock(HashMap.class);
+        FieldUtils.writeDeclaredField(firstTopicManager, "readableBrokers", readableBrokers, true);
+        MethodUtils.invokeMethod(firstTopicManager, true, "updateTopicRoute", "test");
+        verify(readableBrokers).remove(eq("test"));
     }
 
 }

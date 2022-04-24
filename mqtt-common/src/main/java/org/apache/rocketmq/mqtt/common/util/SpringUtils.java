@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.starter;
+package org.apache.rocketmq.mqtt.common.util;
 
-import org.apache.rocketmq.client.log.ClientLogger;
-import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+public class SpringUtils {
+    private static ClassPathXmlApplicationContext applicationContext;
 
-public class Startup {
-
-    public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
-
-        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
-        SpringUtils.SetClassPathXmlApplicationContext(applicationContext);
-        System.out.println("start rocketmq mqtt  ...");
+    public static void SetClassPathXmlApplicationContext(ClassPathXmlApplicationContext applicationContext) {
+        SpringUtils.applicationContext = applicationContext;
     }
 
+    public static <T> T getBean(Class<T> type) {
+        if (applicationContext == null) {
+            return null;
+        }
+        return applicationContext.getBean(type);
+    }
 }

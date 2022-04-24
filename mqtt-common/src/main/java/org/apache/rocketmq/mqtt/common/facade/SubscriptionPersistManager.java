@@ -15,21 +15,35 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.starter;
+package org.apache.rocketmq.mqtt.common.facade;
 
-import org.apache.rocketmq.client.log.ClientLogger;
-import org.apache.rocketmq.mqtt.common.util.SpringUtils;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
 
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
-public class Startup {
+public interface SubscriptionPersistManager {
+    /**
+     * loadSubscriptions
+     *
+     * @param clientId
+     * @return
+     */
+    CompletableFuture<Set<Subscription>> loadSubscriptions(String clientId);
 
-    public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
+    /**
+     * saveSubscriptions
+     *
+     * @param clientId
+     * @param subscriptions
+     */
+    void saveSubscriptions(String clientId, Set<Subscription> subscriptions);
 
-        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
-        SpringUtils.SetClassPathXmlApplicationContext(applicationContext);
-        System.out.println("start rocketmq mqtt  ...");
-    }
-
+    /**
+     * removeSubscriptions
+     *
+     * @param clientId
+     * @param subscriptions
+     */
+    void removeSubscriptions(String clientId, Set<Subscription> subscriptions);
 }

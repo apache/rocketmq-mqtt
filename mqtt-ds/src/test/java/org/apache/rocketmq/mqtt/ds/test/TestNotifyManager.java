@@ -59,6 +59,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -141,9 +142,9 @@ public class TestNotifyManager {
         DefaultMQProducer defaultMQProducer = mock(DefaultMQProducer.class);
         FieldUtils.writeDeclaredField(notifyManager, "defaultMQProducer", defaultMQProducer, true);
         Set<MessageEvent> events = new HashSet<>(Arrays.asList(new MessageEvent()));
-        when(defaultMQProducer.send(any(Message.class))).thenThrow(new RuntimeException());
         MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test",
                 serviceConf.getEventNotifyRetryMaxTime() + 1);
+        verify(defaultMQProducer,times(0)).send(any(Message.class));
         defaultMQProducer = mock(DefaultMQProducer.class);
         FieldUtils.writeDeclaredField(notifyManager, "defaultMQProducer", defaultMQProducer, true);
         MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test", 1);

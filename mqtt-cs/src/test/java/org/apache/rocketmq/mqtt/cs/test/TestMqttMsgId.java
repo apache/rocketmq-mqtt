@@ -32,7 +32,17 @@ public class TestMqttMsgId {
     public void test() {
         MqttMsgId mqttMsgId = new MqttMsgId();
         mqttMsgId.init();
-        int id = mqttMsgId.nextId("test");
-        Assert.assertFalse(mqttMsgId.nextId("test") == id);
+
+        String clientId = "testMsgId";
+        int loopCount = 0, maxMsgId = 65535;
+        while (loopCount < maxMsgId) {
+            Assert.assertEquals(loopCount + 1, mqttMsgId.nextId(clientId));
+            loopCount++;
+        }
+        // new round by triggering 'inUseMsgIds.clear' when 'startingMessageId' == 65535
+        Assert.assertEquals(loopCount, mqttMsgId.nextId(clientId));
+
+        mqttMsgId.releaseId(maxMsgId, "");
+        mqttMsgId.releaseId(maxMsgId, clientId);
     }
 }

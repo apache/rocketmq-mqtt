@@ -24,7 +24,15 @@ import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.utils.MessageUtil;
+import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageAccessor;
+import org.apache.rocketmq.common.message.MessageConst;
+import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
+import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
@@ -51,6 +59,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -111,4 +120,34 @@ public class TestNotifyManager {
         Assert.assertArrayEquals(remotingCommand.getBody(), bytes);
     }
 
+    @Test
+    public void testSetPubTopic() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException {
+        NotifyManager notifyManager = new NotifyManager();
+        MessageEvent event = new MessageEvent();
+        MessageExt message = new MessageExt();
+        message.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC, "test");
+        MethodUtils.invokeMethod(notifyManager, true, "setPubTopic", event, message);
+        Assert.assertTrue(event.getPubTopic().equals("test"));
+        MessageAccessor.clearProperty(message, Constants.PROPERTY_ORIGIN_MQTT_TOPIC);
+        message.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH, MixAll.LMQ_PREFIX + "test");
+        MethodUtils.invokeMethod(notifyManager, true, "setPubTopic", event, message);
+        Assert.assertTrue(event.getPubTopic().equals("test"));
+    }
+
+    @Test
+    public void sendEventRetryMsg() throws Exception {
+        NotifyManager notifyManager = new NotifyManager();
+        when(serviceConf.getEventNotifyRetryMaxTime()).thenReturn(3);
+        FieldUtils.writeDeclaredField(notifyManager, "serviceConf", serviceConf, true);
+        DefaultMQProducer defaultMQProducer = mock(DefaultMQProducer.class);
+        FieldUtils.writeDeclaredField(notifyManager, "defaultMQProducer", defaultMQProducer, true);
+        Set<MessageEvent> events = new HashSet<>(Arrays.asList(new MessageEvent()));
+        MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test",
+                serviceConf.getEventNotifyRetryMaxTime() + 1);
+        verify(defaultMQProducer,times(0)).send(any(Message.class));
+        defaultMQProducer = mock(DefaultMQProducer.class);
+        FieldUtils.writeDeclaredField(notifyManager, "defaultMQProducer", defaultMQProducer, true);
+        MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test", 1);
+        verify(defaultMQProducer).send(any(Message.class));
+    }
 }

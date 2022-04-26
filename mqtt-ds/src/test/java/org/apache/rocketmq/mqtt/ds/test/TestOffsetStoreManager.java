@@ -56,7 +56,7 @@ import static org.mockito.Mockito.when;
  * @date 2022-03-14 11:50
  */
 @RunWith(MockitoJUnitRunner.class)
-public class LmqOffsetStoreManagerTest {
+public class TestOffsetStoreManager {
     @Mock
     private FirstTopicManager firstTopicManager;
 

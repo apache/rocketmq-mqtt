@@ -189,10 +189,7 @@ public class Message {
     }
 
     public boolean isP2P() {
-        if (TopicUtils.isP2P(TopicUtils.decode(firstTopic).getSecondTopic())) {
-            return true;
-        }
-        return false;
+        return TopicUtils.isP2P(TopicUtils.decode(firstTopic).getSecondTopic());
     }
 
     @Override

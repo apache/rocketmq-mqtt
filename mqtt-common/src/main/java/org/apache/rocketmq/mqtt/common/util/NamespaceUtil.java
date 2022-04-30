@@ -24,20 +24,16 @@ public class NamespaceUtil {
     private static final int RESOURCE_LENGTH = 2;
     public static final String MQ_DEFAULT_NAMESPACE_NAME = "DEFAULT_INSTANCE";
 
-    public NamespaceUtil() {
-    }
-
     public static String encodeToNamespaceResource(String namespace, String resource) {
-        return resource != null && namespace != null ? StringUtils.join(new String[]{namespace, "%", resource}) : resource;
+        return resource != null && namespace != null ? StringUtils.join(namespace, NAMESPACE_SPLITER, resource) : resource;
     }
 
     public static String decodeOriginResource(String resource) {
-        if (resource != null && resource.contains("%")) {
-            int firstIndex = resource.indexOf("%");
+        if (resource != null && resource.contains(NAMESPACE_SPLITER)) {
+            int firstIndex = resource.indexOf(NAMESPACE_SPLITER);
             return resource.substring(firstIndex + 1);
-        } else {
-            return resource;
         }
+        return resource;
     }
 
     public static String decodeMqttNamespaceIdFromKey(String key) {
@@ -45,24 +41,18 @@ public class NamespaceUtil {
     }
 
     public static String decodeMqttNamespaceIdFromClientId(String clientId) {
-        if (clientId != null && clientId.contains("%")) {
-            String mqttNamespaceId = clientId.split("%")[0];
-            return mqttNamespaceId;
-        } else {
-            return null;
-        }
+        return splitNamespaceStr(clientId);
     }
 
     public static String decodeStoreNamespaceIdFromTopic(String topic) {
-        if (topic != null && topic.contains("%")) {
-            String storeNamespaceId = topic.split("%")[0];
-            return storeNamespaceId;
-        } else {
-            return null;
-        }
+        return splitNamespaceStr(topic);
     }
 
     public static String decodeNamespaceId(String resource) {
-        return resource != null && resource.contains("%") ? resource.split("%")[0] : null;
+        return splitNamespaceStr(resource);
+    }
+
+    private static String splitNamespaceStr(String namespaceStr) {
+        return namespaceStr != null && namespaceStr.contains(NAMESPACE_SPLITER) ? namespaceStr.split(NAMESPACE_SPLITER)[0] : null;
     }
 }

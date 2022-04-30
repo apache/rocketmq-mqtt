@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.test;
+package org.apache.rocketmq.mqtt.common.test.util;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -31,7 +31,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TestMessageUtil {
 
@@ -40,7 +43,8 @@ public class TestMessageUtil {
     int qos;
     int mqttId;
     MqttPublishMessage mqttPublishMessage;
-
+    Message message;
+    List<Message> messageList;
 
     @Before
     public void Before() {
@@ -54,6 +58,13 @@ public class TestMessageUtil {
         payload.writeBytes(body);
         mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(qos), false, 0),
                 new MqttPublishVariableHeader(topicName, mqttId), payload);
+
+        message = new Message();
+        message.setFirstTopic(topicName);
+        message.putUserProperty(Message.extPropertyQoS, String.valueOf(qos));
+        message.setPayload(messageBody.getBytes(StandardCharsets.UTF_8));
+        messageList = new ArrayList<>();
+        messageList.add(message);
     }
 
     @Test
@@ -63,10 +74,14 @@ public class TestMessageUtil {
 
     @Test
     public void TestToMessage() {
-        Message message = new Message();
-        message.setFirstTopic(topicName);
-        message.putUserProperty(Message.extPropertyQoS, String.valueOf(qos));
-        message.setPayload(messageBody.getBytes(StandardCharsets.UTF_8));
         Assert.assertEquals(message, MessageUtil.toMessage(mqttPublishMessage));
+    }
+
+    @Test
+    public void TestEncodeAndDecode() throws Exception {
+        byte[] bytes = MessageUtil.encode(messageList);
+        List<Message> decodeMsgList = MessageUtil.decode(ByteBuffer.wrap(bytes));
+        Assert.assertEquals(1, decodeMsgList.size());
+        Assert.assertEquals(message, decodeMsgList.get(0));
     }
 }

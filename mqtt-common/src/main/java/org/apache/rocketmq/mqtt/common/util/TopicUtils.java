@@ -31,7 +31,7 @@ public class TopicUtils {
      * @return
      */
     public static String normalizeTopic(String topic) {
-        if (topic == null) {
+        if (topic == null || topic.isEmpty()) {
             return null;
         }
         if (!topic.contains(Constants.MQTT_TOPIC_DELIMITER)) {
@@ -46,20 +46,20 @@ public class TopicUtils {
     /**
      * /t2/t3/t4/
      *
-     * @param secondtopic
+     * @param secondTopic
      * @return
      */
-    public static String normalizeSecondTopic(String secondtopic) {
-        if (secondtopic == null || secondtopic.isEmpty()) {
+    public static String normalizeSecondTopic(String secondTopic) {
+        if (secondTopic == null || secondTopic.isEmpty()) {
             return null;
         }
-        if (!secondtopic.startsWith(Constants.MQTT_TOPIC_DELIMITER)) {
-            secondtopic = Constants.MQTT_TOPIC_DELIMITER + secondtopic;
+        if (!secondTopic.startsWith(Constants.MQTT_TOPIC_DELIMITER)) {
+            secondTopic = Constants.MQTT_TOPIC_DELIMITER + secondTopic;
         }
-        if (!secondtopic.endsWith(Constants.MQTT_TOPIC_DELIMITER)) {
-            return secondtopic + Constants.MQTT_TOPIC_DELIMITER;
+        if (!secondTopic.endsWith(Constants.MQTT_TOPIC_DELIMITER)) {
+            return secondTopic + Constants.MQTT_TOPIC_DELIMITER;
         }
-        return secondtopic;
+        return secondTopic;
     }
 
     public static boolean isP2P(String secondTopic) {
@@ -93,10 +93,10 @@ public class TopicUtils {
     }
 
     public static String getP2Peer(MqttTopic mqttTopic, String namespace) {
-        if (!isP2P(mqttTopic.getSecondTopic())) {
+        if (mqttTopic.getSecondTopic() == null || mqttTopic.getFirstTopic() == null) {
             return null;
         }
-        if (mqttTopic.getSecondTopic() == null || mqttTopic.getFirstTopic() == null) {
+        if (!isP2P(mqttTopic.getSecondTopic())) {
             return null;
         }
         if (mqttTopic.getFirstTopic().contains(Constants.NAMESPACE_SPLITER) && StringUtils.isNotBlank(namespace)) {

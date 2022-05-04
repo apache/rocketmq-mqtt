@@ -86,6 +86,8 @@ public class TestRetryDriver {
     private int pubRelMsgId = 2;
     private int scheduleDelaySecs = 1;
     private long messageRetryInterval = 200;
+    private int retryIntervalSecs = scheduleDelaySecs;
+    private int maxRetryTime = 1;
     private CompletableFuture<StoreResult> completableFuture = new CompletableFuture<>();
 
     @Before
@@ -99,8 +101,8 @@ public class TestRetryDriver {
         FieldUtils.writeDeclaredField(retryDriver, "queueFresh", queueFresh, true);
         FieldUtils.writeDeclaredField(retryDriver, "messageRetryInterval", messageRetryInterval, true);
 
-        when(connectConf.getRetryIntervalSeconds()).thenReturn(1);
-        when(connectConf.getMaxRetryTime()).thenReturn(1);
+        when(connectConf.getRetryIntervalSeconds()).thenReturn(retryIntervalSecs);
+        when(connectConf.getMaxRetryTime()).thenReturn(maxRetryTime);
         retryDriver.init();
 
         when(session.getChannelId()).thenReturn(channelId);
@@ -130,7 +132,7 @@ public class TestRetryDriver {
         // meanwhile set 'messageRetryInterval = 200' to skip continue judgment
         Thread.sleep(1200);
 
-        verify(pushAction, atLeastOnce()).write(any(), any(), eq(1), eq(1), any());
+        verify(pushAction, atLeastOnce()).write(any(), any(), eq(messageId), eq(1), any());
         Assert.assertNotNull(retryDriver.unMountPublish(messageId, channelId));
     }
 

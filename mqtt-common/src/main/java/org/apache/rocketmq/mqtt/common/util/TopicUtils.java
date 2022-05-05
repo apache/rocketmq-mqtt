@@ -31,7 +31,7 @@ public class TopicUtils {
      * @return
      */
     public static String normalizeTopic(String topic) {
-        if (topic == null || topic.isEmpty()) {
+        if (StringUtils.isBlank(topic)) {
             return null;
         }
         if (!topic.contains(Constants.MQTT_TOPIC_DELIMITER)) {
@@ -50,7 +50,7 @@ public class TopicUtils {
      * @return
      */
     public static String normalizeSecondTopic(String secondTopic) {
-        if (secondTopic == null || secondTopic.isEmpty()) {
+        if (StringUtils.isBlank(secondTopic)) {
             return null;
         }
         if (!secondTopic.startsWith(Constants.MQTT_TOPIC_DELIMITER)) {

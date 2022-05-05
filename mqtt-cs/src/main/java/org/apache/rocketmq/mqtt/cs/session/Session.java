@@ -140,7 +140,7 @@ public class Session {
             if (subscription == null) {
                 continue;
             }
-            Map<Queue, QueueOffset> queueMap = new HashMap<>(8);
+            Map<Queue, QueueOffset> queueMap = new HashMap<>(offsetMap.get(queueName).size());
             tmp.put(subscription, queueMap);
             queueMap.putAll(offsetMap.get(queueName));
         }

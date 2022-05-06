@@ -17,15 +17,18 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.cs.test;
+package org.apache.rocketmq.mqtt.cs.test.session.notify;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.rocketmq.mqtt.common.model.MessageEvent;
+import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.loop.QueueCache;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
-import org.junit.Assert;
+import org.apache.rocketmq.mqtt.cs.session.notify.MessageNotifyAction;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -36,19 +39,33 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestMatchAction {
+public class TestMessageNotifyAction {
 
     @Mock
     private SessionLoop sessionLoop;
+
+    @Mock
+    private QueueFresh queueFresh;
+
+    @Mock
+    private QueueCache queueCache;
 
     @Test
     public void test() throws IllegalAccessException {
         MatchAction matchAction = new MatchAction();
         FieldUtils.writeDeclaredField(matchAction, "sessionLoop", sessionLoop, true);
+
+        MessageNotifyAction messageNotifyAction = new MessageNotifyAction();
+        FieldUtils.writeDeclaredField(messageNotifyAction, "sessionLoop", sessionLoop, true);
+        FieldUtils.writeDeclaredField(messageNotifyAction, "queueFresh", queueFresh, true);
+        FieldUtils.writeDeclaredField(messageNotifyAction, "queueCache", queueCache, true);
+        FieldUtils.writeDeclaredField(messageNotifyAction, "matchAction", matchAction, true);
 
         Session session = mock(Session.class);
         when(session.getChannelId()).thenReturn("test");
@@ -56,14 +73,17 @@ public class TestMatchAction {
         Subscription subscription = new Subscription("test");
         Set<Subscription> subscriptions = new HashSet<>(Arrays.asList(subscription));
         when(session.subscriptionSnapshot()).thenReturn(subscriptions);
-
         matchAction.addSubscription(session, subscriptions);
-        Set<Pair<Session, Subscription>> set =  matchAction.matchClients("test","");
-        Assert.assertFalse(set.isEmpty());
 
-        matchAction.removeSubscription(session,subscriptions);
-        set =  matchAction.matchClients("test","");
-        Assert.assertTrue(set.isEmpty());
+        Queue queue = new Queue(0, "test", "test");
+        when(queueFresh.freshQueue(eq(session), eq(subscription))).thenReturn(new HashSet<>(Arrays.asList(queue)));
+
+        MessageEvent messageEvent = new MessageEvent();
+        messageEvent.setPubTopic("test");
+        messageEvent.setBrokerName("test");
+        messageEvent.setQueueId(0);
+        messageNotifyAction.notify(Arrays.asList(messageEvent));
+        verify(sessionLoop).notifyPullMessage(eq(session), eq(subscription), eq(queue));
     }
 
 }

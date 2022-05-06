@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.cs.test;
+package org.apache.rocketmq.mqtt.cs.test.session.infly;
 
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.junit.Assert;

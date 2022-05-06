@@ -84,6 +84,8 @@ public class RetryDriver {
 
     private Cache<String, RetryMessage> retryCache;
     private static final int MAX_CACHE = 50000;
+    private int scheduleDelaySecs = 3;
+    private long messageRetryInterval = 3000;
     private Map<String, Map<Integer, RetryMessage>> sessionNoWaitRetryMsgMap = new ConcurrentHashMap<>(16);
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(2,
             new ThreadFactoryImpl("retry_msg_thread_"));
@@ -99,7 +101,7 @@ public class RetryDriver {
             }
         }).build();
 
-        scheduler.scheduleWithFixedDelay(() -> doRetryCache(), 3, connectConf.getRetryIntervalSeconds(), TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(() -> doRetryCache(), scheduleDelaySecs, connectConf.getRetryIntervalSeconds(), TimeUnit.SECONDS);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Map<String, RetryMessage> map = retryCache.asMap();
@@ -164,7 +166,7 @@ public class RetryDriver {
                         }
                     }
                 }
-            }, 3, TimeUnit.SECONDS);
+            }, scheduleDelaySecs, TimeUnit.SECONDS);
         });
     }
 
@@ -176,9 +178,11 @@ public class RetryDriver {
                     Message message = retryMessage.message;
                     Session session = retryMessage.session;
                     int mqttMsgId = retryMessage.mqttMsgId;
-                    if (System.currentTimeMillis() - retryMessage.timestamp < 3000) {
+
+                    if (System.currentTimeMillis() - retryMessage.timestamp < messageRetryInterval) {
                         continue;
                     }
+
                     if (MqttMessageType.PUBLISH.equals(retryMessage.mqttMessageType)) {
                         if (session == null || session.isDestroyed()) {
                             cleanRetryMessage(mqttMsgId, session.getChannelId());

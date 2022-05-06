@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.cs.test;
+package org.apache.rocketmq.mqtt.cs.test.session.infly;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.model.Message;

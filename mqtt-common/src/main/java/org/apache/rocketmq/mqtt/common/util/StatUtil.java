@@ -227,40 +227,7 @@ public class StatUtil {
     }
 
     public static void addInvoke(String key, long rt, boolean success) {
-        if (invokeCache.size() > MAX_KEY_NUM || secondInvokeCache.size() > MAX_KEY_NUM) {
-            return;
-        }
-        Invoke invoke = getAndSetInvoke(key);
-        if (invoke == null) {
-            return;
-        }
-
-        invoke.totalPv.getAndIncrement();
-        if (!success) {
-            invoke.failPv.getAndIncrement();
-        }
-        long now = nowSecond();
-        AtomicLong oldSecond = invoke.second;
-        if (oldSecond.get() == now) {
-            invoke.secondPv.getAndIncrement();
-        } else {
-            if (oldSecond.compareAndSet(oldSecond.get(), now)) {
-                if (invoke.secondPv.get() > invoke.topSecondPv.get()) {
-                    invoke.topSecondPv.set(invoke.secondPv.get());
-                }
-                invoke.secondPv.set(1);
-            } else {
-                invoke.secondPv.getAndIncrement();
-            }
-        }
-
-        invoke.sumRt.addAndGet(rt);
-        if (invoke.maxRt.get() < rt) {
-            invoke.maxRt.set(rt);
-        }
-        if (invoke.minRt.get() > rt) {
-            invoke.minRt.set(rt);
-        }
+        addInvoke(key, 1, rt, success);
     }
 
     public static SecondInvoke getAndSetSecondInvoke(String key) {
@@ -431,7 +398,6 @@ public class StatUtil {
     public static int maxRtInWindow(String key, int windowSeconds) {
         List<SecondInvoke> list = secondInvokeList(key, windowSeconds);
         long maxRt = 0;
-        long totalPv = 0;
         for (int i = 0; i < windowSeconds && i < list.size(); i++) {
             if (maxRt < list.get(i).maxRt.get()) {
                 maxRt = list.get(i).maxRt.get();
@@ -443,7 +409,6 @@ public class StatUtil {
     public static int minRtInWindow(String key, int windowSeconds) {
         List<SecondInvoke> list = secondInvokeList(key, windowSeconds);
         long minRt = 0;
-        long totalPv = 0;
         for (int i = 0; i < windowSeconds && i < list.size(); i++) {
             if (minRt < list.get(i).minRt.get()) {
                 minRt = list.get(i).minRt.get();

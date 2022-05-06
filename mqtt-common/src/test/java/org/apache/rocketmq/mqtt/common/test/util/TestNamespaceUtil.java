@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.common.test;
+package org.apache.rocketmq.mqtt.common.test.util;
 
 import org.apache.rocketmq.mqtt.common.util.NamespaceUtil;
 import org.junit.Assert;
@@ -40,6 +40,7 @@ public class TestNamespaceUtil {
     @Test
     public void testDecodeOriginResource() {
         Assert.assertEquals(originResource, NamespaceUtil.decodeOriginResource(resource));
+        Assert.assertEquals(originResource, NamespaceUtil.decodeOriginResource(originResource));
     }
 
     @Test
@@ -55,11 +56,13 @@ public class TestNamespaceUtil {
     @Test
     public void testDecodeMqttNamespaceIdFromClientId() {
         Assert.assertEquals(namespace, NamespaceUtil.decodeMqttNamespaceIdFromClientId(resource));
+        Assert.assertNull(NamespaceUtil.decodeMqttNamespaceIdFromClientId(originResource));
     }
 
     @Test
     public void testDecodeStoreNamespaceIdFromTopic() {
         Assert.assertEquals(namespace, NamespaceUtil.decodeStoreNamespaceIdFromTopic(resource));
+        Assert.assertNull(NamespaceUtil.decodeStoreNamespaceIdFromTopic(originResource));
     }
 
     @Test

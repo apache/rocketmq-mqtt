@@ -96,7 +96,7 @@ public class PushAction {
         }
         int qos = subscription.getQos();
         if (subscription.isP2p() && message.qos() != null) {
-            qos = message.qos();
+            qos = Math.min(qos, message.qos());
         }
         if (qos == 0) {
             write(session, message, mqttId, 0, subscription);
@@ -109,7 +109,6 @@ public class PushAction {
 
     public void write(Session session, Message message, int mqttId, int qos, Subscription subscription) {
         Channel channel = session.getChannel();
-        String owner = ChannelInfo.getOwner(channel);
         String clientId = session.getClientId();
         String topicName = message.getOriginTopic();
         String mqttRealTopic = message.getUserProperty(Message.extPropertyMqttRealTopic);
@@ -119,14 +118,12 @@ public class PushAction {
         if (StringUtils.isBlank(topicName)) {
             topicName = message.getFirstTopic();
         }
-        boolean isP2P = TopicUtils.isP2P(TopicUtils.decode(topicName).getSecondTopic());
         if (!channel.isWritable()) {
             logger.error("UnWritable:{}", clientId);
             return;
         }
         Object data = MessageUtil.toMqttMessage(topicName, message.getPayload(), qos, mqttId);
         ChannelFuture writeFuture = session.getChannel().writeAndFlush(data);
-        int bodySize = message.getPayload() != null ? message.getPayload().length : 0;
         writeFuture.addListener((ChannelFutureListener) future -> {
             if (subscription.isRetry()) {
                 message.setRetry(message.getRetry() + 1);

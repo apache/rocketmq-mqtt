@@ -240,7 +240,7 @@ public class RetryDriver {
             }
         }
 
-        if (!subscription.isRetry() &&
+        if (subscription != null && !subscription.isRetry() &&
                 noWaitRetryMsgMap.size() < connectConf.getSizeOfNotRollWhenAckSlow()) {
             noWaitRetryMsgMap.put(mqttMsgId, retryMessage);
             pushAction.rollNextNoWaitRetry(session, mqttMsgId);

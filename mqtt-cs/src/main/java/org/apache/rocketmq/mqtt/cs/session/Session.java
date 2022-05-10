@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ public class Session {
     private Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
     private ConcurrentMap<Subscription, Map<Queue, LinkedHashSet<Message>>> sendingMessages = new ConcurrentHashMap<>(16);
     private ConcurrentMap<Subscription, Integer> loadStatusMap = new ConcurrentHashMap<>();
+    private WillMessage willMessage;
 
     public Session() {
     }
@@ -124,6 +126,14 @@ public class Session {
 
     public void setPullSize(int pullSize) {
         this.pullSize = pullSize;
+    }
+
+    public WillMessage getWillMessage() {
+        return willMessage;
+    }
+
+    public void setWillMessage(WillMessage willMessage) {
+        this.willMessage = willMessage;
     }
 
     public void destroy() {

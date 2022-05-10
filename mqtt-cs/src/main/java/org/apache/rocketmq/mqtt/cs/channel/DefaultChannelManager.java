@@ -108,8 +108,13 @@ public class DefaultChannelManager implements ChannelManager {
                 closeConnect(channel, ChannelCloseFrom.SERVER, "No Heart");
             } else {
                 int keepAliveTimeSeconds = ChannelInfo.getKeepLive(channel);
-                hashedWheelTimer.newTimeout(timeout.task(), (long) Math.ceil(keepAliveTimeSeconds * 1.5 + 1),
-                        TimeUnit.SECONDS);
+                long lastTouchTime = ChannelInfo.getLastTouch(channel);
+                long heartWindow = (long) Math.ceil(keepAliveTimeSeconds * 1.5 + 1) * 1000L;
+                long delay = Math.min(heartWindow, heartWindow - (System.currentTimeMillis() - lastTouchTime));
+                if (delay <= 0) {
+                    delay = heartWindow;
+                }
+                hashedWheelTimer.newTimeout(timeout.task(), delay, TimeUnit.MILLISECONDS);
             }
         } catch (Exception e) {
             logger.error("", e);

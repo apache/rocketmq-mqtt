@@ -94,8 +94,8 @@ public class PushAction {
             logger.error("", e);
         }
         int qos = subscription.getQos();
-        if (subscription.isP2p() && message.qos() != null) {
-            qos = Math.min(qos, message.qos());
+        if (message.qos() != null) {
+            qos = subscription.isP2p() ? message.qos() : Math.min(qos, message.qos());
         }
         if (qos == 0) {
             write(session, message, mqttId, 0, subscription);

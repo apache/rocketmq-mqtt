@@ -21,12 +21,14 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-
 
 
 @Component
@@ -35,8 +37,15 @@ public class MqttDisconnectHandler implements MqttPacketHandler<MqttMessage> {
     @Resource
     private ChannelManager channelManager;
 
+    @Resource
+    private SessionLoop sessionLoop;
+
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
+        if (session != null) {
+            session.setWillMessage(null);
+        }
         channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "disconnect");
     }
 

@@ -27,11 +27,15 @@ import java.util.Properties;
 
 public class MqProducer   {
 
-    private final DefaultMQProducer defaultMQProducer;
+    private DefaultMQProducer defaultMQProducer;
 
     public MqProducer(Properties properties) {
+        this(properties.getProperty("NAMESRV_ADDR"));
+    }
+
+    public MqProducer(String nameSrv) {
         defaultMQProducer = new DefaultMQProducer();
-        defaultMQProducer.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
+        defaultMQProducer.setNamesrvAddr(nameSrv);
         defaultMQProducer.setInstanceName(buildInstanceName());
         defaultMQProducer.setVipChannelEnabled(false);
     }

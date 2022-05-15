@@ -44,6 +44,7 @@ public class ServiceConfListener {
     private File confFile;
     private ScheduledThreadPoolExecutor scheduler;
     private AtomicLong gmt = new AtomicLong();
+    private long refreshCheckInterval = 3;
 
     @PostConstruct
     public void start() {
@@ -65,7 +66,7 @@ public class ServiceConfListener {
             } catch (Exception e) {
                 logger.error("", e);
             }
-        }, 3, 3, TimeUnit.SECONDS);
+        }, refreshCheckInterval, refreshCheckInterval, TimeUnit.SECONDS);
     }
 
 }

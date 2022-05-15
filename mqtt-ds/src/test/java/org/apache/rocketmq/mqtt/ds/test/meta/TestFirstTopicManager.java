@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test;
+package org.apache.rocketmq.mqtt.ds.test.meta;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -35,6 +35,7 @@ import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.tools.admin.DefaultMQAdminExt;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -42,16 +43,22 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -64,15 +71,41 @@ public class TestFirstTopicManager {
     @Mock
     private ServiceConf serviceConf;
 
+    @Mock
+    private DefaultMQAdminExt defaultMQAdminExt;
+
+    private FirstTopicManager firstTopicManager;
+
+    @Before
+    public void setUp() throws Exception {
+        firstTopicManager = new FirstTopicManager();
+        FieldUtils.writeDeclaredField(firstTopicManager, "defaultMQAdminExt", defaultMQAdminExt, true);
+        FieldUtils.writeDeclaredField(firstTopicManager, "serviceConf", serviceConf, true);
+        FieldUtils.writeDeclaredField(firstTopicManager, "metaPersistManager", metaPersistManager, true);
+    }
+
+    @Test
+    public void testInit() throws MQClientException, RemotingException, InterruptedException {
+        String p2pClientTopic = "tm/p2p/test";
+        when(serviceConf.getClientRetryTopic()).thenReturn(null);
+        when(serviceConf.getClientP2pTopic()).thenReturn(p2pClientTopic);
+        when(metaPersistManager.getAllFirstTopics()).thenReturn(new HashSet<>());
+        when(defaultMQAdminExt.examineTopicRouteInfo(p2pClientTopic)).thenReturn(null);
+        FirstTopicManager spyFirstTopicManger = spy(firstTopicManager);
+        doNothing().when(spyFirstTopicManger).initMQAdminExt();
+
+        spyFirstTopicManger.init();
+        Thread.sleep(100);
+
+        Assert.assertTrue(spyFirstTopicManger.getBrokerAddressMap(p2pClientTopic).isEmpty());
+        Assert.assertTrue(spyFirstTopicManger.getReadableBrokers(p2pClientTopic).isEmpty());
+    }
+
     @Test
     public void test() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException {
-        FirstTopicManager firstTopicManager = new FirstTopicManager();
-        DefaultMQAdminExt defaultMQAdminExt = mock(DefaultMQAdminExt.class);
-
         Cache<String, TopicRouteData> topicExistCache = Caffeine.newBuilder().maximumSize(1000).expireAfterWrite(1, TimeUnit.MINUTES).build();
         Cache<String, Object> topicNotExistCache = Caffeine.newBuilder().maximumSize(1000).expireAfterWrite(1, TimeUnit.MINUTES).build();
 
-        FieldUtils.writeDeclaredField(firstTopicManager, "defaultMQAdminExt", defaultMQAdminExt, true);
         FieldUtils.writeDeclaredField(firstTopicManager, "topicExistCache", topicExistCache, true);
         FieldUtils.writeDeclaredField(firstTopicManager, "topicNotExistCache", topicNotExistCache, true);
 
@@ -96,16 +129,13 @@ public class TestFirstTopicManager {
         when(defaultMQAdminExt.examineTopicRouteInfo(any())).thenReturn(topicRouteData);
         firstTopicManager.checkFirstTopicIfCreated("test");
 
-        Assert.assertFalse(topicExistCache.getIfPresent("test") == null);
-        Assert.assertTrue("test".equals(firstTopicManager.getBrokerAddressMap("test").keySet().iterator().next()));
-        Assert.assertTrue("test".equals(firstTopicManager.getReadableBrokers("test").iterator().next()));
+        Assert.assertNotNull(topicExistCache.getIfPresent("test"));
+        Assert.assertEquals("test", firstTopicManager.getBrokerAddressMap("test").keySet().iterator().next());
+        Assert.assertEquals("test", firstTopicManager.getReadableBrokers("test").iterator().next());
     }
 
     @Test
     public void notExistTopicRoute() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException, InvocationTargetException, NoSuchMethodException {
-        FirstTopicManager firstTopicManager = new FirstTopicManager();
-        DefaultMQAdminExt defaultMQAdminExt = mock(DefaultMQAdminExt.class);
-        FieldUtils.writeDeclaredField(firstTopicManager, "defaultMQAdminExt", defaultMQAdminExt, true);
         when(defaultMQAdminExt.examineTopicRouteInfo(anyString())).thenThrow(new MQClientException(ResponseCode.TOPIC_NOT_EXIST, ""));
         Map<String, Set<String>> readableBrokers = mock(HashMap.class);
         FieldUtils.writeDeclaredField(firstTopicManager, "readableBrokers", readableBrokers, true);

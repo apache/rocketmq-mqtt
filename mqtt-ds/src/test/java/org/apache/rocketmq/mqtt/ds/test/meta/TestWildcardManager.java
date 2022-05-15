@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test;
+package org.apache.rocketmq.mqtt.ds.test.meta;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;

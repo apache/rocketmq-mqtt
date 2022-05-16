@@ -128,9 +128,9 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         message.setOffset(parseLmqOffset(queue, mqMessage));
         if (StringUtils.isNotBlank(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC))) {
             message.setOriginTopic(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC));
-        } else if (StringUtils.isNotBlank(message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {
+        } else if (StringUtils.isNotBlank(mqMessage.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {
             // maybe from rmq
-            String s = message.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH);
+            String s = mqMessage.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH);
             String[] lmqSet = s.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
             for (String lmq : lmqSet) {
                 if (TopicUtils.isWildCard(lmq)) {

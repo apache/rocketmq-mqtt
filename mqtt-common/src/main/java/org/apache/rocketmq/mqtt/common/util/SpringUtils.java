@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.common.util;
 
+import org.springframework.beans.BeansException;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class SpringUtils {
@@ -30,6 +31,11 @@ public class SpringUtils {
         if (applicationContext == null) {
             return null;
         }
-        return applicationContext.getBean(type);
+
+        try {
+            return applicationContext.getBean(type);
+        } catch (BeansException e) {
+            return null;
+        }
     }
 }

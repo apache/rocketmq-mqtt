@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test;
+package org.apache.rocketmq.mqtt.ds.test.upstream.processor;
 
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;

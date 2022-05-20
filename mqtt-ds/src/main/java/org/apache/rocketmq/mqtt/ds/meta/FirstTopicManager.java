@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.ds.meta;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -64,8 +65,7 @@ public class FirstTopicManager {
     public void init() throws MQClientException {
         topicExistCache = Caffeine.newBuilder().maximumSize(1000).expireAfterWrite(1, TimeUnit.MINUTES).build();
         topicNotExistCache = Caffeine.newBuilder().maximumSize(1000).expireAfterWrite(1, TimeUnit.MINUTES).build();
-        defaultMQAdminExt = MqFactory.buildDefaultMQAdminExt("TopicCheck", serviceConf.getProperties());
-        defaultMQAdminExt.start();
+        initMQAdminExt();
 
         scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("refreshStoreBroker"));
         scheduler.scheduleWithFixedDelay(() -> {
@@ -80,6 +80,11 @@ public class FirstTopicManager {
                 updateTopicRoute(firstTopic);
             }
         }, 0, 5, TimeUnit.SECONDS);
+    }
+
+    public void initMQAdminExt() throws MQClientException {
+        defaultMQAdminExt = MqFactory.buildDefaultMQAdminExt("TopicCheck", serviceConf.getProperties());
+        defaultMQAdminExt.start();
     }
 
     public void checkFirstTopicIfCreated(String firstTopic) {
@@ -108,6 +113,9 @@ public class FirstTopicManager {
     }
 
     private void updateTopicRoute(String firstTopic) {
+        if (StringUtils.isBlank(firstTopic)) {
+            return;
+        }
         try {
             TopicRouteData topicRouteData = defaultMQAdminExt.examineTopicRouteInfo(firstTopic);
             updateTopicRoute(firstTopic, topicRouteData);

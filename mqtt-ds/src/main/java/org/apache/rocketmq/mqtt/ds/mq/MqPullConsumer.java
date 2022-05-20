@@ -28,8 +28,12 @@ public class MqPullConsumer {
     private DefaultMQPullConsumer defaultMQPullConsumer;
 
     public MqPullConsumer(Properties properties) {
+        this(properties.getProperty("NAMESRV_ADDR"));
+    }
+
+    public MqPullConsumer(String nameSrv) {
         defaultMQPullConsumer = new DefaultMQPullConsumer();
-        defaultMQPullConsumer.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
+        defaultMQPullConsumer.setNamesrvAddr(nameSrv);
         defaultMQPullConsumer.setInstanceName(this.buildInstanceName());
         defaultMQPullConsumer.setVipChannelEnabled(false);
     }

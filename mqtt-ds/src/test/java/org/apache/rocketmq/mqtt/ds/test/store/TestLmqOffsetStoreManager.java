@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.ds.test;
+package org.apache.rocketmq.mqtt.ds.test.store;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,12 +51,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * @author tianliuliu
- * @date 2022-03-14 11:50
- */
 @RunWith(MockitoJUnitRunner.class)
-public class TestOffsetStoreManager {
+public class TestLmqOffsetStoreManager {
     @Mock
     private FirstTopicManager firstTopicManager;
 

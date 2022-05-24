@@ -56,7 +56,11 @@ public class MqttPublishHandler implements MqttPacketHandler<MqttPublishMessage>
         String channelId = ChannelInfo.getId(channel);
         final boolean isQos2 = isQos2Message(mqttMessage);
         boolean dup = isQos2 && inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId());
-        return !dup;
+        if (dup) {
+            doResponse(ctx, mqttMessage);
+            return false;
+        }
+        return true;
     }
 
     @Override

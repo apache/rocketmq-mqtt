@@ -36,6 +36,11 @@ public class MqttDisconnectHandler implements MqttPacketHandler<MqttMessage> {
     private ChannelManager channelManager;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "disconnect");
     }

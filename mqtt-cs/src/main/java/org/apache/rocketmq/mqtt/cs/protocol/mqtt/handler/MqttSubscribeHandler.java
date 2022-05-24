@@ -66,6 +66,11 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage, HookResult upstreamHookResult) {
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Channel channel = ctx.channel();

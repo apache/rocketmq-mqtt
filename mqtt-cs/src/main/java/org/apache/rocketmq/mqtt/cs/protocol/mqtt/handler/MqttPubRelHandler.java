@@ -40,6 +40,11 @@ public class MqttPubRelHandler implements MqttPacketHandler<MqttMessage> {
     private InFlyCache inFlyCache;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         final MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) mqttMessage.variableHeader();
         String channelId = ChannelInfo.getId(ctx.channel());

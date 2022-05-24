@@ -50,6 +50,16 @@ public class MqttPublishHandler implements MqttPacketHandler<MqttPublishMessage>
     private ChannelManager channelManager;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
+        final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
+        Channel channel = ctx.channel();
+        String channelId = ChannelInfo.getId(channel);
+        final boolean isQos2 = isQos2Message(mqttMessage);
+        boolean dup = isQos2 && inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId());
+        return !dup;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx,
                           MqttPublishMessage mqttMessage,
                           HookResult upstreamHookResult) {

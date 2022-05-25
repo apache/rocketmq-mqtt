@@ -466,7 +466,6 @@ public class SessionLoopImpl implements SessionLoop {
         pullStatus.put(eventQueueKey(session, queue), true);
         int count = session.getPullSize() > 0 ? session.getPullSize() : connectConf.getPullBatchSize();
         CompletableFuture<PullResult> result = new CompletableFuture<>();
-        queueCache.pullMessage(session, subscription, queue, queueOffset, count, result);
         result.whenComplete((pullResult, throwable) -> {
             if (throwable != null) {
                 clearPullStatus(session, queue, pullEvent);

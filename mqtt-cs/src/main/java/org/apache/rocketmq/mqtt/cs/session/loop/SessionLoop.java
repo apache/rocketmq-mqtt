@@ -21,6 +21,7 @@ package org.apache.rocketmq.mqtt.cs.session.loop;
 import io.netty.channel.Channel;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 
@@ -94,5 +95,13 @@ public interface SessionLoop {
      * @param queue
      */
     void notifyPullMessage(Session session, Subscription subscription, Queue queue);
+
+    /**
+     * add willMessage
+     *
+     * @param channelId
+     * @param willMessage
+     */
+    void addWillMessage(String channelId, WillMessage willMessage);
 
 }

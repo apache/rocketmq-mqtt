@@ -21,8 +21,15 @@ import io.netty.channel.Channel;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
+import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
@@ -31,7 +38,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +61,12 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private RetryDriver retryDriver;
+
+    @Resource
+    private PushAction pushAction;
+
+    @Resource
+    private MqttMsgId mqttMsgId;
 
 
     @PostConstruct
@@ -111,6 +126,12 @@ public class DefaultChannelManager implements ChannelManager {
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
+        //Publish will message associated with current connection
+        Session willMessageSession = sessionLoop.getSession(channelId);
+        if (willMessageSession.getWillMessage() != null && willMessageSession.getWillMessage().getWillTopic() != null && willMessageSession.getWillMessage().getBody() != null && willMessageSession.getWillMessage().getBody().length > 0) {
+            handleWillMessage(willMessageSession.getWillMessage());
+            willMessageSession.setWillMessage(null);
+        }
         if (clientId == null) {
             channelMap.remove(channelId);
             sessionLoop.unloadSession(clientId, channelId);
@@ -145,6 +166,53 @@ public class DefaultChannelManager implements ChannelManager {
     @Override
     public int totalConn() {
         return channelMap.size();
+    }
+
+    private void handleWillMessage(WillMessage willMessage) {
+        Set<Session> sessions = new HashSet<>();
+        for (Channel channel : channelMap.values()) {
+            Session session = sessionLoop.getSession(ChannelInfo.getId(channel));
+            if (session == null) {
+                continue;
+            }
+            Set<Subscription> tmp = session.subscriptionSnapshot();
+            if (tmp != null && !tmp.isEmpty()) {
+                for (Subscription subscription : tmp) {
+                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
+                        sessions.add(session);
+                    }
+                }
+            }
+        }
+        int qos = willMessage.getQos();
+        Integer subMaxQos = -1;
+        for (Session session : sessions) {
+            int mqttId = mqttMsgId.nextId(session.getClientId());
+            Message data = MessageUtil.toMessage(MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId));
+            Set<Subscription> tmp = session.subscriptionSnapshot();
+            if (tmp != null && !tmp.isEmpty()) {
+                for (Subscription subscription : tmp) {
+                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
+                        subMaxQos = Math.max(subMaxQos, subscription.getQos());
+                    }
+                }
+            }
+            qos = Math.min(subMaxQos, qos);
+            if (qos == 0) {
+                if (!session.getChannel().isWritable()) {
+                    logger.error("UnWritable:{}", session.getClientId());
+                    return;
+                }
+                session.getChannel().writeAndFlush(data);
+                pushAction.rollNextByAck(session, mqttId);
+            } else {
+                retryDriver.mountPublish(mqttId, data, willMessage.getQos(), ChannelInfo.getId(session.getChannel()), null);
+                session.getChannel().writeAndFlush(data);
+            }
+        }
+        if (willMessage.isRetain()) {
+            //complete this part after retainMessage is complete
+        }
     }
 
 }

@@ -28,6 +28,7 @@ import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -285,6 +286,18 @@ public class SessionLoopImpl implements SessionLoop {
                 }
             }
         }
+    }
+
+    @Override
+    public void addWillMessage(String channelId, WillMessage willMessage) {
+        Session session = getSession(channelId);
+        if (session == null) {
+            return;
+        }
+        if (willMessage == null) {
+            return;
+        }
+        session.setWillMessage(willMessage);
     }
 
     private void futureDone(CompletableFuture<Void> future, AtomicInteger result) {

@@ -25,7 +25,7 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 public interface MqttPacketHandler<T extends MqttMessage> {
 
     /**
-     * preHandler before upstream processor
+     * preHandler before upstream processor, for preprocessing
      *
      * @param ctx
      * @param mqttMessage

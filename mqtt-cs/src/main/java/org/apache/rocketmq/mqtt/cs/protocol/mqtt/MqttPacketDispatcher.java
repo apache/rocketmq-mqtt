@@ -100,6 +100,10 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
             throw new ChannelDecodeException(ChannelInfo.getClientId(ctx.channel()) + "," + msg.decoderResult());
         }
         ChannelInfo.touch(ctx.channel());
+        boolean preResult = preHandler(ctx, msg);
+        if (!preResult) {
+            return;
+        }
         CompletableFuture<HookResult> upstreamHookResult;
         try {
             if (msg instanceof MqttPublishMessage) {
@@ -172,6 +176,33 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
                 mqttDisconnectHandler.doHandler(ctx, msg, upstreamHookResult);
                 break;
             default:
+        }
+    }
+
+    private boolean preHandler(ChannelHandlerContext ctx, MqttMessage msg) {
+        switch (msg.fixedHeader().messageType()) {
+            case CONNECT:
+                return mqttConnectHandler.preHandler(ctx, (MqttConnectMessage) msg);
+            case PUBLISH:
+                return mqttPublishHandler.preHandler(ctx, (MqttPublishMessage) msg);
+            case SUBSCRIBE:
+                return mqttSubscribeHandler.preHandler(ctx, (MqttSubscribeMessage) msg);
+            case PUBACK:
+                return mqttPubAckHandler.preHandler(ctx, (MqttPubAckMessage) msg);
+            case PINGREQ:
+                return mqttPingHandler.preHandler(ctx, msg);
+            case UNSUBSCRIBE:
+                return mqttUnSubscribeHandler.preHandler(ctx, (MqttUnsubscribeMessage) msg);
+            case PUBREL:
+                return mqttPubRelHandler.preHandler(ctx, msg);
+            case PUBREC:
+                return mqttPubRecHandler.preHandler(ctx, msg);
+            case PUBCOMP:
+                return mqttPubCompHandler.preHandler(ctx, msg);
+            case DISCONNECT:
+                return mqttDisconnectHandler.preHandler(ctx, msg);
+            default:
+                return true;
         }
     }
 

@@ -40,6 +40,11 @@ public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
     private RetryDriver retryDriver;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) mqttMessage.variableHeader();
         String channelId = ChannelInfo.getId(ctx.channel());

@@ -17,12 +17,13 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.cs.test;
+package org.apache.rocketmq.mqtt.cs.test.session.loop;
 
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
@@ -46,6 +47,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -164,5 +166,21 @@ public class TestSessionLoopImpl {
 
         verify(queueCache, atLeastOnce()).pullMessage(any(), any(), any(), any(), anyInt(), any());
 
+    }
+
+    @Test
+    public void testLoadSubscription() throws IllegalAccessException, InterruptedException {
+        SubscriptionPersistManager subscriptionPersistManager = mock(SubscriptionPersistManager.class);
+        FieldUtils.writeDeclaredField(sessionLoop, "subscriptionPersistManager", subscriptionPersistManager, true);
+        SessionLoopImpl spySessionLoop = spy(sessionLoop);
+        CompletableFuture<Set<Subscription>> loadResult = new CompletableFuture();
+        loadResult.complete(new HashSet<>(Arrays.asList(new Subscription("test"))));
+        when(subscriptionPersistManager.loadSubscriptions(any())).thenReturn(loadResult);
+        spySessionLoop.init();
+        Session session = spy(new Session());
+        session.setChannel(new NioSocketChannel());
+        when(session.isClean()).thenReturn(Boolean.FALSE);
+        spySessionLoop.notifyPullMessage(session, new Subscription("test"), new Queue());
+        Assert.assertTrue(session.isLoaded());
     }
 }

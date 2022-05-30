@@ -58,13 +58,18 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
     @Override
-    public void doHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage, HookResult upstreamHookResult) {
-        MqttConnectVariableHeader variableHeader = connectMessage.variableHeader();
+    public boolean preHandler(ChannelHandlerContext ctx, MqttConnectMessage mqttMessage) {
+        MqttConnectVariableHeader variableHeader = mqttMessage.variableHeader();
         Channel channel = ctx.channel();
         ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
-        ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
+        ChannelInfo.setClientId(channel, mqttMessage.payload().clientIdentifier());
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
+        return true;
+    }
 
+    @Override
+    public void doHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage, HookResult upstreamHookResult) {
+        Channel channel = ctx.channel();
         String remark = upstreamHookResult.getRemark();
         if (!upstreamHookResult.isSuccess()) {
             byte connAckCode = (byte) upstreamHookResult.getSubCode();

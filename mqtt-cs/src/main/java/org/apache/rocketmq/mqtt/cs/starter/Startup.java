@@ -18,6 +18,7 @@
 package org.apache.rocketmq.mqtt.cs.starter;
 
 import org.apache.rocketmq.client.log.ClientLogger;
+import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 
@@ -27,7 +28,7 @@ public class Startup {
         System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
-
+        SpringUtils.SetClassPathXmlApplicationContext(applicationContext);
         System.out.println("start rocketmq mqtt  ...");
     }
 

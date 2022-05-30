@@ -20,21 +20,13 @@ package org.apache.rocketmq.mqtt.ds.upstream.processor;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.util.concurrent.CompletableFuture;
 
 @Component
 public class ConnectProcessor extends BaseProcessor implements UpstreamProcessor {
-    private static Logger logger = LoggerFactory.getLogger(ConnectProcessor.class);
-
-    @Resource
-    private ServiceConf serviceConf;
 
     @Override
     public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) {

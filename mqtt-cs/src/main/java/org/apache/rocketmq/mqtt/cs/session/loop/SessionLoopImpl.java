@@ -23,10 +23,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -88,6 +90,7 @@ public class SessionLoopImpl implements SessionLoop {
     private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
     private ScheduledThreadPoolExecutor persistOffsetScheduler;
+    private SubscriptionPersistManager subscriptionPersistManager;
 
     /**
      * channelId->session
@@ -336,6 +339,32 @@ public class SessionLoopImpl implements SessionLoop {
         if (session == null || session.isDestroyed()) {
             return;
         }
+        if (subscriptionPersistManager == null) {
+            subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+        }
+        if (subscriptionPersistManager != null &&
+                !session.isClean() && !session.isLoaded()) {
+            if (session.isLoading()) {
+                return;
+            }
+            session.setLoading();
+            CompletableFuture<Set<Subscription>> future = subscriptionPersistManager.loadSubscriptions(session.getClientId());
+            future.whenComplete((subscriptions, throwable) -> {
+                if (throwable != null) {
+                    logger.error("", throwable);
+                    scheduler.schedule(() -> {
+                        session.resetLoad();
+                        notifyPullMessage(session, subscription, queue);
+                    }, 3, TimeUnit.SECONDS);
+                    return;
+                }
+                session.addSubscription(subscriptions);
+                matchAction.addSubscription(session, subscriptions);
+                session.setLoaded();
+                notifyPullMessage(session, subscription, queue);
+            });
+            return;
+        }
         if (queue != null) {
             if (subscription == null) {
                 throw new RuntimeException(
@@ -437,7 +466,6 @@ public class SessionLoopImpl implements SessionLoop {
         pullStatus.put(eventQueueKey(session, queue), true);
         int count = session.getPullSize() > 0 ? session.getPullSize() : connectConf.getPullBatchSize();
         CompletableFuture<PullResult> result = new CompletableFuture<>();
-        queueCache.pullMessage(session, subscription, queue, queueOffset, count, result);
         result.whenComplete((pullResult, throwable) -> {
             if (throwable != null) {
                 clearPullStatus(session, queue, pullEvent);

@@ -140,11 +140,9 @@ public class Session {
             if (subscription == null) {
                 continue;
             }
-            Map<Queue, QueueOffset> queueMap = new HashMap<>(8);
+            Map<Queue, QueueOffset> queueMap = new HashMap<>(offsetMap.get(queueName).size());
             tmp.put(subscription, queueMap);
-            for (Map.Entry<Queue, QueueOffset> entry : offsetMap.get(queueName).entrySet()) {
-                queueMap.put(entry.getKey(), entry.getValue());
-            }
+            queueMap.putAll(offsetMap.get(queueName));
         }
         return tmp;
     }

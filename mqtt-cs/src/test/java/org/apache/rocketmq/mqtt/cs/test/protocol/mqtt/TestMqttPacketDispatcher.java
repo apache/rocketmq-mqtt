@@ -75,6 +75,7 @@ public class TestMqttPacketDispatcher {
         FieldUtils.writeDeclaredField(packetDispatcher, "upstreamHookManager", upstreamHookManager, true);
         FieldUtils.writeDeclaredField(packetDispatcher, "mqttPingHandler", mqttPingHandler, true);
 
+        when(mqttPingHandler.preHandler(any(), any())).thenReturn(true);
         when(ctx.channel()).thenReturn(channel);
         doReturn(true).when(channel).isActive();
     }
@@ -110,6 +111,7 @@ public class TestMqttPacketDispatcher {
         verify(channel).isActive();
         verify(upstreamHookManager).doUpstreamHook(any(), any());
         verify(mqttPingHandler).doHandler(eq(ctx), any(), any());
+        verify(mqttPingHandler).preHandler(eq(ctx), any());
         verifyNoMoreInteractions(ctx, upstreamHookManager, mqttPingHandler);
     }
 

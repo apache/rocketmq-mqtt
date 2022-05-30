@@ -32,8 +32,12 @@ public class MqConsumer  {
     private DefaultMQPushConsumer defaultMQPushConsumer;
 
     public MqConsumer(Properties properties) {
+        this(properties, properties.getProperty("NAMESRV_ADDR"));
+    }
+
+    public MqConsumer(Properties properties, String nameSrv) {
         defaultMQPushConsumer = new DefaultMQPushConsumer();
-        defaultMQPushConsumer.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
+        defaultMQPushConsumer.setNamesrvAddr(nameSrv);
         defaultMQPushConsumer.setConsumeMessageBatchMaxSize(1);
         defaultMQPushConsumer.setPullBatchSize(Integer.parseInt(properties.getProperty("pullBatch", "64")));
         if (properties.get(THREAD_NUM_KEY) != null) {

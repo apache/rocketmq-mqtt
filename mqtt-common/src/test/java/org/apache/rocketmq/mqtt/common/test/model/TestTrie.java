@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.common.test;
+package org.apache.rocketmq.mqtt.common.test.model;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;

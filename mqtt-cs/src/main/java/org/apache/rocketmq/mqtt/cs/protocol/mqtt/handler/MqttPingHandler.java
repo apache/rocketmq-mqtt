@@ -36,6 +36,11 @@ public class MqttPingHandler implements MqttPacketHandler<MqttMessage> {
     private static Logger logger = LoggerFactory.getLogger(MqttPingHandler.class);
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         MqttFixedHeader mqttFixedHeader =
                 new MqttFixedHeader(MqttMessageType.PINGRESP, false, MqttQoS.AT_MOST_ONCE, false, 0);

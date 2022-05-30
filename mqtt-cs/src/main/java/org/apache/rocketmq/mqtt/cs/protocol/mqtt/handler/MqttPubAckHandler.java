@@ -49,6 +49,11 @@ public class MqttPubAckHandler implements MqttPacketHandler<MqttPubAckMessage> {
     private SessionLoop sessionLoop;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttPubAckMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttPubAckMessage mqttMessage, HookResult upstreamHookResult) {
         int messageId = mqttMessage.variableHeader().messageId();
         retryDriver.unMountPublish(messageId, ChannelInfo.getId(ctx.channel()));

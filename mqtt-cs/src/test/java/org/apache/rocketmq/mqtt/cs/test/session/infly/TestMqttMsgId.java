@@ -17,33 +17,32 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.cs.test;
+package org.apache.rocketmq.mqtt.cs.test.session.infly;
 
-import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.Queue;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import static org.mockito.Mockito.mock;
-
 @RunWith(MockitoJUnitRunner.class)
-public class TestInFlyCache {
+public class TestMqttMsgId {
 
     @Test
     public void test() {
-        InFlyCache inFlyCache = new InFlyCache();
-        inFlyCache.put(InFlyCache.CacheType.PUB, "test", 1);
-        Assert.assertTrue(inFlyCache.contains(InFlyCache.CacheType.PUB, "test", 1));
+        MqttMsgId mqttMsgId = new MqttMsgId();
+        mqttMsgId.init();
 
-        inFlyCache.getPendingDownCache().put("test", 1, mock(Subscription.class), mock(Queue.class), mock(Message.class));
-        Assert.assertTrue(null != inFlyCache.getPendingDownCache().get("test", 1));
+        String clientId = "testMsgId";
+        int loopCount = 0, maxMsgId = 65535;
+        while (loopCount < maxMsgId) {
+            Assert.assertEquals(loopCount + 1, mqttMsgId.nextId(clientId));
+            loopCount++;
+        }
+        // new round by triggering 'inUseMsgIds.clear' when 'startingMessageId' == 65535
+        Assert.assertEquals(loopCount, mqttMsgId.nextId(clientId));
 
-        inFlyCache.getPendingDownCache().remove("test", 1);
-        Assert.assertTrue(null == inFlyCache.getPendingDownCache().get("test", 1));
-
+        mqttMsgId.releaseId(maxMsgId, "");
+        mqttMsgId.releaseId(maxMsgId, clientId);
     }
 }

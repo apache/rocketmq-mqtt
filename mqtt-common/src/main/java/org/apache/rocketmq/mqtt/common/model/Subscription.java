@@ -36,11 +36,6 @@ public class Subscription {
         this.qos = qos;
     }
 
-    public boolean isWildCard() {
-        return topicFilter != null &&
-                (topicFilter.contains(Constants.NUMBER_SIGN) || topicFilter.contains(Constants.PLUS_SIGN));
-    }
-
     public String toFirstTopic() {
         return TopicUtils.decode(topicFilter).getFirstTopic();
     }

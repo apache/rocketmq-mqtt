@@ -54,6 +54,11 @@ public class MqttUnSubscribeHandler implements MqttPacketHandler<MqttUnsubscribe
     private ChannelManager channelManager;
 
     @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttUnsubscribeMessage mqttMessage) {
+        return true;
+    }
+
+    @Override
     public void doHandler(ChannelHandlerContext ctx, MqttUnsubscribeMessage mqttMessage, HookResult upstreamHookResult) {
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Channel channel = ctx.channel();

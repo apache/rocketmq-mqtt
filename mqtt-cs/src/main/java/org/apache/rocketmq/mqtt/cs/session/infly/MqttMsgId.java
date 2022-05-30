@@ -59,22 +59,17 @@ public class MqttMsgId {
         MsgIdEntry msgIdEntry = hashMsgID(clientId);
         synchronized (msgIdEntry) {
             int startingMessageId = msgIdEntry.nextMsgId;
-            int loopCount = 0;
-            int maxLoopCount = 1;
             do {
                 msgIdEntry.nextMsgId++;
                 if (msgIdEntry.nextMsgId > MAX_MSG_ID) {
                     msgIdEntry.nextMsgId = MIN_MSG_ID;
                 }
                 if (msgIdEntry.nextMsgId == startingMessageId) {
-                    loopCount++;
-                    if (loopCount >= maxLoopCount) {
-                        msgIdEntry.inUseMsgIds.clear();
-                        break;
-                    }
+                    msgIdEntry.inUseMsgIds.clear();
+                    break;
                 }
-            } while (msgIdEntry.inUseMsgIds.containsKey(new Integer(msgIdEntry.nextMsgId)));
-            Integer id = new Integer(msgIdEntry.nextMsgId);
+            } while (msgIdEntry.inUseMsgIds.containsKey(msgIdEntry.nextMsgId));
+            Integer id = msgIdEntry.nextMsgId;
             msgIdEntry.inUseMsgIds.put(id, id);
             return msgIdEntry.nextMsgId;
         }

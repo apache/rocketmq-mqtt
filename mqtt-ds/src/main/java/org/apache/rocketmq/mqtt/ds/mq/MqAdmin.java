@@ -28,9 +28,13 @@ public class MqAdmin {
     private DefaultMQAdminExt defaultMQAdminExt;
 
     public MqAdmin(Properties properties) {
+        this(properties.getProperty("NAMESRV_ADDR"));
+    }
+
+    public MqAdmin(String nameSrv) {
         defaultMQAdminExt = new DefaultMQAdminExt();
         defaultMQAdminExt.setVipChannelEnabled(false);
-        defaultMQAdminExt.setNamesrvAddr(properties.getProperty("NAMESRV_ADDR"));
+        defaultMQAdminExt.setNamesrvAddr(nameSrv);
     }
 
     public DefaultMQAdminExt getDefaultMQAdminExt() {

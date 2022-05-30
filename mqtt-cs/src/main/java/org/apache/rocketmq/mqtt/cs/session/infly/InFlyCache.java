@@ -41,7 +41,7 @@ public class InFlyCache {
     private ConcurrentMap<String, Set<Integer>> pubCache = new ConcurrentHashMap<>(128);
     private PendingDownCache pendingDownCache = new PendingDownCache();
 
-    public void cleanResource(String clientId,String channelId) {
+    public void cleanResource(String clientId, String channelId) {
         pubCache.remove(channelId);
         pendingDownCache.clear(clientId, channelId);
     }
@@ -67,7 +67,7 @@ public class InFlyCache {
             return;
         }
         synchronized (idCache) {
-            cache.get(channelId).add(mqttMsgId);
+            idCache.add(mqttMsgId);
         }
     }
 
@@ -125,7 +125,6 @@ public class InFlyCache {
             Map<Integer, PendingDown> map = cache.get(channelId);
             if (map != null) {
                 return map.remove(mqttMsgId);
-
             }
             return null;
         }
@@ -134,7 +133,6 @@ public class InFlyCache {
             Map<Integer, PendingDown> map = cache.get(channelId);
             if (map != null) {
                 return map.get(mqttMsgId);
-
             }
             return null;
         }

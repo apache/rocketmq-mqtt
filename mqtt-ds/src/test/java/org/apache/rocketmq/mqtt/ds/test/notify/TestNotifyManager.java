@@ -17,14 +17,21 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test;
+package org.apache.rocketmq.mqtt.ds.test.notify;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.message.Message;
+import org.apache.rocketmq.common.message.MessageAccessor;
+import org.apache.rocketmq.common.message.MessageConst;
+import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
+import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
@@ -34,6 +41,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -51,6 +59,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -72,18 +81,26 @@ public class TestNotifyManager {
     @Mock
     private ServiceConf serviceConf;
 
-    @Test
-    public void test() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException,
-            MQClientException, RemotingException, InterruptedException, MQBrokerException {
-        NotifyManager notifyManager = new NotifyManager();
+    @Mock
+    private DefaultMQProducer defaultMQProducer;
+
+    private NotifyManager notifyManager;
+
+    @Before
+    public void SetUp() throws IllegalAccessException {
+        notifyManager = new NotifyManager();
         FieldUtils.writeDeclaredField(notifyManager, "metaPersistManager", metaPersistManager, true);
         FieldUtils.writeDeclaredField(notifyManager, "firstTopicManager", firstTopicManager, true);
         FieldUtils.writeDeclaredField(notifyManager, "defaultMQPushConsumer", defaultMQPushConsumer, true);
         FieldUtils.writeDeclaredField(notifyManager, "remotingClient", remotingClient, true);
         FieldUtils.writeDeclaredField(notifyManager, "serviceConf", serviceConf, true);
+        FieldUtils.writeDeclaredField(notifyManager, "defaultMQProducer", defaultMQProducer, true);
+    }
 
+    @Test
+    public void test() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException,
+            MQClientException, RemotingException, InterruptedException, MQBrokerException {
         when(metaPersistManager.getAllFirstTopics()).thenReturn(new HashSet<>(Arrays.asList("test")));
-
         MethodUtils.invokeMethod(notifyManager, true, "refresh");
         verify(defaultMQPushConsumer).subscribe(any(), anyString());
 
@@ -98,17 +115,40 @@ public class TestNotifyManager {
     @Test
     public void testJsonByte() throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         Set<MessageEvent> messageEvents=new HashSet<>();
-        for (int i=0;i<10;i++) {
+        for (int i = 0; i < 10; i++) {
             MessageEvent messageEvent = new MessageEvent();
-            messageEvent.setBrokerName("testBroker"+i);
-            messageEvent.setPubTopic("testTopic"+i);
-            messageEvent.setNamespace("testSpace"+i);
+            messageEvent.setBrokerName("testBroker" + i);
+            messageEvent.setPubTopic("testTopic" + i);
+            messageEvent.setNamespace("testSpace" + i);
             messageEvents.add(messageEvent);
         }
-        NotifyManager notifyManager = new NotifyManager();
         RemotingCommand remotingCommand = (RemotingCommand) MethodUtils.invokeMethod(notifyManager,  true, "createMsgEventCommand", messageEvents);
         byte[] bytes = JSONObject.toJSONString(messageEvents).getBytes(StandardCharsets.UTF_8);
         Assert.assertArrayEquals(remotingCommand.getBody(), bytes);
+    }
+
+    @Test
+    public void testSetPubTopic() throws InvocationTargetException, NoSuchMethodException, IllegalAccessException {
+        MessageEvent event = new MessageEvent();
+        MessageExt message = new MessageExt();
+        message.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC, "test");
+        MethodUtils.invokeMethod(notifyManager, true, "setPubTopic", event, message);
+        Assert.assertTrue(event.getPubTopic().equals("test"));
+        MessageAccessor.clearProperty(message, Constants.PROPERTY_ORIGIN_MQTT_TOPIC);
+        message.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH, MixAll.LMQ_PREFIX + "test");
+        MethodUtils.invokeMethod(notifyManager, true, "setPubTopic", event, message);
+        Assert.assertTrue(event.getPubTopic().equals("test"));
+    }
+
+    @Test
+    public void sendEventRetryMsg() throws Exception {
+        when(serviceConf.getEventNotifyRetryMaxTime()).thenReturn(3);
+        Set<MessageEvent> events = new HashSet<>(Arrays.asList(new MessageEvent()));
+        MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test",
+                serviceConf.getEventNotifyRetryMaxTime() + 1);
+        verify(defaultMQProducer,times(0)).send(any(Message.class));
+        MethodUtils.invokeMethod(notifyManager, true, "sendEventRetryMsg", events, 1, "test", 1);
+        verify(defaultMQProducer).send(any(Message.class));
     }
 
 }

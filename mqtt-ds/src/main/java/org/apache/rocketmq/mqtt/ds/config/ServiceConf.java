@@ -42,6 +42,11 @@ public class ServiceConf {
     private String username;
     private String secretKey;
 
+    private String clusterName = "defaultCluster";
+    private String allNodeAddress;
+    private String dbPath = "~/mqtt_meta/db/";
+    private String raftDataPath = "~/mqtt_meta/raft/data";
+    private int metaPort = 25000;
     public ServiceConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -133,5 +138,45 @@ public class ServiceConf {
 
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
+    }
+
+    public String getClusterName() {
+        return clusterName;
+    }
+
+    public void setClusterName(String clusterName) {
+        this.clusterName = clusterName;
+    }
+
+    public String getAllNodeAddress() {
+        return allNodeAddress;
+    }
+
+    public void setAllNodeAddress(String allNodeAddress) {
+        this.allNodeAddress = allNodeAddress;
+    }
+
+    public String getDbPath() {
+        return dbPath;
+    }
+
+    public void setDbPath(String dbPath) {
+        this.dbPath = dbPath;
+    }
+
+    public String getRaftDataPath() {
+        return raftDataPath;
+    }
+
+    public void setRaftDataPath(String raftDataPath) {
+        this.raftDataPath = raftDataPath;
+    }
+
+    public int getMetaPort() {
+        return metaPort;
+    }
+
+    public void setMetaPort(int metaPort) {
+        this.metaPort = metaPort;
     }
 }

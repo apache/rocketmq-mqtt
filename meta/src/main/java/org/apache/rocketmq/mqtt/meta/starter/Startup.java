@@ -12,7 +12,7 @@ public class Startup {
     public static void main(String[] args) {
         System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
 
-        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
+        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:meta_spring.xml");
         SpringUtil.setApplicationContext(applicationContext);
         System.out.println("start main ...");
     }

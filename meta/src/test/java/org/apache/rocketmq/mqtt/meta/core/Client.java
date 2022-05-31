@@ -37,7 +37,7 @@ public class Client {
         cliOptions.setRpcDefaultTimeout(10000);
         final PlacementDriverOptions pdOpts = PlacementDriverOptionsConfigured.newConfigured() //
             .withFake(true) //
-            .withRegionRouteTableOptionsList(regionRouteTableOptionsList) //
+            .withRegionRouteTableOptionsList(regionRouteTableOptionsList)
             .withCliOptions(cliOptions)
             .config();
 

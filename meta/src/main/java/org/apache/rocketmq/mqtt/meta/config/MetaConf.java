@@ -26,10 +26,6 @@ import org.apache.rocketmq.common.MixAll;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
-/**
- * @author dongyuan.pdy
- * date 2022-05-31
- */
 @Component
 public class MetaConf {
     private static final String CONF_FILE_NAME = "meta.conf";

@@ -33,10 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/**
- * @author dongyuan.pdy
- * date 2022-05-31
- */
 @Component
 public class MetaConfListener {
     private static Logger logger = LoggerFactory.getLogger(MetaConfListener.class);

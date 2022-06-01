@@ -24,7 +24,7 @@ public class Client {
 
     public static void main(String[] args) throws Exception {
 
-        String allNodeAddress = "30.225.11.185:25000";
+        String allNodeAddress = "11.164.2.4:25000";
         String clusterName = "defaultCluster";
         final List<RegionRouteTableOptions> regionRouteTableOptionsList = MultiRegionRouteTableOptionsConfigured.newConfigured() //
             .withInitialServerList(-1L /* default id */, allNodeAddress) //

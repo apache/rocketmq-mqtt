@@ -55,8 +55,8 @@ And some configuration items in the**meta.conf** configuration file
 
 **Config Key** | **Instruction**
 ----- | ----  
-allNodeAddress   |  meta kv all nodes ip
-metaPort   | corresponding port
+allNodeAddress   |  meta kv all nodes ip, e.g. 192.168.0.1,192.168.0.2,192.168.0.3
+metaPort   | corresponding port, e.g. 25000
 
 4. CreateTopic
 

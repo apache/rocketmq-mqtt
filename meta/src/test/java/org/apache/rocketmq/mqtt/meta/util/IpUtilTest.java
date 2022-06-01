@@ -31,4 +31,11 @@ public class IpUtilTest {
         String allNodes1 = IpUtil.convertAllNodeAddress(serviceConf.getAllNodeAddress(), serviceConf.getMetaPort());
         Assert.assertEquals("127.0.0.1:25000,127.0.0.2:25000", allNodes1);
     }
+
+    @Test
+    public void getLocalAddressCompatible() {
+        String ip = IpUtil.getLocalAddressCompatible();
+        Assert.assertNotNull(ip);
+    }
+
 }

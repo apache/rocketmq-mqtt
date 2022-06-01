@@ -30,8 +30,8 @@ import com.alipay.sofa.jraft.util.Endpoint;
  * date 2022-05-31
  */
 @Service
-public class Server {
-    private static final Logger logger = LoggerFactory.getLogger(Server.class);
+public class MetaServer {
+    private static final Logger logger = LoggerFactory.getLogger(MetaServer.class);
 
     @Resource
     private MetaConf metaConf;

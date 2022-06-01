@@ -266,8 +266,29 @@ public class SessionLoopImpl implements SessionLoop {
         matchAction.removeSubscription(session, subscriptions);
     }
 
-    private void addSubscriptionAndInit(Session session, Set<Subscription> subscriptions,
-                                        CompletableFuture<Void> future) {
+//    private void addSubscriptionAndInit(Session session, Set<Subscription> subscriptions,
+//                                        CompletableFuture<Void> future) {
+//        if (session == null) {
+//            return;
+//        }
+//        if (subscriptions == null) {
+//            return;
+//        }
+//        session.addSubscription(subscriptions);
+//
+//        AtomicInteger result = new AtomicInteger(subscriptions.size());
+//        for (Subscription subscription : subscriptions) {
+//            queueFresh.freshQueue(session, subscription);
+//            Map<Queue, QueueOffset> queueOffsets = session.getQueueOffset(subscription);
+//            if (queueOffsets != null) {
+//                for (Map.Entry<Queue, QueueOffset> entry : queueOffsets.entrySet()) {
+//                    initOffset(session, subscription, entry.getKey(), entry.getValue(), future, result);
+//                }
+//            }
+//        }
+//    }
+
+    private void addSubscriptionAndInit(Session session, Set<Subscription> subscriptions, CompletableFuture<Void> future) {
         if (session == null) {
             return;
         }
@@ -275,14 +296,27 @@ public class SessionLoopImpl implements SessionLoop {
             return;
         }
         session.addSubscription(subscriptions);
-        AtomicInteger result = new AtomicInteger(subscriptions.size());
+
+        int sum = 0;
+        Map<Subscription, List<Pair<Queue, QueueOffset>>> subscriptionQueueOffsetMap = new HashMap(16);
         for (Subscription subscription : subscriptions) {
-            queueFresh.freshQueue(session, subscription);
+            session.freshQueue(subscription);
             Map<Queue, QueueOffset> queueOffsets = session.getQueueOffset(subscription);
             if (queueOffsets != null) {
+                List<Pair<Queue, QueueOffset>> pairList = new ArrayList(16);
                 for (Map.Entry<Queue, QueueOffset> entry : queueOffsets.entrySet()) {
-                    initOffset(session, subscription, entry.getKey(), entry.getValue(), future, result);
+                    pairList.add(new Pair(entry.getKey(), entry.getValue()));
                 }
+                subscriptionQueueOffsetMap.put(subscription, pairList);
+                sum += pairList.size();
+            }
+        }
+        AtomicInteger result = new AtomicInteger(sum);
+        for (Map.Entry<Subscription, List<Pair<Queue, QueueOffset>>> entry : subscriptionQueueOffsetMap.entrySet()) {
+            Subscription subscription = entry.getKey();
+            List<Pair<Queue, QueueOffset>> pairList = entry.getValue();
+            for (Pair<Queue, QueueOffset> pair : pairList) {
+                initOffset(session, subscription, pair.getObject1(), pair.getObject2(), future, result);
             }
         }
     }

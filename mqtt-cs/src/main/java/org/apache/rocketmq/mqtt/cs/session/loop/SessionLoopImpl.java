@@ -24,10 +24,7 @@ import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
-import org.apache.rocketmq.mqtt.common.model.PullResult;
-import org.apache.rocketmq.mqtt.common.model.Queue;
-import org.apache.rocketmq.mqtt.common.model.QueueOffset;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.*;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -386,6 +383,23 @@ public class SessionLoopImpl implements SessionLoop {
                 }
             }
         }
+    }
+
+    @Override
+    public void addWillMessage(Channel channel, WillMessage willMessage) {
+        Session session = getSession(ChannelInfo.getId(channel));
+        if(session == null){
+            return;
+        }
+        if(willMessage == null){
+            return;
+        }
+
+        session.setWillMessage(willMessage);
+
+        //todo add to distributed KV
+
+
     }
 
     private String eventQueueKey(Session session, Queue queue) {

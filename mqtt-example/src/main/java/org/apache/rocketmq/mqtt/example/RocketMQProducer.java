@@ -38,14 +38,14 @@ import java.util.stream.Collectors;
 
 public class RocketMQProducer {
     private static DefaultMQProducer producer;
-    private static String firstTopic = System.getenv("firstTopic");
+    private static String firstTopic = "test";
     private static String recvClientId = "recv01";
 
     public static void main(String[] args) throws Exception {
         //Instantiate with a producer group name.
         producer = new DefaultMQProducer("PID_TEST");
         // Specify name server addresses.
-        producer.setNamesrvAddr(System.getenv("namesrv"));
+        producer.setNamesrvAddr("localhost:9876");
         //Launch the instance.
         producer.start();
 
@@ -78,6 +78,9 @@ public class RocketMQProducer {
                 "MQ2MQTT",
                 ("MQ_" + System.currentTimeMillis() + "_" + i).getBytes(StandardCharsets.UTF_8));
         String secondTopic = "/r1";
+
+//        System.out.println(TopicUtils.wrapLmq(firstTopic, secondTopic));
+
         setLmq(msg, new HashSet<>(Arrays.asList(TopicUtils.wrapLmq(firstTopic, secondTopic))));
         SendResult sendResult = producer.send(msg);
         System.out.println(now() + "sendMessage: " + new String(msg.getBody()));

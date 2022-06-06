@@ -18,11 +18,22 @@
 package org.apache.rocketmq.mqtt.cs.channel;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
+import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
+import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
@@ -31,7 +42,9 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +65,12 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private RetryDriver retryDriver;
+
+    @Resource
+    private MqttMsgId mqttMsgId;
+
+    @Resource
+    private PushAction pushAction;
 
 
     @PostConstruct
@@ -111,6 +130,33 @@ public class DefaultChannelManager implements ChannelManager {
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
+
+        // publish will message with current connection
+        Session willMessageSession = sessionLoop.getSession(channelId);
+
+        WillMessage willMessage = null;
+        willMessage = willMessageSession.getWillMessage();
+        if(willMessage == null){
+            // todo get will message from distributed KV
+        }
+
+//        if(!reason.equals("disconnect") && session.getWillMessage() != null && session.getWillMessage().getWillTopic() != null
+//                && session.getWillMessage().getBody() != null && session.getWillMessage().getBody().length > 0)
+        if(reason.equals("disconnect")){
+            willMessageSession.setWillMessage(null);
+            // todo delete will message in distributed KV
+
+        }
+
+        if(willMessageSession.getWillMessage() != null && willMessageSession.getWillMessage().getWillTopic() != null
+                && willMessageSession.getWillMessage().getBody() != null && willMessageSession.getWillMessage().getBody().length > 0){
+            boolean isFlushSuccess = handleWillMessage(willMessage);
+            if(isFlushSuccess){
+                willMessageSession.setWillMessage(null);
+                // todo delete will message in distributed KV
+            }
+        }
+
         if (clientId == null) {
             channelMap.remove(channelId);
             sessionLoop.unloadSession(clientId, channelId);
@@ -128,6 +174,78 @@ public class DefaultChannelManager implements ChannelManager {
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
 
+    /**
+     *
+     * @param willMessage
+     * distribute will message to clients that subscribe the will topic
+     */
+    private boolean handleWillMessage(WillMessage willMessage) {
+        // get all clients subscribing the will topic
+        Set<Session> sessions = new HashSet<>();
+        for (Channel channel : channelMap.values()) {
+            Session session = sessionLoop.getSession(ChannelInfo.getId(channel));
+            if (session == null) {
+                continue;
+            }
+            Set<Subscription> tmp = session.subscriptionSnapshot();
+            if (tmp != null && !tmp.isEmpty()) {
+                for (Subscription subscription : tmp) {
+                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
+                        sessions.add(session);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // distribute will message
+        int qos = willMessage.getQos();
+        ChannelFuture flushFuture = null;
+        boolean isFlushSuccess = true;
+        Integer subMaxQos = -1;
+        for (Session session : sessions) {
+            int mqttId = mqttMsgId.nextId(session.getClientId());
+            MqttMessage message = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+            Set<Subscription> tmp = session.subscriptionSnapshot();
+            if (tmp != null && !tmp.isEmpty()) {
+                for (Subscription subscription : tmp) {
+                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
+                        subMaxQos = Math.max(subMaxQos, subscription.getQos());
+                    }
+                }
+            }
+            qos = Math.min(subMaxQos, qos);
+            if (qos == 0) {
+                if (!session.getChannel().isWritable()) {
+                    // todo ??? channel is not able to write ? why ?? 查看tcp连接可能满了
+                    logger.error("UnWritable:{}", session.getClientId());
+                    continue;
+                }
+                try {
+                    flushFuture = session.getChannel().writeAndFlush(message).sync();
+                } catch (InterruptedException e) {
+                    isFlushSuccess = false;
+                    logger.error(flushFuture.toString(), "flush process is not correct");
+                    throw new RuntimeException(e);
+                }
+                pushAction.rollNextByAck(session, mqttId);
+            } else {
+                retryDriver.mountPublish(mqttId, MessageUtil.toMessage((MqttPublishMessage) message), willMessage.getQos(), ChannelInfo.getId(session.getChannel()), null);
+                try {
+                    flushFuture = session.getChannel().writeAndFlush(message).sync();
+                } catch (InterruptedException e) {
+                    isFlushSuccess = false;
+                    logger.error(flushFuture.toString(), "flush process is not correct");
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        if (willMessage.isRetain()) {
+            //complete this part after retainMessage is complete
+        }
+
+        return isFlushSuccess;
+    }
     @Override
     public void closeConnect(String channelId, String reason) {
         Channel channel = channelMap.get(channelId);

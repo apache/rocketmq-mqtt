@@ -35,8 +35,8 @@ import java.util.Date;
 public class MqttProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = System.getenv("brokerUrl");
-        String firstTopic = System.getenv("firstTopic");
+        String brokerUrl = "tcp://127.0.0.1:1883";
+        String firstTopic = "test";
         String sendClientId = "send01";
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
@@ -68,28 +68,28 @@ public class MqttProducer {
         }
         long interval = 1000;
         for (int i = 0; i < 1000; i++) {
-            String msg = "r1_" + System.currentTimeMillis() + "_" + i;
+            String msg = "r1_" + System.currentTimeMillis() + "_" + i  + "test";
             MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
             message.setQos(1);
             String mqttSendTopic = firstTopic + "/r1";
             mqttClient.publish(mqttSendTopic, message);
-            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
+            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg + "test");
             Thread.sleep(interval);
 
             mqttSendTopic = firstTopic + "/r/wc";
-            msg = "wc_" + System.currentTimeMillis() + "_" + i;
+            msg = "wc_" + System.currentTimeMillis() + "_" + i  + "test";
             MqttMessage messageWild = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
             messageWild.setQos(1);
             mqttClient.publish(mqttSendTopic, messageWild);
-            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
+            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg + "test");
             Thread.sleep(interval);
 
             mqttSendTopic = firstTopic + "/r2";
-            msg = "msgQ2_" + System.currentTimeMillis() + "_" + i;
+            msg = "msgQ2_" + System.currentTimeMillis() + "_" + i + "test";
             message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
             message.setQos(2);
             mqttClient.publish(mqttSendTopic, message);
-            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
+            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg + "test");
             Thread.sleep(interval);
         }
     }
@@ -100,8 +100,10 @@ public class MqttProducer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName(System.getenv("username"));
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("secretKey")).toCharArray());
+        connOpts.setUserName("wlq");
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "123").toCharArray());
+//        connOpts.setWill("offline",  "i_am_offline".getBytes(), 0, false);
+
         return connOpts;
     }
 

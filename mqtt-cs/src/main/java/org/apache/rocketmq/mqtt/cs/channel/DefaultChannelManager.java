@@ -25,7 +25,10 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.common.message.MessageClientIDSetter;
+import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
@@ -45,6 +48,7 @@ import javax.annotation.Resource;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +75,9 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private PushAction pushAction;
+
+    @Resource
+    private LmqQueueStore lmqQueueStore;
 
 
     @PostConstruct
@@ -148,9 +155,10 @@ public class DefaultChannelManager implements ChannelManager {
 
         }
 
-        if(willMessageSession.getWillMessage() != null && willMessageSession.getWillMessage().getWillTopic() != null
-                && willMessageSession.getWillMessage().getBody() != null && willMessageSession.getWillMessage().getBody().length > 0){
-            boolean isFlushSuccess = handleWillMessage(willMessage);
+        if(willMessage != null && willMessage.getWillTopic() != null
+                && willMessage.getBody() != null && willMessage.getBody().length > 0){
+//            boolean isFlushSuccess = handleWillMessage(willMessage);
+            boolean isFlushSuccess = MQHandleWillMessage(willMessage, clientId);
             if(isFlushSuccess){
                 willMessageSession.setWillMessage(null);
                 // todo delete will message in distributed KV
@@ -172,6 +180,30 @@ public class DefaultChannelManager implements ChannelManager {
             channel.close();
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+    }
+
+    /**
+     * distribute will message through MQ
+     * @param willMessage
+     * @param clientId
+     * @return
+     */
+    private boolean MQHandleWillMessage(WillMessage willMessage, String clientId){
+        int mqttId = mqttMsgId.nextId(clientId);
+        MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+        Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
+
+        String msgId = MessageClientIDSetter.createUniqID();
+        message.setMsgId(msgId);
+        message.setBornTimestamp(System.currentTimeMillis());
+        Set<String> queueNames = new HashSet<>();
+        queueNames.add(willMessage.getWillTopic());
+        CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
+        storeResultFuture.whenComplete((storeResult, throwable) -> {
+               logger.info("will message : {}, {}", storeResult.getQueue(), storeResult.getMsgId());
+               // todo delete will message from KV
+        });
+        return true;
     }
 
     /**

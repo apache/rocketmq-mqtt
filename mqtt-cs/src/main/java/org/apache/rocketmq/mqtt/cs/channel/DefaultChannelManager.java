@@ -17,6 +17,8 @@
 
 package org.apache.rocketmq.mqtt.cs.channel;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.mqtt.MqttMessage;
@@ -27,10 +29,7 @@ import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.StoreResult;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.model.*;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -39,6 +38,8 @@ import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.ds.meta.SubscriptionPersistManager;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -78,6 +79,9 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private LmqQueueStore lmqQueueStore;
+
+    @Resource
+    private MetaClient metaClient;
 
 
     @PostConstruct
@@ -142,9 +146,11 @@ public class DefaultChannelManager implements ChannelManager {
         Session willMessageSession = sessionLoop.getSession(channelId);
 
         WillMessage willMessage = null;
-        willMessage = willMessageSession.getWillMessage();
+        String willTopic = willMessageSession.getWillMessage().getWillTopic();
+//        willMessage = willMessageSession.getWillMessage();
         if(willMessage == null){
             // todo get will message from distributed KV
+            willMessage = JSON.parseObject(new String(metaClient.bGet(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic)), new TypeReference<WillMessage>(){});
         }
 
 //        if(!reason.equals("disconnect") && session.getWillMessage() != null && session.getWillMessage().getWillTopic() != null
@@ -159,10 +165,6 @@ public class DefaultChannelManager implements ChannelManager {
                 && willMessage.getBody() != null && willMessage.getBody().length > 0){
 //            boolean isFlushSuccess = handleWillMessage(willMessage);
             boolean isFlushSuccess = MQHandleWillMessage(willMessage, clientId);
-            if(isFlushSuccess){
-                willMessageSession.setWillMessage(null);
-                // todo delete will message in distributed KV
-            }
         }
 
         if (clientId == null) {
@@ -192,17 +194,33 @@ public class DefaultChannelManager implements ChannelManager {
         int mqttId = mqttMsgId.nextId(clientId);
         MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
         Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
+        String willTopic = willMessage.getWillTopic();
 
         String msgId = MessageClientIDSetter.createUniqID();
         message.setMsgId(msgId);
         message.setBornTimestamp(System.currentTimeMillis());
         Set<String> queueNames = new HashSet<>();
-        queueNames.add(willMessage.getWillTopic());
+        queueNames.add(willTopic);
         CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
         storeResultFuture.whenComplete((storeResult, throwable) -> {
-               logger.info("will message : {}, {}", storeResult.getQueue(), storeResult.getMsgId());
-               // todo delete will message from KV
+            logger.info("will message : {}, {}", storeResult.getQueue(), storeResult.getMsgId());
+            // todo delete will message from KV
+            String willClientTopic = Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic;
+            Set<String> clientIdSet = JSON.parseObject(new String(metaClient.bGet(willClientTopic)), new TypeReference<Set<String>>(){});
+            for(String id : clientIdSet){
+                String willClientId = Constants.MQTT_WILL_TOPIC+Constants.PLUS_SIGN+id;
+                Set<String> topicSet = JSON.parseObject(new String(metaClient.bGet(willClientId)), new TypeReference<Set<String>>(){});
+                topicSet.remove(willTopic);
+                if(topicSet.size() == 0){
+                    metaClient.bDelete(willClientId);
+                }else{
+                    metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
+                }
+            }
+            metaClient.bDelete(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic);
+            metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic);
         });
+
         return true;
     }
 

@@ -41,4 +41,10 @@ public class Constants {
 
     public static final String MQTT_TAG = "MQTT_COMMON";
 
+    public static final String MQTT_WILL_TOPIC = "WILL_TOPIC";
+
+    public static final String MQTT_WILL_MESSAGE = "WILL_MESSAGE";
+
+    public static final String MQTT_WILL_CLIENT = "WILL_CLIENT";
+
 }

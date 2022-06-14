@@ -23,15 +23,18 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.concurrent.CompletableFuture;
@@ -48,6 +51,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Resource
     private SessionLoop sessionLoop;
+
+    @Resource
+    public MetaClient metaClient;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
@@ -107,10 +113,13 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                 if(payload.willTopic() == null || payload.willMessageInBytes() == null || payload.willMessageInBytes().length == 0){
                     logger.error("Will message and will topic can not be empty");
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
+                    return;
                 }
-                willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                if(!metaClient.bContainsKey(Constants.MQTT_WILL_MESSAGE + Constants.PLUS_SIGN + willMessage.getWillTopic())){
+                    willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                    sessionLoop.addWillMessage(channel, willMessage);
+                }
             }
-            sessionLoop.addWillMessage(channel, willMessage);
 
         } catch (Exception e) {
             logger.error("Connect:{}", payload.clientIdentifier(), e);

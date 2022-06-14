@@ -18,6 +18,8 @@
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
@@ -29,6 +31,7 @@ import io.netty.handler.codec.mqtt.MqttSubscribePayload;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
@@ -36,6 +39,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -62,6 +66,9 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private MetaClient metaClient;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
@@ -93,9 +100,22 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                 Set<Subscription> subscriptions = new HashSet<>(mqttTopicSubscriptions.size());
                 for (MqttTopicSubscription mqttTopicSubscription : mqttTopicSubscriptions) {
                     Subscription subscription = new Subscription();
+                    String topicFilter = TopicUtils.normalizeTopic(mqttTopicSubscription.topicName());
                     subscription.setQos(mqttTopicSubscription.qualityOfService().value());
-                    subscription.setTopicFilter(TopicUtils.normalizeTopic(mqttTopicSubscription.topicName()));
+                    subscription.setTopicFilter(topicFilter);
                     subscriptions.add(subscription);
+
+                    if(metaClient.bContainsKey(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+topicFilter)){
+                        String willClientTopic = Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+topicFilter;
+                        String willClientId = Constants.MQTT_WILL_TOPIC+Constants.PLUS_SIGN+clientId;
+
+                        Set<String> topicSet = metaClient.bContainsKey(willClientId) ? JSON.parseObject(new String(metaClient.bGet(willClientId)), new TypeReference<Set<String>>(){}) : new HashSet<>();
+                        Set<String> clientIdSet = metaClient.bContainsKey(willClientTopic) ? JSON.parseObject(new String(metaClient.bGet(willClientTopic)), new TypeReference<Set<String>>(){}) : new HashSet<>();
+                        topicSet.add(topicFilter);
+                        clientIdSet.add(clientId);
+                        metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
+                        metaClient.bPut(willClientTopic, JSON.toJSONString(clientIdSet).getBytes());
+                    }
                 }
                 sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions);
             }

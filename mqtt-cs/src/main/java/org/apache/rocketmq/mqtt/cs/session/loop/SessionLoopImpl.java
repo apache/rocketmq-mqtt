@@ -17,7 +17,9 @@
 
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -34,6 +36,7 @@ import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -82,6 +85,9 @@ public class SessionLoopImpl implements SessionLoop {
 
     @Resource
     private QueueFresh queueFresh;
+
+    @Resource
+    private MetaClient metaClient;
 
     private ChannelManager channelManager;
     private ScheduledThreadPoolExecutor pullService;
@@ -398,6 +404,36 @@ public class SessionLoopImpl implements SessionLoop {
         session.setWillMessage(willMessage);
 
         //todo add to distributed KV
+        String topic = willMessage.getWillTopic();
+        String message = JSON.toJSONString(willMessage);
+
+        // key: "willmessage"+topic; value: WillMessage
+        metaClient.bPut(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+topic, message.getBytes());
+        //key: topic; value: clientIds
+        CompletableFuture<Set<String>> completableFuture = subscriptionPersistManager.loadSubscribers(topic);
+        completableFuture.whenComplete((clientIds, throwable) -> {
+            if(throwable != null){
+                logger.error("fail to load {} topic subscribers, reason {}", topic, throwable);
+                return;
+            }
+            if(clientIds == null || clientIds.size() == 0){
+                return;
+            }
+            
+            Set<String> clientIdSet = new HashSet<>();
+            for(String id : clientIds){
+                clientIdSet.add(id);
+                String willClientId = Constants.MQTT_WILL_TOPIC+Constants.PLUS_SIGN+id;
+                Set<String> topicSet = metaClient.bContainsKey(willClientId) ? JSON.parseObject(new String(metaClient.bGet(willClientId)), new TypeReference<Set<String>>(){}) : new HashSet<>();
+                topicSet.add(topic);
+                metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
+            }
+            if(clientIdSet.size() != 0){
+                String willClientTopic = Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+topic;
+                metaClient.bPut(willClientTopic, JSON.toJSONString(clientIdSet).getBytes());
+            }
+
+        });
 
 
     }

@@ -48,6 +48,9 @@ public class UnSubscribeProcessor implements UpstreamProcessor {
         MqttUnsubscribePayload payload = (MqttUnsubscribePayload) message.payload();
         if (payload.topics() != null && !payload.topics().isEmpty()) {
             Set<Subscription> subscriptions = new HashSet<>();
+            if (subscriptionPersistManager == null) {
+                subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+            }
             for (String topic : payload.topics()) {
                 String topicFilter = TopicUtils.normalizeTopic(topic);
                 MqttTopic mqttTopic = TopicUtils.decode(topicFilter);
@@ -55,9 +58,9 @@ public class UnSubscribeProcessor implements UpstreamProcessor {
                 Subscription subscription = new Subscription();
                 subscription.setTopicFilter(topicFilter);
                 subscriptions.add(subscription);
-            }
-            if (subscriptionPersistManager == null) {
-                subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+                if(subscriptionPersistManager != null){
+                    subscriptionPersistManager.removeSubscribers(topicFilter, new HashSet<String>(){{add(context.getClientId());}});
+                }
             }
             if (subscriptionPersistManager != null) {
                 subscriptionPersistManager.removeSubscriptions(context.getClientId(), subscriptions);

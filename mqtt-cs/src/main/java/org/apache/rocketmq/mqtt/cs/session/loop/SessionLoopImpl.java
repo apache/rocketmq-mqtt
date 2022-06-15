@@ -410,6 +410,9 @@ public class SessionLoopImpl implements SessionLoop {
         // key: "willmessage"+topic; value: WillMessage
         metaClient.bPut(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+topic, message.getBytes());
         //key: topic; value: clientIds
+        if (subscriptionPersistManager == null) {
+            subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+        }
         CompletableFuture<Set<String>> completableFuture = subscriptionPersistManager.loadSubscribers(topic);
         completableFuture.whenComplete((clientIds, throwable) -> {
             if(throwable != null){
@@ -417,9 +420,10 @@ public class SessionLoopImpl implements SessionLoop {
                 return;
             }
             if(clientIds == null || clientIds.size() == 0){
+                logger.error("{} clientIds is null", topic);
                 return;
             }
-            
+
             Set<String> clientIdSet = new HashSet<>();
             for(String id : clientIds){
                 clientIdSet.add(id);
@@ -427,11 +431,15 @@ public class SessionLoopImpl implements SessionLoop {
                 Set<String> topicSet = metaClient.bContainsKey(willClientId) ? JSON.parseObject(new String(metaClient.bGet(willClientId)), new TypeReference<Set<String>>(){}) : new HashSet<>();
                 topicSet.add(topic);
                 metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
+
+                logger.info("put MQTT_WILL_TOPIC clientid {} {}", id, JSON.parseObject(new String(metaClient.bGet(Constants.MQTT_WILL_TOPIC+Constants.PLUS_SIGN+id)), new TypeReference<Set<String>>(){}));
             }
             if(clientIdSet.size() != 0){
                 String willClientTopic = Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+topic;
                 metaClient.bPut(willClientTopic, JSON.toJSONString(clientIdSet).getBytes());
             }
+
+            logger.info("put MQTT_WILL_CLIENT {}", JSON.parseObject(new String(metaClient.bGet(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+topic)), new TypeReference<Set<String>>(){}));
 
         });
 

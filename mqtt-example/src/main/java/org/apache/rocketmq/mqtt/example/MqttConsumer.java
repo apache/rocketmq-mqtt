@@ -36,7 +36,7 @@ public class MqttConsumer {
         String brokerUrl = "tcp://127.0.0.1:1883";
         MemoryPersistence memoryPersistence = new MemoryPersistence();
         String firstTopic = "test";
-        String recvClientId = "recv01";
+        String recvClientId = "recv02";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(recvClientId);
         MqttClient mqttClient = new MqttClient(brokerUrl, recvClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);

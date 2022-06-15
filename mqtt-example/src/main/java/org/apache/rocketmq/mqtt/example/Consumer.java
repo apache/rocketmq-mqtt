@@ -14,7 +14,7 @@ public class Consumer {
     public static void main(String[] args) throws MqttException, NoSuchAlgorithmException, InvalidKeyException {
         String brokerUrl = "tcp://127.0.0.1:1883";
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String firstTopic = "test";
+        String firstTopic = "offline";
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(recvClientId);
         MqttClient mqttClient = new MqttClient(brokerUrl, recvClientId, memoryPersistence);

@@ -146,7 +146,7 @@ public class DefaultChannelManager implements ChannelManager {
         Session willMessageSession = sessionLoop.getSession(channelId);
 
         WillMessage willMessage = null;
-        String willTopic = willMessageSession.getWillMessage().getWillTopic();
+        String willTopic = willMessageSession.getWillMessage().getWillTopic() == null ? "offline" : willMessageSession.getWillMessage().getWillTopic();
 //        willMessage = willMessageSession.getWillMessage();
         if(willMessage == null){
             // todo get will message from distributed KV
@@ -213,12 +213,15 @@ public class DefaultChannelManager implements ChannelManager {
                 topicSet.remove(willTopic);
                 if(topicSet.size() == 0){
                     metaClient.bDelete(willClientId);
+                    logger.info("delete willClientId {} {}", willClientId, metaClient.bGet(willClientId)==null);
                 }else{
                     metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
                 }
             }
             metaClient.bDelete(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic);
             metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic);
+
+            logger.info("delete MQTT_WILL_CLIENT + {} {}, delete MQTT_WILL_MESSAGE + {} {}", willTopic, metaClient.bGet(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic)==null, willTopic, metaClient.bGet(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic)==null);
         });
 
         return true;

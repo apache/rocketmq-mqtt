@@ -115,7 +115,11 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
                     return;
                 }
-                if(!metaClient.bContainsKey(Constants.MQTT_WILL_MESSAGE + Constants.PLUS_SIGN + willMessage.getWillTopic())){
+
+//                //todo
+//                metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+payload.willTopic());
+
+                if(!metaClient.bContainsKey(Constants.MQTT_WILL_MESSAGE + Constants.PLUS_SIGN + payload.willTopic())){
                     willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
                     sessionLoop.addWillMessage(channel, willMessage);
                 }

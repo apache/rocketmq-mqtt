@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -34,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager {
 
     private static final Logger log = LoggerFactory.getLogger(SubscriptionPersistManager.class);
+
     @Resource
     private MetaClient metaClient;
 
@@ -42,16 +44,13 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
         // todo caffine cache
 
         CompletableFuture<Set<Subscription>> subscriptions = new CompletableFuture<>();
-        Set<Subscription> set = JSON.parseObject(new String(metaClient.bGet(clientId)), new TypeReference<Set<Subscription>>(){});
-        subscriptions.complete(set);
-
-//        metaClient.get(clientId).whenComplete((subs, throwable)->{
-//            if(throwable != null){
-//                log.error("fail to load {} subscription, reason: {}", clientId, throwable);
-//            }
-//            Set<Subscription> set = JSON.parseObject(new String(subs), new TypeReference<Set<Subscription>>(){});
-//            subscriptions.complete(set);
-//        });
+        metaClient.get(clientId).whenComplete((subs, throwable)->{
+            if(throwable != null){
+                log.error("fail to load {} subscription, reason: {}", clientId, throwable);
+            }
+            Set<Subscription> set = metaClient.bContainsKey(clientId) ? JSON.parseObject(new String(metaClient.bGet(clientId)), new TypeReference<Set<Subscription>>(){}) : new HashSet<>();
+            subscriptions.complete(set);
+        });
         return subscriptions;
     }
 
@@ -60,16 +59,14 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
         // todo caffine cache
 
         CompletableFuture<Set<String>> subscribers = new CompletableFuture<>();
-        Set<String> set = JSON.parseObject(new String(metaClient.bGet(topic)), new TypeReference<Set<String>>(){});
-        subscribers.complete(set);
-
-//        metaClient.get(topic).whenComplete((subs, throwable)->{
-//            if(throwable != null){
-//                log.error("fail to load {} subscribers, reason: {}", topic, throwable);
-//            }
-//            Set<String> set = JSON.parseObject(new String(subs), new TypeReference<Set<String>>(){});
-//            subscribers.complete(set);
-//        });
+        metaClient.get(topic).whenComplete((subs, throwable)->{
+            if(throwable != null){
+                log.error("fail to load {} subscribers, reason: {}", topic, throwable);
+            }
+            Set<String> set = metaClient.bContainsKey(topic) ? JSON.parseObject(new String(subs), new TypeReference<Set<String>>(){}) : new HashSet<>();
+            log.info("load topic {} subs {}", topic, set);
+            subscribers.complete(set);
+        });
         return subscribers;
     }
 
@@ -81,42 +78,32 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
             return;
         }
 
-        String json = JSON.toJSONString(subscriptions);
-        try{
-            Boolean ok = metaClient.bPut(clientId, json.getBytes());
-        }catch (Exception e){
-            log.error("fail to put {}", clientId);
-        }
+        metaClient.get(clientId).whenComplete((subs, throwable)->{
+            if(throwable != null){
+                log.error("fail to load {} subscription, reason: {}", clientId, throwable);
+                return;
+            }
 
-        byte[] bytes = metaClient.bGet(clientId);
-        Set<Subscription> set = JSON.parseObject(new String(bytes), new TypeReference<Set<Subscription>>() {
+            Set<Subscription> set;
+            if(subs == null || subs.length == 0){
+                set = subscriptions;
+            }else{
+                set = JSON.parseObject(new String(subs), new TypeReference<Set<Subscription>>(){});
+                for(Subscription sub : subscriptions){
+                    set.add(sub);
+                }
+            }
+
+            String json = JSON.toJSONString(set);
+            metaClient.put(clientId, json.getBytes()).whenComplete((ok, exception)->{
+                if(!ok || exception != null){
+                    log.error("fail to save {} subscription, reason: {}", clientId, exception);
+                }
+            });
+
+            log.info("put client {} subscriptions {}", clientId, JSON.parseObject(new String(metaClient.bGet(clientId))), new TypeReference<Set<Subscription>>(){});
+
         });
-
-//        metaClient.get(clientId).whenComplete((subs, throwable)->{
-//            if(throwable != null){
-//                log.error("fail to load {} subscription, reason: {}", clientId, throwable);
-//                return;
-//            }
-//
-//            Set<Subscription> set;
-//            if(subs == null || subs.length == 0){
-//                set = subscriptions;
-//            }else{
-//                set = JSON.parseObject(new String(subs), new TypeReference<Set<Subscription>>(){});
-//                for(Subscription sub : subscriptions){
-//                    set.add(sub);
-//                }
-//            }
-//
-//            String json = JSON.toJSONString(set);
-//            metaClient.put(clientId, json.getBytes()).whenComplete((ok, exception)->{
-//                if(!ok || exception != null){
-//                    log.error("fail to save {} subscription, reason: {}", clientId, exception);
-//                }
-//            });
-//
-//
-//        });
 
     }
 
@@ -151,6 +138,8 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
                 }
             });
 
+            log.info("put topic {} clients {}", topic, JSON.parseObject(new String(metaClient.bGet(topic)), new TypeReference<Set<String>>(){}));
+
         });
     }
 
@@ -174,6 +163,14 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
             for(Subscription sub : subscriptions){
                 set.remove(sub);
             }
+            if(set.size() == 0){
+                metaClient.bDelete(clientId);
+                log.info("delete subscriptions {} {}", clientId, metaClient.bGet(clientId)==null);
+                return;
+            }
+
+            log.info("{} subscriptions {}", clientId, JSON.parseObject(new String(metaClient.bGet(clientId)), new TypeReference<Set<Subscription>>(){}));
+
             if (set.size() == length){
                 return;
             }
@@ -185,6 +182,48 @@ public class SubscriptionPersistManager implements org.apache.rocketmq.mqtt.comm
                 }
             });
 
+
+        });
+    }
+
+    @Override
+    public void removeSubscribers(String topic, Set<String> clientIds) {
+        // todo caffine cache
+
+        metaClient.get(topic).whenComplete((subs, throwable)->{
+            if(throwable != null){
+                log.error("fail to load {} subscribers, reason: {}", topic, throwable);
+                return;
+            }
+
+            if(subs == null || subs.length == 0){
+                return;
+            }
+
+            Set<String> set = JSON.parseObject(new String(subs), new TypeReference<Set<String>>() {
+            });
+            int length = set.size();
+            for(String sub : clientIds){
+                set.remove(sub);
+            }
+            if(set.size() == 0){
+                metaClient.bDelete(topic);
+                log.info("delete subscribers {} {}", topic, metaClient.bGet(topic)==null);
+                return;
+            }
+
+            log.info("{} subscribers {}", topic, JSON.parseObject(new String(metaClient.bGet(topic)), new TypeReference<Set<String>>(){}));
+
+            if (set.size() == length){
+                return;
+            }
+
+            String json = JSON.toJSONString(set);
+            metaClient.put(topic, json.getBytes()).whenComplete((ok, exception)->{
+                if(!ok || exception != null){
+                    log.error("fail to save {} subscribers, reason: {}", topic, exception);
+                }
+            });
 
         });
     }

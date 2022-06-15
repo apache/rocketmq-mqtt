@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.common.facade;
 
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -62,4 +63,12 @@ public interface SubscriptionPersistManager {
      * @param subscriptions
      */
     void removeSubscriptions(String clientId, Set<Subscription> subscriptions);
+
+    /**
+     * removeSubscriptions
+     *
+     * @param topic
+     * @param clientIds
+     */
+    void removeSubscribers(String topic, Set<String> clientIds);
 }

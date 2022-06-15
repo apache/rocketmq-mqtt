@@ -68,6 +68,7 @@ public class TestSubscribeProcessor {
         subscribeProcessor.process(context, mqttSubscribeMessage);
         verify(firstTopicManager).checkFirstTopicIfCreated(any());
         verify(subscriptionPersistManager).saveSubscriptions(any(), anySet());
+        verify(subscriptionPersistManager).saveSubscribers(any(), anySet());
     }
 
 }

@@ -52,6 +52,9 @@ public class SubscribeProcessor implements UpstreamProcessor {
         MqttSubscribePayload payload = mqttSubscribeMessage.payload();
         List<MqttTopicSubscription> mqttTopicSubscriptions = payload.topicSubscriptions();
         Set<Subscription> subscriptions = new HashSet<>();
+        if (subscriptionPersistManager == null) {
+            subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+        }
         for (MqttTopicSubscription mqttTopicSubscription : mqttTopicSubscriptions) {
             String topicFilter = TopicUtils.normalizeTopic(mqttTopicSubscription.topicName());
             MqttTopic mqttTopic = TopicUtils.decode(topicFilter);
@@ -60,9 +63,11 @@ public class SubscribeProcessor implements UpstreamProcessor {
             subscription.setTopicFilter(topicFilter);
             subscription.setQos(mqttTopicSubscription.qualityOfService().value());
             subscriptions.add(subscription);
-        }
-        if (subscriptionPersistManager == null) {
-            subscriptionPersistManager = SpringUtils.getBean(SubscriptionPersistManager.class);
+            if (subscriptionPersistManager != null) {
+                subscriptionPersistManager.saveSubscribers(topicFilter, new HashSet<String>() { {
+                        add(context.getClientId());
+                    } });
+            }
         }
         if (subscriptionPersistManager != null) {
             subscriptionPersistManager.saveSubscriptions(context.getClientId(), subscriptions);

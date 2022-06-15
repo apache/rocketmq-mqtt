@@ -67,6 +67,7 @@ public class TestUnSubscribeProcessor {
         unSubscribeProcessor.process(context, mqttUnsubscribeMessage);
         verify(firstTopicManager).checkFirstTopicIfCreated(any());
         verify(subscriptionPersistManager).removeSubscriptions(any(), anySet());
+        verify(subscriptionPersistManager).removeSubscribers(any(), anySet());
     }
 
 }

@@ -21,12 +21,14 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.mqtt.common.model.Message;
 
@@ -39,22 +41,27 @@ import java.util.Map;
 public class MessageUtil {
     public static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
 
-    public static MqttPublishMessage toMqttMessage(String topicName, byte[] body, int qos, int mqttId) {
+    public static final String RETAINED="%RETAINED%";
+
+    public static final String EMPTYSTRING="%@!@%";
+    public static MqttPublishMessage toMqttMessage(String topicName, byte[] body, int qos, int mqttId, boolean retained) {
         ByteBuf payload = ALLOCATOR.buffer();
         payload.writeBytes(body);
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false,
             MqttQoS.valueOf(qos),
-            false, 0);
+                retained, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topicName, mqttId);
         MqttPublishMessage mqttPublishMessage = new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader,
             payload);
         return mqttPublishMessage;
     }
 
+
     public static Message toMessage(MqttPublishMessage mqttMessage) {
         Message message = new Message();
         message.setFirstTopic(TopicUtils.decode(mqttMessage.variableHeader().topicName()).getFirstTopic());
         message.setOriginTopic(mqttMessage.variableHeader().topicName());
+        message.setRetained(mqttMessage.fixedHeader().isRetain());
         message.putUserProperty(Message.extPropertyQoS, String.valueOf(mqttMessage.fixedHeader().qosLevel().value()));
         int readableBytes = mqttMessage.payload().readableBytes();
         byte[] body = new byte[readableBytes];
@@ -63,6 +70,21 @@ public class MessageUtil {
         return message;
     }
 
+    public static MqttPublishMessage removeRetainedFlag(MqttPublishMessage mqttPublishMessage) {
+        MqttFixedHeader tmpFixHeader= mqttPublishMessage.fixedHeader();
+        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(),tmpFixHeader.isDup(),tmpFixHeader.qosLevel(),false,tmpFixHeader.remainingLength()),
+                mqttPublishMessage.variableHeader(),
+                mqttPublishMessage.payload());
+        return mqttPublishMessage;
+    }
+
+    public static MqttPublishMessage dealEmptyMessage(MqttPublishMessage mqttPublishMessage) {
+        MqttFixedHeader tmpFixHeader= mqttPublishMessage.fixedHeader();
+        mqttPublishMessage=new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(),tmpFixHeader.isDup(),tmpFixHeader.qosLevel(),tmpFixHeader.isRetain(),tmpFixHeader.remainingLength()),
+                mqttPublishMessage.variableHeader(),
+                Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8));
+        return mqttPublishMessage;
+    }
 
     public static byte[] encode(List<Message> messageList) {
         if (messageList == null || messageList.isEmpty()) {
@@ -111,7 +133,7 @@ public class MessageUtil {
             String ext = mqMessage.getUserProperty(Message.propertyUserProperties);
             if (ext != null) {
                 message.getUserProperties().putAll(
-                    com.alibaba.fastjson.JSONObject.parseObject(ext, new TypeReference<Map<String, String>>() { }));
+                    JSONObject.parseObject(ext, new TypeReference<Map<String, String>>() { }));
             }
             messageList.add(message);
         }

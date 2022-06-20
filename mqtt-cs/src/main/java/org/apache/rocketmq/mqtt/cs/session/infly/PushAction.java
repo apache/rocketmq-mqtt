@@ -54,7 +54,7 @@ public class PushAction {
     private ConnectConf connectConf;
 
 
-    public void messageArrive(Session session, Subscription subscription, Queue queue) {
+    public void messageArrive(Session session, Subscription subscription, Queue queue) {   //
         if (session == null) {
             return;
         }
@@ -77,10 +77,10 @@ public class PushAction {
         }
     }
 
-    public void push(Message message, Subscription subscription, Session session, Queue queue) {
+    public void push(Message message, Subscription subscription, Session session, Queue queue) {  //感觉得重写这个push啊，dealRetainMsg？
         String clientId = session.getClientId();
         int mqttId = mqttMsgId.nextId(clientId);
-        inFlyCache.getPendingDownCache().put(session.getChannelId(), mqttId, subscription, queue, message);
+        inFlyCache.getPendingDownCache().put(session.getChannelId(), mqttId, subscription, queue, message);  //这一步不知道做啥的，如果messgae是来自kv的话 没必要做这一步吗？还是说queue要处理？
         try {
             if (session.isClean()) {
                 if (message.getStoreTimestamp() > 0 &&
@@ -100,7 +100,7 @@ public class PushAction {
         }
         if (qos == 0) {
             write(session, message, mqttId, 0, subscription);
-            rollNextByAck(session, mqttId);
+            rollNextByAck(session, mqttId);  //因为没有ack所以要主动去推下一条msgid？
         } else {
             retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
             write(session, message, mqttId, qos, subscription);
@@ -113,6 +113,7 @@ public class PushAction {
         String clientId = session.getClientId();
         String topicName = message.getOriginTopic();
         String mqttRealTopic = message.getUserProperty(Message.extPropertyMqttRealTopic);
+        boolean retained=message.isRetained();
         if (StringUtils.isNotBlank(mqttRealTopic)) {
             topicName = mqttRealTopic;
         }
@@ -124,7 +125,7 @@ public class PushAction {
             logger.error("UnWritable:{}", clientId);
             return;
         }
-        Object data = MessageUtil.toMqttMessage(topicName, message.getPayload(), qos, mqttId);
+        Object data = MessageUtil.toMqttMessage(topicName, message.getPayload(), qos, mqttId,retained);
         ChannelFuture writeFuture = session.getChannel().writeAndFlush(data);
         int bodySize = message.getPayload() != null ? message.getPayload().length : 0;
         writeFuture.addListener((ChannelFutureListener) future -> {
@@ -139,7 +140,7 @@ public class PushAction {
         if (session == null) {
             return;
         }
-        mqttMsgId.releaseId(mqttId, session.getClientId());
+        mqttMsgId.releaseId(mqttId, session.getClientId()); //释放mqttId
         InFlyCache.PendingDown pendingDown = inFlyCache.getPendingDownCache().get(session.getChannelId(), mqttId);
         if (pendingDown == null) {
             return;
@@ -163,7 +164,7 @@ public class PushAction {
         if (session == null || session.isDestroyed()) {
             return;
         }
-        InFlyCache.PendingDown pendingDown = inFlyCache.getPendingDownCache().get(session.getChannelId(), mqttId);
+        InFlyCache.PendingDown pendingDown = inFlyCache.getPendingDownCache().get(session.getChannelId(), mqttId);  //？
         if (pendingDown == null) {
             return;
         }

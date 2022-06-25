@@ -37,6 +37,9 @@ public class MetaConf {
     private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft_data/";
     private int metaPort = 25000;
 
+    private String selfAddress;
+    private String membersAddress;
+
     public MetaConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -89,5 +92,21 @@ public class MetaConf {
 
     public void setMetaPort(int metaPort) {
         this.metaPort = metaPort;
+    }
+
+    public String getSelfAddress() {
+        return selfAddress;
+    }
+
+    public void setSelfAddress(String selfAddress) {
+        this.selfAddress = selfAddress;
+    }
+
+    public String getMembersAddress() {
+        return membersAddress;
+    }
+
+    public void setMembersAddress(String membersAddress) {
+        this.membersAddress = membersAddress;
     }
 }

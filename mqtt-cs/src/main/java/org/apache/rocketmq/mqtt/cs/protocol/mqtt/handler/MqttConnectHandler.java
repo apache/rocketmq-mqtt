@@ -110,7 +110,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             // save will message if have
             WillMessage willMessage  = null;
             if(variableHeader.isWillFlag()){
-                if(payload.willTopic() == null || payload.willMessageInBytes() == null || payload.willMessageInBytes().length == 0){
+                if(payload.willTopic() == null || payload.willMessageInBytes() == null){
                     logger.error("Will message and will topic can not be empty");
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
                     return;
@@ -119,10 +119,8 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 //                //todo
 //                metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+payload.willTopic());
 
-                if(!metaClient.bContainsKey(Constants.MQTT_WILL_MESSAGE + Constants.PLUS_SIGN + payload.willTopic())){
-                    willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
-                    sessionLoop.addWillMessage(channel, willMessage);
-                }
+                willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                sessionLoop.addWillMessage(channel, willMessage);
             }
 
         } catch (Exception e) {

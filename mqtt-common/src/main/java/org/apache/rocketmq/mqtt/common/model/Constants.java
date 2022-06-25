@@ -41,10 +41,14 @@ public class Constants {
 
     public static final String MQTT_TAG = "MQTT_COMMON";
 
-    public static final String MQTT_WILL_TOPIC = "WILL_TOPIC";
+    public static final String CS_ALIVE = "alive";
 
-    public static final String MQTT_WILL_MESSAGE = "WILL_MESSAGE";
+    public static final String CS_MASTER = "master";
 
-    public static final String MQTT_WILL_CLIENT = "WILL_CLIENT";
+    public static final byte CTRL_0 = '\u0000';
+
+    public static final byte CTRL_1 = '\u0001';
+
+    public static final byte CTRL_2 = '\u0002';
 
 }

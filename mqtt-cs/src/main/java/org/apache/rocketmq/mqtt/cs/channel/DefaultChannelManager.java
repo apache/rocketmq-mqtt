@@ -40,6 +40,7 @@ import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.ds.meta.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.meta.core.MetaClient;
+import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -141,30 +142,22 @@ public class DefaultChannelManager implements ChannelManager {
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
+        String ip = IpUtil.getLocalAddressCompatible();
 
-        // publish will message with current connection
-        Session willMessageSession = sessionLoop.getSession(channelId);
+        String willKey = ip + Constants.CTRL_1 + clientId;
 
-        WillMessage willMessage = null;
-        String willTopic = willMessageSession.getWillMessage().getWillTopic() == null ? "offline" : willMessageSession.getWillMessage().getWillTopic();
-//        willMessage = willMessageSession.getWillMessage();
-        if(willMessage == null){
-            // todo get will message from distributed KV
-            willMessage = JSON.parseObject(new String(metaClient.bGet(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic)), new TypeReference<WillMessage>(){});
-        }
-
-//        if(!reason.equals("disconnect") && session.getWillMessage() != null && session.getWillMessage().getWillTopic() != null
-//                && session.getWillMessage().getBody() != null && session.getWillMessage().getBody().length > 0)
-        if(reason.equals("disconnect")){
-            willMessageSession.setWillMessage(null);
-            // todo delete will message in distributed KV
-
-        }
-
-        if(willMessage != null && willMessage.getWillTopic() != null
-                && willMessage.getBody() != null && willMessage.getBody().length > 0){
-//            boolean isFlushSuccess = handleWillMessage(willMessage);
-            boolean isFlushSuccess = MQHandleWillMessage(willMessage, clientId);
+        if(metaClient.bContainsKey(willKey)){
+            if(!reason.equals("disconnect")){
+                WillMessage willMessage = JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {});
+                CompletableFuture<Boolean> future = MQHandleWillMessage(willMessage, clientId);
+            }
+            metaClient.delete(willKey).whenComplete((result, throwable) -> {
+                if(!result || throwable != null){
+                    logger.error("fail to delete will message key", willKey);
+                    return;
+                }
+                logger.info("delete will message key {} successfully", willKey);
+            });
         }
 
         if (clientId == null) {
@@ -190,41 +183,29 @@ public class DefaultChannelManager implements ChannelManager {
      * @param clientId
      * @return
      */
-    private boolean MQHandleWillMessage(WillMessage willMessage, String clientId){
+    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId){
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+
         int mqttId = mqttMsgId.nextId(clientId);
         MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
         Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
         String willTopic = willMessage.getWillTopic();
-
         String msgId = MessageClientIDSetter.createUniqID();
         message.setMsgId(msgId);
         message.setBornTimestamp(System.currentTimeMillis());
         Set<String> queueNames = new HashSet<>();
         queueNames.add(willTopic);
+
         CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
         storeResultFuture.whenComplete((storeResult, throwable) -> {
-            logger.info("will message : {}, {}", storeResult.getQueue(), storeResult.getMsgId());
-            // todo delete will message from KV
-            String willClientTopic = Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic;
-            Set<String> clientIdSet = JSON.parseObject(new String(metaClient.bGet(willClientTopic)), new TypeReference<Set<String>>(){});
-            for(String id : clientIdSet){
-                String willClientId = Constants.MQTT_WILL_TOPIC+Constants.PLUS_SIGN+id;
-                Set<String> topicSet = JSON.parseObject(new String(metaClient.bGet(willClientId)), new TypeReference<Set<String>>(){});
-                topicSet.remove(willTopic);
-                if(topicSet.size() == 0){
-                    metaClient.bDelete(willClientId);
-                    logger.info("delete willClientId {} {}", willClientId, metaClient.bGet(willClientId)==null);
-                }else{
-                    metaClient.bPut(willClientId, JSON.toJSONString(topicSet).getBytes());
-                }
+            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
+            if (throwable != null) {
+                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
             }
-            metaClient.bDelete(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic);
-            metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic);
-
-            logger.info("delete MQTT_WILL_CLIENT + {} {}, delete MQTT_WILL_MESSAGE + {} {}", willTopic, metaClient.bGet(Constants.MQTT_WILL_CLIENT+Constants.PLUS_SIGN+willTopic)==null, willTopic, metaClient.bGet(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+willTopic)==null);
+            result.complete(throwable == null);
         });
 
-        return true;
+        return result;
     }
 
     /**

@@ -24,8 +24,8 @@ public class Consumer {
             public void connectComplete(boolean reconnect, String serverURI) {
                 System.out.println(recvClientId + " connect success to " + serverURI);
                 try {
-                    final String topicFilter[] = {firstTopic + "/r1", firstTopic + "/r/+", firstTopic + "/r2"};
-                    final int[] qos = {1, 1, 2};
+                    final String topicFilter[] = {firstTopic, firstTopic + "/r/+", firstTopic + "/r2"};
+                    final int[] qos = {0, 1, 2};
                     mqttClient.subscribe(topicFilter, qos);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -39,12 +39,11 @@ public class Consumer {
 
             @Override
             public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-                System.out.println("in in in in");
                 try {
                     String payload = new String(mqttMessage.getPayload());
                     String[] ss = payload.split("_");
                     System.out.println(now() + "receive:" + topic + "," + payload
-                            + " ---- rt:" + (System.currentTimeMillis() - Long.parseLong(ss[1])));
+                            + " ---- rt:" + recvClientId);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

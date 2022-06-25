@@ -102,7 +102,7 @@ public class MqttProducer {
         connOpts.setMaxInflight(10000);
         connOpts.setUserName("wlq");
         connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "123").toCharArray());
-//        connOpts.setWill("offline",  "i_am_offline".getBytes(), 0, false);
+        connOpts.setWill("offline",  "i_am_offline".getBytes(), 0, false);
 
         return connOpts;
     }

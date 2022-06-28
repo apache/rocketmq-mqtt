@@ -180,19 +180,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                     return;
                 }
                 Message message = JSON.parseObject(bytes, Message.class);
-                String payLoad = new String(message.getPayload());
-                if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
-                    return;
-                }
-                int mqttId = mqttMsgId.nextId(clientId);
-                int qos = min(subscription.getQos(), message.qos());
-                if (qos == 0) {
-                    pushAction.write(session, message, mqttId, 0, subscription);
-                    pushAction.rollNextByAck(session, mqttId);
-                } else {
-                    retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
-                    pushAction.write(session, message, mqttId, qos, subscription);
-                }
+                _sendMessage(session,clientId,subscription,message);
             });
         }
 
@@ -205,25 +193,28 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                         return;
                     }
                     Message message = JSON.parseObject(bytes, Message.class);
-                    String payLoad = new String(message.getPayload());
-                    if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
-                        return;
-                    }
-                    int mqttId = mqttMsgId.nextId(clientId);
-                    int qos = min(subscription.getQos(), message.qos());
-                    if (qos == 0) {
-                        pushAction.write(session, message, mqttId, 0, subscription);
-                        pushAction.rollNextByAck(session, mqttId);
-                    } else {
-                        retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
-                        pushAction.write(session, message, mqttId, qos, subscription);
-                    }
+                    _sendMessage(session,clientId,subscription,message);
                 });
             }
+        }
+    }
 
+    private void _sendMessage(Session session,String clientId,Subscription subscription,Message message){
+
+        String payLoad = new String(message.getPayload());
+        if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
+            return;
         }
 
-
+        int mqttId = mqttMsgId.nextId(clientId);
+        int qos = min(subscription.getQos(), message.qos());
+        if (qos == 0) {
+            pushAction.write(session, message, mqttId, 0, subscription);
+            pushAction.rollNextByAck(session, mqttId);
+        } else {
+            retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
+            pushAction.write(session, message, mqttId, qos, subscription);
+        }
     }
 
 }

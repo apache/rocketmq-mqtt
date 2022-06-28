@@ -120,7 +120,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                     subscription.setTopicFilter(TopicUtils.normalizeTopic(mqttTopicSubscription.topicName()));
                     subscriptions.add(subscription);
                 }
-                sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions); //将订阅信息注册到本地session的sub信息中
+                sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions); 
             }
             future.thenAccept(aVoid -> {
                 if (!channel.isActive()) {

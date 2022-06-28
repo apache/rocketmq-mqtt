@@ -37,7 +37,7 @@ public class TestTrie {
     public void test() {
         Trie<String, String> trie = new Trie<>();
         List<String> topicFilterList = new ArrayList<>(Arrays.asList(
-            "k/r/b/", "k/r/a/c/", "k/r/#/", "k/r/+/", "k/r/+/c/", "k/r/+/#/", "k/a/b/c/r/"));
+                "k/r/b/", "k/r/a/c/", "k/r/#/", "k/r/+/", "k/r/+/c/", "k/r/+/#/", "k/a/b/c/r/"));
 
         int index = 0;
         for (String topicFilter : topicFilterList) {
@@ -91,10 +91,56 @@ public class TestTrie {
         });
         Assert.assertFalse(trie.getNodePath(krbPath).contains(krbPath));
 
-        // test delete all trie node
+        // test delete all reverseTrie node
         for (int i = 0; i < topicFilterList.size(); ++i) {
             trie.deleteNode(topicFilterList.get(i), String.valueOf(i));
         }
         Assert.assertTrue(MapUtils.isEmpty(trie.getNode(topicFilterList.get(0))));
+
+        Trie<String, String> reverseTrie = new Trie<>();
+        List<String> topicList = new ArrayList<>(Arrays.asList(
+                "k/r/b/", "k/r/a/c/", "k/r/a/", "k/r/c/", "k/r/a/d/", "k/a/b/c/r/"));
+
+        index = 0;
+        for (String topicFilter : topicList) {
+            // test 'addNode'
+            reverseTrie.addNode(topicFilter, "", Integer.toString(index++));
+        }
+
+        //test 'getNode' by 'k/r/#'
+        String wcTopic = "k/r/#/";
+        Set<String> wcFilterSet = new HashSet<>(Arrays.asList("k/r/b/", "k/r/a/c/", "k/r/a/","k/r/c/","k/r/a/d/"));
+        Set<String> allPath = reverseTrie.getAllPath(wcTopic);
+        Assert.assertEquals(wcFilterSet,allPath);
+
+        wcTopic = "k/+/#/";
+        wcFilterSet = new HashSet<>(Arrays.asList("k/r/b/", "k/r/a/c/", "k/r/a/", "k/r/c/", "k/r/a/d/", "k/a/b/c/r/"));
+        allPath = reverseTrie.getAllPath(wcTopic);
+        Assert.assertEquals(wcFilterSet,allPath);
+
+        wcTopic = "k/r/+/";
+        wcFilterSet = new HashSet<>(Arrays.asList("k/r/b/", "k/r/a/", "k/r/c/"));
+        allPath = reverseTrie.getAllPath(wcTopic);
+        Assert.assertEquals(wcFilterSet,allPath);
+
+        wcTopic = "k/+/+/";
+        wcFilterSet = new HashSet<>(Arrays.asList("k/r/b/", "k/r/a/", "k/r/c/"));
+        allPath = reverseTrie.getAllPath(wcTopic);
+        Assert.assertEquals(wcFilterSet,allPath);
+
+        wcTopic = "k/#/+/";
+        wcFilterSet = new HashSet<>(Arrays.asList("k/r/b/", "k/r/a/c/", "k/r/a/", "k/r/c/", "k/r/a/d/", "k/a/b/c/r/"));
+        allPath = reverseTrie.getAllPath(wcTopic);
+        Assert.assertEquals(wcFilterSet,allPath);
+
+        System.out.println(reverseTrie.getNodeCount());
+        System.out.println(reverseTrie);
+        reverseTrie.deleteTrieNode("k/r/c/","");
+        System.out.println(reverseTrie);
+        System.out.println(reverseTrie.getNodeCount());
+
+
+
+
     }
 }

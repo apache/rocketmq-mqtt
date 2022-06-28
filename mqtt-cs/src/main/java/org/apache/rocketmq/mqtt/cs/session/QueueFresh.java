@@ -33,7 +33,7 @@ public class QueueFresh {
     @Resource
     private LmqQueueStore lmqQueueStore;
 
-    public Set<Queue> freshQueue(Session session, Subscription subscription) {
+    public Set<Queue> freshQueue(Session session, Subscription subscription) {  //
         Set<Queue> queues = new HashSet<>();
         Set<String> brokers;
         if (subscription.isP2p()) {

@@ -37,5 +37,7 @@
 
     <bean id="metaPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample" init-method="init"/>
 
+    <bean id="RetainedPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.RetainedPersistManagerImpl" init-method="init"/>
+
 
 </beans>

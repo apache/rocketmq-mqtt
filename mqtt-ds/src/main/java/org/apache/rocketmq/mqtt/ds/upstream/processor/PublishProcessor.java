@@ -27,6 +27,7 @@ import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
@@ -62,6 +63,9 @@ public class PublishProcessor implements UpstreamProcessor {
     private FirstTopicManager firstTopicManager;
 
     @Resource
+    RetainedPersistManager retainedPersistManager;
+
+    @Resource
     private MetaClient metaClient;
 
     @Override
@@ -89,12 +93,7 @@ public class PublishProcessor implements UpstreamProcessor {
             Message metaMessage = MessageUtil.toMessage(retainedMqttPublishMessage);
             metaMessage.setMsgId(msgId);
             metaMessage.setBornTimestamp(bornTime);
-            String json = JSON.toJSONString(metaMessage, SerializerFeature.WriteClassName);
-            metaClient.put(MessageUtil.RETAINED+TopicUtils.normalizeTopic(mqttPublishMessage.variableHeader().topicName()),json.getBytes()).whenComplete((ok, exception) -> {
-                if (!ok || exception != null) {
-                    logger.error("Put retained message into meta failed", exception);
-                }
-            });
+            retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(mqttPublishMessage.variableHeader().topicName()),metaMessage);
         }
 
         Message message = MessageUtil.toMessage(mqttPublishMessage);

@@ -69,7 +69,7 @@ public class TestMessageUtil {
 
     @Test
     public void TestToMqttMessage() {
-        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId).toString());
+        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId,false).toString());
     }
 
     @Test

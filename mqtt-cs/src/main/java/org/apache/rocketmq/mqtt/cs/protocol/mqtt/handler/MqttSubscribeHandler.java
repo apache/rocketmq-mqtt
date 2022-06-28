@@ -24,9 +24,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.*;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
+import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
@@ -45,7 +46,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -55,7 +55,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader.from;
-import static io.netty.handler.codec.mqtt.MqttMessageType.PUBLISH;
 import static io.netty.handler.codec.mqtt.MqttMessageType.SUBACK;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 import static java.lang.Math.min;
@@ -76,6 +75,9 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     private ChannelManager channelManager;
 
     @Resource
+    private RetainedPersistManager retainedPersistManager;
+
+    @Resource
     private PushAction pushAction;
     @Resource
     private RetryDriver retryDriver;
@@ -83,6 +85,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     @Resource
     private MetaClient metaClient;
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
+
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage) {
@@ -159,36 +162,63 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
-        Set<Subscription> topics = new HashSet<>();     //
+        Set<Subscription> preciseTopics = new HashSet<>();
+        Set<Subscription> wildcardTopics = new HashSet<>();
 
         for (Subscription subscription : subscriptions) {
             if (!TopicUtils.isWildCard(subscription.getTopicFilter())) {
-                topics.add(subscription);
+                preciseTopics.add(subscription);
             } else {
-
+                wildcardTopics.add(subscription);
             }
         }
 
-        for (Subscription subscription : topics) {
-            String queryKey = MessageUtil.RETAINED + TopicUtils.normalizeTopic(subscription.getTopicFilter());
-            if (!metaClient.bContainsKey(queryKey)) {
-                continue;
-            }
-//            metaClient.get(queryKey)
-            Message message = JSON.parseObject(metaClient.bGet(queryKey), Message.class);
-            String payLoad = new String(message.getPayload());
-            if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
-                continue;
-            }
-            
-            int mqttId = mqttMsgId.nextId(clientId);
-            int qos = min(subscription.getQos(), message.qos());
-            if (qos == 0) {
-                pushAction.write(session, message, mqttId, 0, subscription);
-                pushAction.rollNextByAck(session, mqttId);  //因为没有ack所以要主动去推下一条msgid？
-            } else {
-                retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
-                pushAction.write(session, message, mqttId, qos, subscription);
+        for (Subscription subscription : preciseTopics) {
+            CompletableFuture<byte[]> retainedMessage = retainedPersistManager.getRetainedMessage(subscription.getTopicFilter());
+            retainedMessage.whenComplete((bytes, throwable) -> {
+                if (bytes==null){
+                    return;
+                }
+                Message message = JSON.parseObject(bytes, Message.class);
+                String payLoad = new String(message.getPayload());
+                if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
+                    return;
+                }
+                int mqttId = mqttMsgId.nextId(clientId);
+                int qos = min(subscription.getQos(), message.qos());
+                if (qos == 0) {
+                    pushAction.write(session, message, mqttId, 0, subscription);
+                    pushAction.rollNextByAck(session, mqttId);
+                } else {
+                    retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
+                    pushAction.write(session, message, mqttId, qos, subscription);
+                }
+            });
+        }
+
+        for (Subscription subscription : wildcardTopics) {
+            Set<String>topics=retainedPersistManager.getTopicsFromTrie(subscription);
+            for (String topic:topics){
+                CompletableFuture<byte[]> retainedMessage = retainedPersistManager.getRetainedMessage(topic);
+                retainedMessage.whenComplete((bytes, throwable) -> {
+                    if (bytes==null){
+                        return;
+                    }
+                    Message message = JSON.parseObject(bytes, Message.class);
+                    String payLoad = new String(message.getPayload());
+                    if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
+                        return;
+                    }
+                    int mqttId = mqttMsgId.nextId(clientId);
+                    int qos = min(subscription.getQos(), message.qos());
+                    if (qos == 0) {
+                        pushAction.write(session, message, mqttId, 0, subscription);
+                        pushAction.rollNextByAck(session, mqttId);
+                    } else {
+                        retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
+                        pushAction.write(session, message, mqttId, qos, subscription);
+                    }
+                });
             }
 
         }

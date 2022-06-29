@@ -94,6 +94,12 @@ public class PushAction {
         } catch (Exception e) {
             logger.error("", e);
         }
+
+        String msgPayLoad = new String(message.getPayload());   //deal with message with empty payload
+        if (msgPayLoad.equals(MessageUtil.EMPTYSTRING)){
+            message.setPayload("".getBytes());
+        }
+
         int qos = subscription.getQos();
         if (subscription.isP2p() && message.qos() != null) {
             qos = message.qos();

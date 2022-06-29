@@ -3,7 +3,6 @@ package org.apache.rocketmq.mqtt.ds.meta;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import com.alipay.sofa.jraft.rhea.util.concurrent.DistributedLock;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
@@ -21,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Resource;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RetainedPersistManagerImpl implements RetainedPersistManager {
 
@@ -39,8 +39,6 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
     private MetaClient metaClient;
 
     private static final String PREFIX_TOPIC_TRIE = "%RETAINED_TOPIC_TRIE%";
-
-    private static final String LOCK_TOPIC_TRIE= "%LOCK_TOPIC_TRIE%";
 
     private final int LIMIT_RETAINED_MESSAGE_COUNT=100;
 
@@ -133,26 +131,34 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         }
 
         String msgPayLoad = new String(message.getPayload());
-        byte[] kvTriebytes = metaClient.bGet(PREFIX_TOPIC_TRIE + firstTopic);
-        Trie<String,String>kvTrie=JSON.parseObject(kvTriebytes, Trie.class);
-        if (kvTrie.getNodeCount()>LIMIT_RETAINED_MESSAGE_COUNT&&!msgPayLoad.equals(MessageUtil.EMPTYSTRING)){
-            logger.info("Put retained message of topic {} into meta failed. Because the number of topics {} exceeds the limit...", topic,firstTopic);
+        boolean isEmptyMsg=false;
+        boolean isNeedStoreMsg =false;
+        if(msgPayLoad.equals(MessageUtil.EMPTYSTRING)){  //will delete retained msg
+            deleteTopicQueue.add(new deleteTopicTask(firstTopic,topic,System.currentTimeMillis()));
+            isEmptyMsg=true;
+        }else if(localRetainedTopicTrieCache.get(firstTopic).getNodePath().size()>=LIMIT_RETAINED_MESSAGE_COUNT){
+            logger.info("Local Trie reject. Put retained message of topic {} into meta failed. Because the number of topics {} exceeds the limit...", topic,firstTopic);
+            isNeedStoreMsg =false;
+        } else{
+            isNeedStoreMsg = updateTopicTrie(firstTopic, topic);
+        }
+
+        if (isEmptyMsg|| isNeedStoreMsg){
+            logger.info("isEmptyMsg={}  isNeedStoreMsg={}",isEmptyMsg, isNeedStoreMsg);
+            String json = JSON.toJSONString(message, SerializerFeature.WriteClassName);
+            return metaClient.put(MessageUtil.RETAINED+topic ,json.getBytes()).whenComplete((ok, exception) -> {
+                if (!ok || exception != null) {
+                    logger.error("Put retained message of topic {} into meta failed", topic,exception);
+                }else{
+                    logger.info("Put retained message of topic {} into meta success",topic);
+                }
+            });
+        }else{
+            logger.info("Put retained message of topic {} into meta failed",topic);
             result.complete(false);
             return result;
         }
 
-        String json = JSON.toJSONString(message, SerializerFeature.WriteClassName);
-        return metaClient.put(MessageUtil.RETAINED+topic ,json.getBytes()).whenComplete((ok, exception) -> {
-            if (!ok || exception != null) {
-                logger.error("Put retained message of topic {} into meta failed", topic,exception);
-            }else{
-                logger.info("Put retained message of topic {} into meta success",topic);
-                updateTopicTrie(firstTopic,topic);
-                if (msgPayLoad.equals(MessageUtil.EMPTYSTRING)){
-                    deleteTopicQueue.add(new deleteTopicTask(firstTopic,topic,System.currentTimeMillis()));
-                }
-            }
-        });
     }
     public CompletableFuture<byte[]> getRetainedMessage(String preciseTopic){  //precise preciseTopic
         String queryKey = MessageUtil.RETAINED + TopicUtils.normalizeTopic(preciseTopic);
@@ -165,7 +171,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         String originTopicFilter=subscription.getTopicFilter();
         logger.info("firstTopic={}   originTopicFilter={}",firstTopic,originTopicFilter);
         results=localRetainedTopicTrieCache.get(firstTopic).getAllPath(originTopicFilter);
-        if(results.isEmpty()){   //Refresh the trie about firstTopic
+        if(results.isEmpty()){   //Refresh the trie about single firstTopic
             logger.info("Local trie does not exist. Try to kv store find...");
             refreshSingleKVStore(firstTopic);
             results=localRetainedTopicTrieCache.get(firstTopic).getAllPath(originTopicFilter);
@@ -173,44 +179,41 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         return results;
     }
 
-    private void updateTopicTrie(String firstTopic,String topic){
+    private boolean updateTopicTrie(String firstTopic,String topic){
 
         if(localRetainedTopicTrieCache.get(firstTopic).getNodePath().contains(topic)){
-            return;
+            return true;
         }
 
         Trie<String,String>localTrie=localRetainedTopicTrieCache.get(firstTopic);
         localTrie.addNode(topic,"","");
+
         //update the kv trie
-        DistributedLock<byte[]> trieLock = metaClient.getDistributedLock(LOCK_TOPIC_TRIE+ firstTopic,3,TimeUnit.SECONDS);
-        if (trieLock.tryLock()) {
-            try {
-                logger.info("Get the lock of "+firstTopic+" for update successful...");
-                // manipulate protected state
-                logger.info("Get {} kvTrie ...",firstTopic);
-                byte[] kvTriebytes = metaClient.bGet(PREFIX_TOPIC_TRIE + firstTopic);
-                Trie<String,String>kvTrie=JSON.parseObject(kvTriebytes, Trie.class);
-                TrieUtil.mergeKvToLocal(localTrie, kvTrie);  //local<-KV
-                String newTrieJson = JSON.toJSONString(localTrie, SerializerFeature.WriteClassName);
-                boolean ok = metaClient.bCompareAndPut(PREFIX_TOPIC_TRIE + firstTopic, kvTriebytes, newTrieJson.getBytes());
-                if (ok){
-                    logger.info("Update "+firstTopic+" Trie successful...");
-                }else{
-                    logger.info("Update "+firstTopic+" Trie failed...");
-                }
-            } finally {
-                trieLock.unlock();
-                logger.info("Unlock the lock of "+firstTopic+" successful...");
+        boolean result=false;
+        while(!result){
+            byte[] kvTriebytes = metaClient.bGet(PREFIX_TOPIC_TRIE + firstTopic);
+            Trie<String,String>kvTrie=JSON.parseObject(kvTriebytes, Trie.class);
+            if (kvTrie.getNodePath().size()>=LIMIT_RETAINED_MESSAGE_COUNT){
+                result=false;
+                break;
             }
-        } else {
-            // perform alternative actions
+            TrieUtil.mergeKvToLocal(localTrie, kvTrie);  //local<-KV
+            String newTrieJson = JSON.toJSONString(localTrie, SerializerFeature.WriteClassName);
+            result = metaClient.bCompareAndPut(PREFIX_TOPIC_TRIE + firstTopic, kvTriebytes, newTrieJson.getBytes());  //write success
         }
+        if (result) {
+            logger.info("Update {} into firstTopic {} Trie successful...", topic, firstTopic);
+        }else{
+            logger.info("KV Trie reject. Put retained message of topic {} into meta failed. Because the number of topics {} exceeds the limit...", topic,firstTopic);
+            return false;
+        }
+        return result;
     }
 
     private void refreshDeleteQueue() throws InterruptedException {
         try {
             logger.info("Start refreshDeleteQueue...");
-            int count=0;
+            AtomicInteger count=new AtomicInteger(0);
             long ct=System.currentTimeMillis();
             while(!deleteTopicQueue.isEmpty()){
                 if (ct-deleteTopicQueue.peek().time<LIMIT_DELETE_MESSAGE_TIME){
@@ -218,7 +221,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
                 }
                 deleteTopicTask take = deleteTopicQueue.take();
                 execDeleteTopicFromTrie(take.firstTopic,take.topic);
-                count++;
+                count.incrementAndGet();
             }
             logger.info("delete {} topic",count);
             logger.info("End refreshDeleteQueue...");
@@ -228,30 +231,17 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
     }
 
     private void execDeleteTopicFromTrie(String firstTopic,String topic){
-        DistributedLock<byte[]> trieLock = metaClient.getDistributedLock(LOCK_TOPIC_TRIE+ firstTopic,3,TimeUnit.SECONDS);
-        if (trieLock.tryLock()) {
-            try {
-                logger.info("Get the lock of "+firstTopic+"for delete successful...");
-                // manipulate protected state
-                logger.info("Get {} kvTrie ...",firstTopic);
-                byte[] kvTriebytes = metaClient.bGet(PREFIX_TOPIC_TRIE + firstTopic);
-                Trie<String,String>kvTrie=JSON.parseObject(metaClient.bGet(PREFIX_TOPIC_TRIE+firstTopic), Trie.class);
-                kvTrie.deleteTrieNode(topic,"");
-                Trie<String, String> newTrie = TrieUtil.rebuildLocalTrie(kvTrie);
-                String newTrieJson = JSON.toJSONString(newTrie, SerializerFeature.WriteClassName);
-                boolean ok = metaClient.bCompareAndPut(PREFIX_TOPIC_TRIE + firstTopic, kvTriebytes, newTrieJson.getBytes());
-                if (ok){
-                    logger.info("Delete "+firstTopic+" Trie's {} successful...",topic);
-                }else{
-                    logger.info("Delete "+firstTopic+" Trie's {} failed...",topic);
-                }
-            } finally {
-                trieLock.unlock();
-                logger.info("Unlock the lock of "+firstTopic+" successful...");
-            }
-        } else {
-            // perform alternative actions
+        boolean result=false;
+        while(!result){
+            byte[] kvTriebytes = metaClient.bGet(PREFIX_TOPIC_TRIE + firstTopic);
+            Trie<String,String>kvTrie=JSON.parseObject(kvTriebytes, Trie.class);
+            kvTrie.deleteTrieNode(topic,"");
+            Trie<String, String> newTrie = TrieUtil.rebuildLocalTrie(kvTrie);
+            String newTrieJson = JSON.toJSONString(newTrie, SerializerFeature.WriteClassName);
+            result = metaClient.bCompareAndPut(PREFIX_TOPIC_TRIE + firstTopic, kvTriebytes, newTrieJson.getBytes());  //remove topic from trie
         }
+        logger.info("Delete "+firstTopic+" Trie's {} successful...",topic);
+
     }
     public static class deleteTopicTask {
         public String firstTopic;

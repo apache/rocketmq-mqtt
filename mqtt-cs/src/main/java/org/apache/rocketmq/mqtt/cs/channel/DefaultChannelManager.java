@@ -25,11 +25,16 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
-import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.model.*;
+
+import org.apache.rocketmq.mqtt.common.model.StoreResult;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.MqttTopic;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -38,7 +43,8 @@ import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
-import org.apache.rocketmq.mqtt.ds.meta.SubscriptionPersistManager;
+import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
+import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
@@ -83,6 +89,12 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private MetaClient metaClient;
+
+    @Resource
+    private WildcardManager wildcardManager;
+
+    @Resource
+    private FirstTopicManager firstTopicManager;
 
 
     @PostConstruct
@@ -146,13 +158,14 @@ public class DefaultChannelManager implements ChannelManager {
 
         String willKey = ip + Constants.CTRL_1 + clientId;
 
-        if(metaClient.bContainsKey(willKey)){
-            if(!reason.equals("disconnect")){
-                WillMessage willMessage = JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {});
+        if (metaClient.bContainsKey(willKey)) {
+            if (!reason.equals("disconnect")) {
+                WillMessage willMessage = JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {
+                });
                 CompletableFuture<Boolean> future = MQHandleWillMessage(willMessage, clientId);
             }
             metaClient.delete(willKey).whenComplete((result, throwable) -> {
-                if(!result || throwable != null){
+                if (!result || throwable != null) {
                     logger.error("fail to delete will message key", willKey);
                     return;
                 }
@@ -179,28 +192,33 @@ public class DefaultChannelManager implements ChannelManager {
 
     /**
      * distribute will message through MQ
+     *
      * @param willMessage
      * @param clientId
      * @return
      */
-    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId){
+    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         int mqttId = mqttMsgId.nextId(clientId);
         MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
-        Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
         String willTopic = willMessage.getWillTopic();
+        String pubTopic = TopicUtils.normalizeTopic(willTopic);
+        MqttTopic mqttTopic = TopicUtils.decode(pubTopic);
+        firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic());
+        Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, null);
+        Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
         String msgId = MessageClientIDSetter.createUniqID();
         message.setMsgId(msgId);
         message.setBornTimestamp(System.currentTimeMillis());
-        Set<String> queueNames = new HashSet<>();
-        queueNames.add(willTopic);
+//        Set<String> queueNames = new HashSet<>();
+//        queueNames.add(willTopic);
 
         CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
         storeResultFuture.whenComplete((storeResult, throwable) -> {
-            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
+            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
             if (throwable != null) {
-                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
+                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
             }
             result.complete(throwable == null);
         });
@@ -209,9 +227,7 @@ public class DefaultChannelManager implements ChannelManager {
     }
 
     /**
-     *
-     * @param willMessage
-     * distribute will message to clients that subscribe the will topic
+     * @param willMessage distribute will message to clients that subscribe the will topic
      */
     private boolean handleWillMessage(WillMessage willMessage) {
         // get all clients subscribing the will topic
@@ -251,7 +267,6 @@ public class DefaultChannelManager implements ChannelManager {
             qos = Math.min(subMaxQos, qos);
             if (qos == 0) {
                 if (!session.getChannel().isWritable()) {
-                    // todo ??? channel is not able to write ? why ?? 查看tcp连接可能满了
                     logger.error("UnWritable:{}", session.getClientId());
                     continue;
                 }
@@ -280,6 +295,7 @@ public class DefaultChannelManager implements ChannelManager {
 
         return isFlushSuccess;
     }
+
     @Override
     public void closeConnect(String channelId, String reason) {
         Channel channel = channelMap.get(channelId);

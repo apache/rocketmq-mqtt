@@ -63,9 +63,6 @@ public class SubscribeProcessor implements UpstreamProcessor {
             subscription.setTopicFilter(topicFilter);
             subscription.setQos(mqttTopicSubscription.qualityOfService().value());
             subscriptions.add(subscription);
-            if(subscriptionPersistManager != null){
-                subscriptionPersistManager.saveSubscribers(topicFilter, new HashSet<String>(){{add(context.getClientId());}});
-            }
         }
         if (subscriptionPersistManager != null) {
             subscriptionPersistManager.saveSubscriptions(context.getClientId(), subscriptions);

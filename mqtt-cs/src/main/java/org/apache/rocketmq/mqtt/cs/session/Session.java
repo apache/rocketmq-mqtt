@@ -19,7 +19,11 @@ package org.apache.rocketmq.mqtt.cs.session;
 
 
 import io.netty.channel.Channel;
-import org.apache.rocketmq.mqtt.common.model.*;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Queue;
+import org.apache.rocketmq.mqtt.common.model.QueueOffset;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

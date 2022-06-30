@@ -30,7 +30,14 @@ import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
-import org.apache.rocketmq.mqtt.common.model.*;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.PullResult;
+import org.apache.rocketmq.mqtt.common.model.Queue;
+import org.apache.rocketmq.mqtt.common.model.QueueOffset;
+import org.apache.rocketmq.mqtt.common.model.StoreResult;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -50,6 +57,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -118,7 +126,7 @@ public class SessionLoopImpl implements SessionLoop {
     private AtomicLong rid = new AtomicLong();
     private long pullIntervalMillis = 10;
 
-    private long checkAliveIntervalMillis = 10 * 1000;
+    private long checkAliveIntervalMillis = 5 * 1000;
 
     @PostConstruct
     public void init() {
@@ -129,9 +137,7 @@ public class SessionLoopImpl implements SessionLoop {
         persistOffsetScheduler.scheduleWithFixedDelay(() -> persistAllOffset(true), 5000, 5000, TimeUnit.MILLISECONDS);
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
         aliveService.scheduleWithFixedDelay(() -> csLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
-        if(new String(metaClient.bGet(Constants.CS_MASTER)).equals(IpUtil.getLocalAddressCompatible() + ":" + connectConf.getMqttPort())){
-            aliveService.scheduleWithFixedDelay(() -> masterLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
-        }
+        aliveService.scheduleWithFixedDelay(() -> masterLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
     }
 
     private void pullLoop() {
@@ -157,24 +163,36 @@ public class SessionLoopImpl implements SessionLoop {
         }
     }
 
-    private void csLoop(){
-        String ip = IpUtil.getLocalAddressCompatible() + ":" + connectConf.getMqttPort();
+    private void csLoop() {
+        String ip = IpUtil.getLocalAddressCompatible();
         String csKey = Constants.CS_ALIVE + Constants.CTRL_1 + ip;
         String masterKey = Constants.CS_MASTER;
         long currentTime = System.currentTimeMillis();
 
-        metaClient.put(csKey, String.valueOf(currentTime).getBytes());
-        logger.info("put csKey csKey {} {}", csKey, JSON.parseObject(new String(metaClient.bGet(csKey)), new TypeReference<Set<String>>(){}));
+        metaClient.put(csKey, String.valueOf(currentTime).getBytes()).whenComplete((result, throwable) -> {
+            if (result == null || throwable != null) {
+                logger.error("{} fail to put csKey", csKey);
+                return;
+            }
+            logger.info("put csKey {} {}", csKey, JSON.parseObject(new String(metaClient.bGet(csKey)), new TypeReference<String>() {
+            }));
+        });
 
+        if (!metaClient.bContainsKey(masterKey)) {
+            logger.info("metaClient does not have master");
+            return;
+        }
         byte[] masterValueBytes = metaClient.bGet(masterKey);
+        if (masterValueBytes == null || masterValueBytes.length == 0) {
+            return;
+        }
         String masterValue = new String(masterValueBytes);
-        String[] masterInfo = masterValue.split(Constants.PLUS_SIGN);
-        String masterIp = masterInfo[0];
-        String masterUpdateTime = masterInfo[1];
+        String masterUpdateTime = masterValue.substring((ip + Constants.PLUS_SIGN).length());
+        logger.info("masterUpdateTime is {}", masterUpdateTime);
 
-        if(currentTime - Long.parseLong(masterUpdateTime) > 2 * 10 * 1000){
-            metaClient.compareAndPut(masterKey, masterValueBytes, (ip+Constants.PLUS_SIGN+currentTime).getBytes()).whenComplete((result, throwable) -> {
-                if(!result || throwable != null){
+        if (currentTime - Long.parseLong(masterUpdateTime) > 20 * checkAliveIntervalMillis) {
+            metaClient.compareAndPut(masterKey, masterValueBytes, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+                if (!result || throwable != null) {
                     logger.error("{} fail to update master", ip);
                     return;
                 }
@@ -184,71 +202,105 @@ public class SessionLoopImpl implements SessionLoop {
 
     }
 
-    private void masterLoop(){
-        String ip = IpUtil.getLocalAddressCompatible() + ":" + connectConf.getMqttPort();
-//        String csKey = "Alive" + ip;
+    private void masterLoop() {
         String masterKey = Constants.CS_MASTER;
+        String ip = IpUtil.getLocalAddressCompatible();
         long currentTime = System.currentTimeMillis();
 
-        metaClient.put(masterKey, (ip+Constants.PLUS_SIGN+currentTime).getBytes());
-        logger.info("put master  {} {}", ip, JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<Set<String>>(){}));
+        if (!metaClient.bContainsKey(masterKey)) {
+//            metaClient.compareAndPut(masterKey, null, (ip+Constants.PLUS_SIGN+currentTime).getBytes()).whenComplete((result, throwable) -> {
+            metaClient.put(masterKey, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+                if (!result || throwable != null) {
+                    logger.error("{} fail to update master", ip);
+                    return;
+                }
+                logger.info("put master {}", JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<String>() {
+                }));
+            });
+        }
+        logger.info("master is {}", new String(metaClient.bGet(Constants.CS_MASTER)));
+        if (metaClient.bContainsKey(Constants.CS_MASTER) && !new String(metaClient.bGet(Constants.CS_MASTER)).startsWith(IpUtil.getLocalAddressCompatible())) {
+            logger.info("master is not {}", IpUtil.getLocalAddressCompatible());
+            return;
+        }
+
+        metaClient.put(masterKey, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+            if (result == null || throwable != null) {
+                logger.error("{} fail to put master", ip);
+                return;
+            }
+            logger.info("put master  {} {}", ip, JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<String>() {
+            }));
+        });
 
         String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
         String endCSKey = Constants.CS_ALIVE + Constants.CTRL_2;
         metaClient.scan(startCSKey, endCSKey).whenComplete((result, throwable) -> {
-            if(throwable != null){
+            if (throwable != null) {
                 logger.error("{} master fail to scan cs", ip);
                 return;
             }
 
-            for(KVEntry kvEntry : result){
-                if(System.currentTimeMillis() - Long.parseLong(new String(kvEntry.getValue())) > 2 * 10 * 1000){
+            if (result.size() == 0) {
+                logger.info("master scanned 0 cs");
+                return;
+            }
+            for (KVEntry kvEntry : result) {
+                logger.info("master {} scan cs {} {}", ip, new String(kvEntry.getKey()), new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(new String(kvEntry.getValue()))));
+                if (System.currentTimeMillis() - Long.parseLong(new String(kvEntry.getValue())) > 20 * checkAliveIntervalMillis) {
                     String csIp = new String(kvEntry.getKey()).substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
                     handleShutDownCS(csIp);
                 }
             }
-            logger.info("{} update master successfully", ip);
         });
+        logger.info("{} update master successfully", ip);
     }
 
-    private CompletableFuture handleShutDownCS(String ip){
+    private CompletableFuture handleShutDownCS(String ip) {
         CompletableFuture future = new CompletableFuture();
 
         String startClientKey = ip + Constants.CTRL_0;
         String endClientKey = ip + Constants.CTRL_2;
         metaClient.scan(startClientKey, endClientKey).whenComplete((willList, throwable) -> {
-            if(throwable != null){
+            if (throwable != null) {
                 logger.error("{} master fail to scan cs", ip);
                 return;
             }
 
-            for(KVEntry kvEntry : willList){
+            if (willList.size() == 0) {
+                logger.info("master handle 0 will");
+                future.complete(null);
+                return;
+            }
+            for (KVEntry kvEntry : willList) {
+                logger.info("master handle will {} {}", kvEntry.getKey(), kvEntry.getValue());
                 String willKey = new String(kvEntry.getValue());
-                String clientId = new String(kvEntry.getKey()).substring((ip+Constants.CTRL_1).length());
-                WillMessage willMessage = JSON.parseObject(willKey, new TypeReference<WillMessage>() {});
+                String clientId = new String(kvEntry.getKey()).substring((ip + Constants.CTRL_1).length());
+                WillMessage willMessage = JSON.parseObject(willKey, new TypeReference<WillMessage>() {
+                });
                 MQHandleWillMessage(willMessage, clientId);
 
                 metaClient.delete(new String(kvEntry.getKey())).whenComplete((result, e) -> {
-                    if(!result || e != null){
+                    if (!result || e != null) {
                         logger.error("fail to delete will message key", willKey);
                         return;
                     }
                     logger.info("delete will message key {} successfully", willKey);
                 });
             }
-            logger.info("{} update master successfully", ip);
             future.complete(null);
         });
-        return  future;
+        return future;
     }
 
     /**
      * distribute will message through MQ
+     *
      * @param willMessage
      * @param clientId
      * @return
      */
-    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId){
+    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         int mqttId = mqttMsgId.nextId(clientId);
@@ -263,9 +315,9 @@ public class SessionLoopImpl implements SessionLoop {
 
         CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
         storeResultFuture.whenComplete((storeResult, throwable) -> {
-            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
+            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
             if (throwable != null) {
-                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(),  storeResult.getQueue().getQueueName(), storeResult.getMsgId());
+                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
             }
             result.complete(throwable == null);
         });
@@ -530,12 +582,12 @@ public class SessionLoopImpl implements SessionLoop {
     public void addWillMessage(Channel channel, WillMessage willMessage) {
         Session session = getSession(ChannelInfo.getId(channel));
         String clientId = ChannelInfo.getClientId(channel);
-        String ip = IpUtil.getLocalAddressCompatible() + ":" + connectConf.getMqttPort();
+        String ip = IpUtil.getLocalAddressCompatible();
 
-        if(session == null){
+        if (session == null) {
             return;
         }
-        if(willMessage == null){
+        if (willMessage == null) {
             return;
         }
 
@@ -543,19 +595,19 @@ public class SessionLoopImpl implements SessionLoop {
         String message = JSON.toJSONString(willMessage);
         String willKey = ip + Constants.CTRL_1 + clientId;
 
-        if(metaClient.bContainsKey(willKey)){
+        if (metaClient.bContainsKey(willKey)) {
             logger.error("client {} already have will topic {} will message {}", clientId, topic, willMessage);
             return;
         }
 
         // key: ip + clientId; value: WillMessage
         metaClient.put(willKey, message.getBytes()).whenComplete((result, throwable) -> {
-            if(!result || throwable != null){
+            if (!result || throwable != null) {
                 logger.error("fail to put will message key {} value {}", willKey, willMessage);
                 return;
             }
-//            logger.info("put will message key {} value {} successfully", willKey, willMessage);
-            logger.info("put will message key {} value {} successfully", willKey, JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>(){}));
+            logger.info("put will message key {} value {} successfully", willKey, JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {
+            }));
         });
     }
 

@@ -20,10 +20,17 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttConnAckMessage;
+import io.netty.handler.codec.mqtt.MqttConnAckVariableHeader;
+import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttConnectPayload;
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
+import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -34,7 +41,6 @@ import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.concurrent.CompletableFuture;
@@ -108,9 +114,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
 
             // save will message if have
-            WillMessage willMessage  = null;
-            if(variableHeader.isWillFlag()){
-                if(payload.willTopic() == null || payload.willMessageInBytes() == null){
+            WillMessage willMessage = null;
+            if (variableHeader.isWillFlag()) {
+                if (payload.willTopic() == null || payload.willMessageInBytes() == null) {
                     logger.error("Will message and will topic can not be empty");
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
                     return;

@@ -47,7 +47,6 @@ public class ConnectHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        // todo ctx中channel的buff就是null了
         super.channelInactive(ctx);
         channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "be closed");
     }

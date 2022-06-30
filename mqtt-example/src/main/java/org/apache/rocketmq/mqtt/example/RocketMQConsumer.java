@@ -36,14 +36,11 @@ public class RocketMQConsumer {
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("GID_test01");
 
         // Specify name server addresses.
-        consumer.setNamesrvAddr("localhost:9876");
+        consumer.setNamesrvAddr(System.getenv("namesrv"));
 
         // Subscribe one more more topics to consume.
-        String firstTopic = "test";
-//        String firstTopic = "offline";
-//        consumer.subscribe(firstTopic, Constants.MQTT_TAG);
-        consumer.subscribe(firstTopic, "MQ2MQTT");
-
+        String firstTopic = System.getenv("firstTopic");
+        consumer.subscribe(firstTopic, Constants.MQTT_TAG);
         // Register callback to execute on arrival of messages fetched from brokers.
         consumer.registerMessageListener(new MessageListenerConcurrently() {
 

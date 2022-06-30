@@ -18,9 +18,7 @@
 package org.apache.rocketmq.mqtt.meta.util;
 
 import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import javax.management.Query;
 import java.lang.management.ManagementFactory;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -89,7 +87,6 @@ public class IpUtil {
         for (ObjectName objectName : objectNames) {
             String protocol = String.valueOf(mBeanServer.getAttribute(objectName, "protocol"));
             String port = String.valueOf(mBeanServer.getAttribute(objectName, "port"));
-            // windows下属性名称为HTTP/1.1, linux下为org.apache.coyote.http11.Http11NioProtocol
             if (protocol.equals("HTTP/1.1") || protocol.equals("org.apache.coyote.http11.Http11NioProtocol")) {
                 return port;
             }

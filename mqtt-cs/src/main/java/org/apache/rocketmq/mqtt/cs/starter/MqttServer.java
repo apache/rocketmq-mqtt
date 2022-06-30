@@ -17,8 +17,6 @@
 
 package org.apache.rocketmq.mqtt.cs.starter;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelInitializer;
@@ -33,15 +31,12 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
-import org.apache.rocketmq.mqtt.meta.core.MetaClient;
-import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -49,7 +44,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
-import java.util.Set;
 
 @Service
 public class MqttServer {
@@ -73,9 +67,6 @@ public class MqttServer {
     @Resource
     private ChannelManager channelManager;
 
-    @Resource
-    private MetaClient metaClient;
-
     @PostConstruct
     public void init() throws Exception {
         start();
@@ -84,35 +75,24 @@ public class MqttServer {
 
     private void start() {
         int port = connectConf.getMqttPort();
-        String masterKey = Constants.CS_MASTER;
-        String ip = IpUtil.getLocalAddressCompatible() + ":" + port;
-        long currentTime = System.currentTimeMillis();
-        metaClient.compareAndPut(masterKey, null, (ip+Constants.PLUS_SIGN+currentTime).getBytes()).whenComplete((result, throwable) -> {
-            if(!result || throwable != null){
-                logger.error("{} fail to update master", ip);
-                return;
-            }
-//            logger.info("{} update master successfully", ip);
-            logger.info("put master {}", JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<Set<String>>(){}));
-        });
         serverBootstrap
-            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
-            .channel(NioServerSocketChannel.class)
-            .option(ChannelOption.SO_BACKLOG, 8 * 1024)
-            .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-            .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
-            .childOption(ChannelOption.TCP_NODELAY, true)
-            .localAddress(new InetSocketAddress(port))
-            .childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline pipeline = ch.pipeline();
-                    pipeline.addLast("connectHandler", connectHandler);
-                    pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
-                    pipeline.addLast("encoder", MqttEncoder.INSTANCE);
-                    pipeline.addLast("dispatcher", mqttPacketDispatcher);
-                }
-            });
+                .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+                .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_BACKLOG, 8 * 1024)
+                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
+                .childOption(ChannelOption.TCP_NODELAY, true)
+                .localAddress(new InetSocketAddress(port))
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("connectHandler", connectHandler);
+                        pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
+                        pipeline.addLast("encoder", MqttEncoder.INSTANCE);
+                        pipeline.addLast("dispatcher", mqttPacketDispatcher);
+                    }
+                });
         serverBootstrap.bind();
         logger.warn("start mqtt server , port:{}", port);
     }
@@ -120,29 +100,29 @@ public class MqttServer {
     private void startWs() {
         int port = connectConf.getMqttWsPort();
         wsServerBootstrap
-            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
-            .channel(NioServerSocketChannel.class)
-            .option(ChannelOption.SO_BACKLOG, 8 * 1024)
-            .option(ChannelOption.SO_KEEPALIVE, true)
-            .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-            .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
-            .childOption(ChannelOption.TCP_NODELAY, true)
-            .localAddress(new InetSocketAddress(port))
-            .childHandler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline pipeline = ch.pipeline();
-                    pipeline.addLast("connectHandler", connectHandler);
-                    pipeline.addLast("http-codec", new HttpServerCodec(1024, 32 * 1024, connectConf.getMaxPacketSizeInByte() * 2, true));
-                    pipeline.addLast("aggregator", new HttpObjectAggregator(connectConf.getMaxPacketSizeInByte() * 2));
-                    pipeline.addLast("http-chunked", new ChunkedWriteHandler());
-                    pipeline.addLast("websocket-handler", webSocketServerHandler);
-                    pipeline.addLast("websocket-encoder", new WebSocketEncoder());
-                    pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
-                    pipeline.addLast("encoder", MqttEncoder.INSTANCE);
-                    pipeline.addLast("dispatcher", mqttPacketDispatcher);
-                }
-            });
+                .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+                .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.SO_BACKLOG, 8 * 1024)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
+                .childOption(ChannelOption.TCP_NODELAY, true)
+                .localAddress(new InetSocketAddress(port))
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    public void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("connectHandler", connectHandler);
+                        pipeline.addLast("http-codec", new HttpServerCodec(1024, 32 * 1024, connectConf.getMaxPacketSizeInByte() * 2, true));
+                        pipeline.addLast("aggregator", new HttpObjectAggregator(connectConf.getMaxPacketSizeInByte() * 2));
+                        pipeline.addLast("http-chunked", new ChunkedWriteHandler());
+                        pipeline.addLast("websocket-handler", webSocketServerHandler);
+                        pipeline.addLast("websocket-encoder", new WebSocketEncoder());
+                        pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
+                        pipeline.addLast("encoder", MqttEncoder.INSTANCE);
+                        pipeline.addLast("dispatcher", mqttPacketDispatcher);
+                    }
+                });
         wsServerBootstrap.bind();
         logger.warn("start mqtt ws server , port:{}", port);
     }

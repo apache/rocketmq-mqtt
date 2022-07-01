@@ -34,7 +34,6 @@ public class TestTrieUtil {
 
 
         TrieUtil.mergeKvToLocal(trie1,trie2);
-
         Assert.assertEquals(trie1.toString(),trie2.toString());
 
         Trie<String,String>trie3= TrieUtil.rebuildLocalTrie(trie2);

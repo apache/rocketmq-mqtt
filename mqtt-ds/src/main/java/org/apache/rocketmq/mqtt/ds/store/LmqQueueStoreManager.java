@@ -104,6 +104,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         org.apache.rocketmq.common.message.Message mqMessage = new org.apache.rocketmq.common.message.Message(finalMessage.getFirstTopic(), message.getPayload());
         MessageAccessor.putProperty(mqMessage, MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, message.getMsgId());
         mqMessage.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC, message.getOriginTopic());
+        mqMessage.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG, String.valueOf(message.isEmpty()));  //new add
         if (message.getUserProperty(Message.extPropertyQoS) != null) {
             mqMessage.putUserProperty(Constants.PROPERTY_MQTT_QOS, message.getUserProperty(Message.extPropertyQoS));
         }
@@ -126,6 +127,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         Message message = new Message();
         message.setMsgId(mqMessage.getMsgId());
         message.setOffset(parseLmqOffset(queue, mqMessage));
+        message.setEmpty(Boolean.parseBoolean(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG)));
         if (StringUtils.isNotBlank(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC))) {
             message.setOriginTopic(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC));
         } else if (StringUtils.isNotBlank(mqMessage.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {
@@ -137,7 +139,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                     continue;
                 }
                 String originQueue = lmq.replace(MixAll.LMQ_PREFIX, "");
-                message.setOriginTopic(StringUtils.replace(originQueue, "%","/"));
+                message.setOriginTopic(StringUtils.replace(originQueue, "%", "/"));
             }
         }
         message.setFirstTopic(mqMessage.getTopic());
@@ -149,9 +151,9 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         }
         if (StringUtils.isNotBlank(mqMessage.getUserProperty(Constants.PROPERTY_MQTT_EXT_DATA))) {
             message.getUserProperties().putAll(
-                    JSONObject.parseObject(mqMessage.getUserProperty(Constants.PROPERTY_MQTT_EXT_DATA),
-                            new TypeReference<Map<String, String>>() {
-                            }));
+                JSONObject.parseObject(mqMessage.getUserProperty(Constants.PROPERTY_MQTT_EXT_DATA),
+                    new TypeReference<Map<String, String>>() {
+                    }));
         }
         return message;
     }
@@ -168,7 +170,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         String[] queues = multiDispatchQueue.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
         String[] queueOffsets = multiQueueOffset.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
         for (int i = 0; i < queues.length; i++) {
-            if ((MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%")).equals(queues[i])) {
+            if ((MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%")).equals(queues[i])) {
                 return Long.parseLong(queueOffsets[i]);
             }
         }
@@ -181,30 +183,30 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         org.apache.rocketmq.common.message.Message mqMessage = toMQMessage(message);
         mqMessage.setTags(Constants.MQTT_TAG);
         mqMessage.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH,
-                StringUtils.join(
-                        queues.stream().map(s -> MixAll.LMQ_PREFIX + StringUtils.replace(s, "/", "%")).collect(Collectors.toSet()),
-                        MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
+            StringUtils.join(
+                queues.stream().map(s -> MixAll.LMQ_PREFIX + StringUtils.replace(s, "/", "%")).collect(Collectors.toSet()),
+                MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
         try {
             long start = System.currentTimeMillis();
             defaultMQProducer.send(mqMessage,
-                    new SendCallback() {
-                        @Override
-                        public void onSuccess(SendResult sendResult) {
-                            result.complete(toStoreResult(sendResult));
-                            long rt = System.currentTimeMillis() - start;
-                            StatUtil.addInvoke("lmqWrite", rt);
-                            collectLmqReadWriteMatchActionRt("lmqWrite", rt, true);
-                        }
+                new SendCallback() {
+                    @Override
+                    public void onSuccess(SendResult sendResult) {
+                        result.complete(toStoreResult(sendResult));
+                        long rt = System.currentTimeMillis() - start;
+                        StatUtil.addInvoke("lmqWrite", rt);
+//                            collectLmqReadWriteMatchActionRt("lmqWrite", rt, true);
+                    }
 
-                        @Override
-                        public void onException(Throwable e) {
-                            logger.error("", e);
-                            result.completeExceptionally(e);
-                            long rt = System.currentTimeMillis() - start;
-                            StatUtil.addInvoke("lmqWrite", rt, false);
-                            collectLmqReadWriteMatchActionRt("lmqWrite", rt, false);
-                        }
-                    });
+                    @Override
+                    public void onException(Throwable e) {
+                        logger.error("", e);
+                        result.completeExceptionally(e);
+                        long rt = System.currentTimeMillis() - start;
+                        StatUtil.addInvoke("lmqWrite", rt, false);
+                        collectLmqReadWriteMatchActionRt("lmqWrite", rt, false);
+                    }
+                });
         } catch (Throwable e) {
             result.completeExceptionally(e);
         }
@@ -225,7 +227,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         try {
             MessageQueue messageQueue = new MessageQueue(firstTopic, queue.getBrokerName(), (int) queue.getQueueId());
             long start = System.currentTimeMillis();
-            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%");
             pull(lmqTopic, messageQueue, queueOffset.getOffset(), (int) count, new PullCallback() {
                 @Override
                 public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
@@ -330,73 +332,73 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     private void pull(String lmqTopic, MessageQueue mq, long offset, int maxNums, PullCallback pullCallback)
-            throws MQClientException, RemotingException, InterruptedException {
+        throws MQClientException, RemotingException, InterruptedException {
         try {
             int sysFlag = PullSysFlag.buildSysFlag(false, false, true, false);
             long timeoutMillis = 3000L;
             pullKernelImpl(
-                    lmqTopic,
-                    mq,
-                    "*",
-                    "TAG",
-                    0L,
-                    offset,
-                    maxNums,
-                    sysFlag,
-                    0,
-                    5000L,
-                    timeoutMillis,
-                    CommunicationMode.ASYNC,
-                    new PullCallback() {
-                        @Override
-                        public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
-                            org.apache.rocketmq.client.consumer.PullResult userPullResult = pullAPIWrapper.processPullResult(mq, pullResult, new SubscriptionData());
-                            pullCallback.onSuccess(userPullResult);
-                        }
+                lmqTopic,
+                mq,
+                "*",
+                "TAG",
+                0L,
+                offset,
+                maxNums,
+                sysFlag,
+                0,
+                5000L,
+                timeoutMillis,
+                CommunicationMode.ASYNC,
+                new PullCallback() {
+                    @Override
+                    public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
+                        org.apache.rocketmq.client.consumer.PullResult userPullResult = pullAPIWrapper.processPullResult(mq, pullResult, new SubscriptionData());
+                        pullCallback.onSuccess(userPullResult);
+                    }
 
-                        @Override
-                        public void onException(Throwable e) {
-                            pullCallback.onException(e);
-                        }
-                    });
+                    @Override
+                    public void onException(Throwable e) {
+                        pullCallback.onException(e);
+                    }
+                });
         } catch (MQBrokerException e) {
             throw new MQClientException("pullAsync unknow exception", e);
         }
     }
 
     public org.apache.rocketmq.client.consumer.PullResult pullKernelImpl(
-            final String lmqTopic,
-            final MessageQueue mq,
-            final String subExpression,
-            final String expressionType,
-            final long subVersion,
-            final long offset,
-            final int maxNums,
-            final int sysFlag,
-            final long commitOffset,
-            final long brokerSuspendMaxTimeMillis,
-            final long timeoutMillis,
-            final CommunicationMode communicationMode,
-            final PullCallback pullCallback
+        final String lmqTopic,
+        final MessageQueue mq,
+        final String subExpression,
+        final String expressionType,
+        final long subVersion,
+        final long offset,
+        final int maxNums,
+        final int sysFlag,
+        final long commitOffset,
+        final long brokerSuspendMaxTimeMillis,
+        final long timeoutMillis,
+        final CommunicationMode communicationMode,
+        final PullCallback pullCallback
     ) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         MQClientInstance mQClientFactory = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getRebalanceImpl().getmQClientFactory();
         FindBrokerResult findBrokerResult =
-                mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
-                        pullAPIWrapper.recalculatePullFromWhichNode(mq), false);
+            mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
+                pullAPIWrapper.recalculatePullFromWhichNode(mq), false);
         if (null == findBrokerResult) {
             mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
             findBrokerResult =
-                    mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
-                            pullAPIWrapper.recalculatePullFromWhichNode(mq), false);
+                mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(),
+                    pullAPIWrapper.recalculatePullFromWhichNode(mq), false);
         }
 
         if (findBrokerResult != null) {
             {
                 // check version
                 if (!ExpressionType.isTagType(expressionType)
-                        && findBrokerResult.getBrokerVersion() < MQVersion.Version.V4_1_0_SNAPSHOT.ordinal()) {
+                    && findBrokerResult.getBrokerVersion() < MQVersion.Version.V4_1_0_SNAPSHOT.ordinal()) {
                     throw new MQClientException("The broker[" + mq.getBrokerName() + ", "
-                            + findBrokerResult.getBrokerVersion() + "] does not upgrade to support for filter message by " + expressionType, null);
+                        + findBrokerResult.getBrokerVersion() + "] does not upgrade to support for filter message by " + expressionType, null);
                 }
             }
             int sysFlagInner = sysFlag;
@@ -420,12 +422,12 @@ public class LmqQueueStoreManager implements LmqQueueStore {
 
             String brokerAddr = findBrokerResult.getBrokerAddr();
             org.apache.rocketmq.client.consumer.PullResult pullResult =
-                    mQClientFactory.getMQClientAPIImpl().pullMessage(
-                            brokerAddr,
-                            requestHeader,
-                            timeoutMillis,
-                            communicationMode,
-                            pullCallback);
+                mQClientFactory.getMQClientAPIImpl().pullMessage(
+                    brokerAddr,
+                    requestHeader,
+                    timeoutMillis,
+                    communicationMode,
+                    pullCallback);
 
             return pullResult;
         }
@@ -433,7 +435,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     private long maxOffset(Queue queue) throws MQClientException {
-        String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+        String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%");
         MQClientInstance mQClientFactory = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getRebalanceImpl().getmQClientFactory();
         String brokerAddr = mQClientFactory.findBrokerAddressInPublish(queue.getBrokerName());
         if (null == brokerAddr) {

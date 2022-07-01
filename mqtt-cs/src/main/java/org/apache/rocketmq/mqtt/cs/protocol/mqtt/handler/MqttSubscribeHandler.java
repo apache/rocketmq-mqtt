@@ -21,10 +21,15 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 import com.alibaba.fastjson.JSON;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.*;
+import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttSubAckMessage;
+import io.netty.handler.codec.mqtt.MqttSubAckPayload;
+import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
+import io.netty.handler.codec.mqtt.MqttSubscribePayload;
+import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
@@ -94,7 +99,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
 
     @Override
-    public void doHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage, HookResult upstreamHookResult) {//subscription
+    public void doHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage, HookResult upstreamHookResult) {
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Channel channel = ctx.channel();
         if (!upstreamHookResult.isSuccess()) {
@@ -120,7 +125,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                     subscription.setTopicFilter(TopicUtils.normalizeTopic(mqttTopicSubscription.topicName()));
                     subscriptions.add(subscription);
                 }
-                sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions); 
+                sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions);
             }
             future.thenAccept(aVoid -> {
                 if (!channel.isActive()) {
@@ -154,7 +159,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         MqttFixedHeader fixedHeader = new MqttFixedHeader(SUBACK, false, AT_MOST_ONCE, false, 0);
         MqttMessageIdVariableHeader variableHeader = from(mqttSubscribeMessage.variableHeader().messageId());
         MqttSubAckMessage mqttSubAckMessage = new MqttSubAckMessage(fixedHeader, variableHeader,
-                new MqttSubAckPayload(qoss));
+            new MqttSubAckPayload(qoss));
         return mqttSubAckMessage;
     }
 
@@ -176,33 +181,33 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         for (Subscription subscription : preciseTopics) {
             CompletableFuture<byte[]> retainedMessage = retainedPersistManager.getRetainedMessage(subscription.getTopicFilter());
             retainedMessage.whenComplete((bytes, throwable) -> {
-                if (bytes==null){
+                if (bytes == null) {
                     return;
                 }
                 Message message = JSON.parseObject(bytes, Message.class);
-                _sendMessage(session,clientId,subscription,message);
+                _sendMessage(session, clientId, subscription, message);
             });
         }
 
         for (Subscription subscription : wildcardTopics) {
-            Set<String>topics=retainedPersistManager.getTopicsFromTrie(subscription);
-            for (String topic:topics){
+            Set<String> topics = retainedPersistManager.getTopicsFromTrie(subscription);
+            for (String topic : topics) {
                 CompletableFuture<byte[]> retainedMessage = retainedPersistManager.getRetainedMessage(topic);
                 retainedMessage.whenComplete((bytes, throwable) -> {
-                    if (bytes==null){
+                    if (bytes == null) {
                         return;
                     }
                     Message message = JSON.parseObject(bytes, Message.class);
-                    _sendMessage(session,clientId,subscription,message);
+                    _sendMessage(session, clientId, subscription, message);
                 });
             }
         }
     }
 
-    private void _sendMessage(Session session,String clientId,Subscription subscription,Message message){
+    private void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
 
         String payLoad = new String(message.getPayload());
-        if (payLoad.equals(MessageUtil.EMPTYSTRING)) {
+        if (payLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
             return;
         }
 

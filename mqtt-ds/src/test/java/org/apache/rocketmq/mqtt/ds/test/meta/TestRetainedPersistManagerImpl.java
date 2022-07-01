@@ -15,9 +15,9 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class TestRetainedPersistManagerImpl {
-    void dealQueue(BlockingQueue<RetainedPersistManagerImpl.deleteTopicTask> deleteTopicQueue,Trie<String, String>trie) throws InterruptedException {
+    void dealQueue(BlockingQueue<RetainedPersistManagerImpl.DeleteTopicTask> deleteTopicQueue, Trie<String, String>trie) throws InterruptedException {
         while (!deleteTopicQueue.isEmpty()){
-            RetainedPersistManagerImpl.deleteTopicTask take = deleteTopicQueue.take();
+            RetainedPersistManagerImpl.DeleteTopicTask take = deleteTopicQueue.take();
             long l = System.currentTimeMillis() - take.time;
             if (l<3000){
                 deleteTopicQueue.put(take);
@@ -51,15 +51,15 @@ public class TestRetainedPersistManagerImpl {
         }
 
         ScheduledThreadPoolExecutor deleteTopicTrieScheduler=new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("deleteTopicKvStore"));
-        BlockingQueue<RetainedPersistManagerImpl.deleteTopicTask> deleteTopicQueue = new LinkedBlockingDeque<RetainedPersistManagerImpl.deleteTopicTask>();
-        deleteTopicQueue.add(new RetainedPersistManagerImpl.deleteTopicTask("testTopic","testTopic/t1",System.currentTimeMillis()));
+        BlockingQueue<RetainedPersistManagerImpl.DeleteTopicTask> deleteTopicQueue = new LinkedBlockingDeque<RetainedPersistManagerImpl.DeleteTopicTask>();
+        deleteTopicQueue.add(new RetainedPersistManagerImpl.DeleteTopicTask("testTopic","testTopic/t1",System.currentTimeMillis()));
         Thread.sleep(3000);
-        deleteTopicQueue.add(new RetainedPersistManagerImpl.deleteTopicTask("testTopic","testTopic/t1/t2",System.currentTimeMillis()));
+        deleteTopicQueue.add(new RetainedPersistManagerImpl.DeleteTopicTask("testTopic","testTopic/t1/t2",System.currentTimeMillis()));
         Thread.sleep(3000);
-        deleteTopicQueue.add(new RetainedPersistManagerImpl.deleteTopicTask("testTopic","testTopic/t1/t2/t3",System.currentTimeMillis()));
+        deleteTopicQueue.add(new RetainedPersistManagerImpl.DeleteTopicTask("testTopic","testTopic/t1/t2/t3",System.currentTimeMillis()));
 
 
-        RetainedPersistManagerImpl.deleteTopicTask take = deleteTopicQueue.take();
+        RetainedPersistManagerImpl.DeleteTopicTask take = deleteTopicQueue.take();
         take.time=System.currentTimeMillis();
         deleteTopicQueue.add(take);
         deleteTopicQueue.element();

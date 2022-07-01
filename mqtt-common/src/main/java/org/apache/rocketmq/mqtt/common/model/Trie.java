@@ -32,9 +32,9 @@ public class Trie<K, V> {
 
     private TrieNode<K, V> rootNode = new TrieNode(null);
 
-    private Set<String>nodePath=new HashSet<>();
+    private Set<String> nodePath = new HashSet<>();
 
-    private int nodeCount=0;
+    private int nodeCount = 0;
 
 
     public synchronized V addNode(String key, V nodeValue, K nodeKey) {
@@ -54,7 +54,7 @@ public class Trie<K, V> {
                 level++;
                 currentNode = trieNode;
             }
-            currentNode.end=true;
+            currentNode.end = true;
             V old = currentNode.valueSet.put(nodeKey, nodeValue);
             nodePath.add(key);
             nodeCount++;
@@ -96,7 +96,7 @@ public class Trie<K, V> {
 
     public synchronized boolean deleteTrieNode(String key, K valueKey) {
         try {
-            if (!nodePath.contains(key)){
+            if (!nodePath.contains(key)) {
                 return false;
             }
             String[] keyArray = key.split(Constants.MQTT_TOPIC_DELIMITER);
@@ -111,7 +111,7 @@ public class Trie<K, V> {
                 currentNode = trieNode;
             }
             V oldValue = currentNode.valueSet.remove(valueKey);
-            currentNode.end=false;
+            currentNode.end = false;
             //clean the empty node
             while (currentNode.children.isEmpty() && currentNode.valueSet.isEmpty() && currentNode.parentNode != null) {
                 currentNode.parentNode.children.remove(keyArray[--level]);
@@ -129,7 +129,7 @@ public class Trie<K, V> {
         return countLevelRecords(rootNode);
     }
 
-    private long countLevelRecords(TrieNode<K, V> currentNode) {  //计算整棵树有多少channel
+    private long countLevelRecords(TrieNode<K, V> currentNode) {  //Calculate how many chantels there are for the whole tree
         if (currentNode == null) {
             return 0;
         }
@@ -143,7 +143,7 @@ public class Trie<K, V> {
         return childrenCount + currentNode.valueSet.size();
     }
 
-    public Map<K, V> getNode(String key) {   //获取给定key前缀下所有的channel，感觉是重点方法，根据key查对应的channel
+    public Map<K, V> getNode(String key) {   //Get all the channels under the given key prefix, the feeling is the key method, according to the key to check the corresponding channels
         try {
             String[] keyArray = key.split(Constants.MQTT_TOPIC_DELIMITER);
             Map<K, V> result = findValueSet(rootNode, keyArray, 0, keyArray.length, false);
@@ -158,7 +158,7 @@ public class Trie<K, V> {
         traverse(rootNode, method, builder);
     }
 
-    public Set<String> getNodePath(String key) {  //获取给定key前缀下的所有匹配的路径
+    public Set<String> getNodePath(String key) {
         try {
             String[] keyArray = key.split(Constants.MQTT_TOPIC_DELIMITER);
             StringBuilder builder = new StringBuilder(key.length());
@@ -251,6 +251,7 @@ public class Trie<K, V> {
         }
         return result;
     }
+
     /**
      * @param key Topic wildcard
      * @return null if can not find the path correspond wildcard
@@ -258,50 +259,51 @@ public class Trie<K, V> {
     public Set<String> getAllPath(String key) {  //find all node according to wildcard
         try {
             String[] keyArray = key.split(Constants.MQTT_TOPIC_DELIMITER);
-            Set<String> result =new HashSet<>();
-            _getAllPath(rootNode, keyArray, 0, keyArray.length,false,result,"");
+            Set<String> result = new HashSet<>();
+            _getAllPath(rootNode, keyArray, 0, keyArray.length, false, result, "");
             return result;
         } catch (Throwable e) {
             throw new TrieException(e);
         }
     }
-    private void _getAllPath(TrieNode<K, V> currentNode, String[] topicArray, int level, int maxLevel, boolean findAll, Set<String>result, String path){
-        if (level>=maxLevel&& !findAll){
-            if(currentNode.end){
+
+    private void _getAllPath(TrieNode<K, V> currentNode, String[] topicArray, int level, int maxLevel, boolean findAll, Set<String> result, String path) {
+        if (level >= maxLevel && !findAll) {
+            if (currentNode.end) {
                 result.add(path);
             }
             return;
         }
-        if (findAll && currentNode.end){
+        if (findAll && currentNode.end) {
             result.add(path);
         }
-        if(currentNode.end&&level+1<maxLevel&&topicArray[level+1].equals("#")){
+        if (currentNode.end && level + 1 < maxLevel && topicArray[level + 1].equals("#")) {
             result.add(path);
         }
-        if (findAll){   // match the '#'
-            for (String key: currentNode.children.keySet()){
-                _getAllPath(currentNode.children.get(key),topicArray,level+1,maxLevel,true,result,path+key+Constants.MQTT_TOPIC_DELIMITER);
+        if (findAll) {   // match the '#'
+            for (String key : currentNode.children.keySet()) {
+                _getAllPath(currentNode.children.get(key), topicArray, level + 1, maxLevel, true, result, path + key + Constants.MQTT_TOPIC_DELIMITER);
             }
             return;
         }
-        if (topicArray[level].equals("+")){ // match the '+'
-            for (String key: currentNode.children.keySet()){
-                _getAllPath(currentNode.children.get(key),topicArray,level+1,maxLevel,false,result,path+key+Constants.MQTT_TOPIC_DELIMITER);
+        if (topicArray[level].equals("+")) { // match the '+'
+            for (String key : currentNode.children.keySet()) {
+                _getAllPath(currentNode.children.get(key), topicArray, level + 1, maxLevel, false, result, path + key + Constants.MQTT_TOPIC_DELIMITER);
             }
-        }else if (topicArray[level].equals("#")){ // match the '#'
-            for (String key: currentNode.children.keySet()){
-                _getAllPath(currentNode.children.get(key),topicArray,level+1,maxLevel,true,result,path+key+Constants.MQTT_TOPIC_DELIMITER);
+        } else if (topicArray[level].equals("#")) { // match the '#'
+            for (String key : currentNode.children.keySet()) {
+                _getAllPath(currentNode.children.get(key), topicArray, level + 1, maxLevel, true, result, path + key + Constants.MQTT_TOPIC_DELIMITER);
             }
-        }else{
-            if (currentNode.children.get(topicArray[level])!=null){
-                String key=topicArray[level];
-                _getAllPath(currentNode.children.get(topicArray[level]),topicArray,level+1,maxLevel,false,result,path+key+Constants.MQTT_TOPIC_DELIMITER);
+        } else {
+            if (currentNode.children.get(topicArray[level]) != null) {
+                String key = topicArray[level];
+                _getAllPath(currentNode.children.get(topicArray[level]), topicArray, level + 1, maxLevel, false, result, path + key + Constants.MQTT_TOPIC_DELIMITER);
             }
         }
 
     }
 
-    public boolean isExistNodePath(String topic){
+    public boolean isExistNodePath(String topic) {
         return nodePath.contains(topic);
     }
 
@@ -313,21 +315,19 @@ public class Trie<K, V> {
         this.nodeCount = nodeCount;
     }
 
-    public Set<String> getNodePath(){
+    public Set<String> getNodePath() {
         return this.nodePath;
     }
 
 
-
     @Override
     public String toString() {
-        StringBuilder result= new StringBuilder();
-        for(String topic :nodePath){
+        StringBuilder result = new StringBuilder();
+        for (String topic : nodePath) {
             result.append(topic).append(" ");
         }
         return result.toString();
     }
-
 
 
     class TrieNode<K, V> {

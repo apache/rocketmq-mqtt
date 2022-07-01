@@ -41,15 +41,16 @@ import java.util.Map;
 public class MessageUtil {
     public static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
 
-    public static final String RETAINED="%RETAINED%";
+    public static final String RETAINED = "%RETAINED%";
 
-    public static final String EMPTYSTRING="%@!@%";
+    public static final String EMPTYSTRING = "%@!@%";
+
     public static MqttPublishMessage toMqttMessage(String topicName, byte[] body, int qos, int mqttId, boolean retained) {
         ByteBuf payload = ALLOCATOR.buffer();
         payload.writeBytes(body);
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false,
             MqttQoS.valueOf(qos),
-                retained, 0);
+            retained, 0);
         MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(topicName, mqttId);
         MqttPublishMessage mqttPublishMessage = new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader,
             payload);
@@ -71,18 +72,18 @@ public class MessageUtil {
     }
 
     public static MqttPublishMessage removeRetainedFlag(MqttPublishMessage mqttPublishMessage) {
-        MqttFixedHeader tmpFixHeader= mqttPublishMessage.fixedHeader();
-        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(),tmpFixHeader.isDup(),tmpFixHeader.qosLevel(),false,tmpFixHeader.remainingLength()),
-                mqttPublishMessage.variableHeader(),
-                mqttPublishMessage.payload());
+        MqttFixedHeader tmpFixHeader = mqttPublishMessage.fixedHeader();
+        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(), tmpFixHeader.isDup(), tmpFixHeader.qosLevel(), false, tmpFixHeader.remainingLength()),
+            mqttPublishMessage.variableHeader(),
+            mqttPublishMessage.payload());
         return mqttPublishMessage;
     }
 
     public static MqttPublishMessage dealEmptyMessage(MqttPublishMessage mqttPublishMessage) {
-        MqttFixedHeader tmpFixHeader= mqttPublishMessage.fixedHeader();
-        mqttPublishMessage=new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(),tmpFixHeader.isDup(),tmpFixHeader.qosLevel(),tmpFixHeader.isRetain(),tmpFixHeader.remainingLength()),
-                mqttPublishMessage.variableHeader(),
-                Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8));
+        MqttFixedHeader tmpFixHeader = mqttPublishMessage.fixedHeader();
+        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(tmpFixHeader.messageType(), tmpFixHeader.isDup(), tmpFixHeader.qosLevel(), tmpFixHeader.isRetain(), tmpFixHeader.remainingLength()),
+            mqttPublishMessage.variableHeader(),
+            Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8));
         return mqttPublishMessage;
     }
 
@@ -133,7 +134,8 @@ public class MessageUtil {
             String ext = mqMessage.getUserProperty(Message.propertyUserProperties);
             if (ext != null) {
                 message.getUserProperties().putAll(
-                    JSONObject.parseObject(ext, new TypeReference<Map<String, String>>() { }));
+                    JSONObject.parseObject(ext, new TypeReference<Map<String, String>>() {
+                    }));
             }
             messageList.add(message);
         }

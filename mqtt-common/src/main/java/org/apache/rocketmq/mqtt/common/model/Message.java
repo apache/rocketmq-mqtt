@@ -34,6 +34,7 @@ public class Message implements Serializable {
     private long nextOffset;
     private int retry;
     private boolean retained;
+    private boolean isEmpty;  //
     private byte[] payload;
     private long bornTimestamp;
     private long storeTimestamp;
@@ -69,6 +70,7 @@ public class Message implements Serializable {
         message.setBornTimestamp(this.bornTimestamp);
         message.setStoreTimestamp(this.storeTimestamp);
         message.setRetained(this.retained);
+        message.setEmpty(this.isEmpty());
         message.getUserProperties().putAll(this.userProperties);
         return message;
     }
@@ -219,5 +221,13 @@ public class Message implements Serializable {
 
     public void setRetained(boolean retained) {
         this.retained = retained;
+    }
+
+    public boolean isEmpty() {
+        return isEmpty;
+    }
+
+    public void setEmpty(boolean empty) {
+        isEmpty = empty;
     }
 }

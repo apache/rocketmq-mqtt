@@ -33,7 +33,10 @@ public class ConnectConf {
     private int nettySelectThreadNum = 1;
     private int nettyWorkerThreadNum = Runtime.getRuntime().availableProcessors() * 2;
     private int mqttPort = 1883;
+    private int mqttTlsPort = 8883;
     private int mqttWsPort = 8888;
+    private boolean enableTlsSever = false;
+    private boolean needClientAuth = false;
     private int maxPacketSizeInByte = 64 * 1024;
     private int highWater = 256 * 1024;
     private int lowWater = 16 * 1024;
@@ -83,12 +86,24 @@ public class ConnectConf {
         return mqttPort;
     }
 
+    public int getMqttTlsPort() {
+        return mqttTlsPort;
+    }
+
     public void setMqttPort(int mqttPort) {
         this.mqttPort = mqttPort;
     }
 
     public int getMqttWsPort() {
         return mqttWsPort;
+    }
+
+    public boolean isEnableTlsSever() {
+        return enableTlsSever;
+    }
+
+    public boolean isNeedClientAuth() {
+        return needClientAuth;
     }
 
     public void setMqttWsPort(int mqttWsPort) {

@@ -31,11 +31,13 @@
 
     <context:component-scan base-package="org.apache.rocketmq.mqtt.ds"/>
     <context:component-scan base-package="org.apache.rocketmq.mqtt.cs"/>
-
+    <context:component-scan base-package="org.apache.rocketmq.mqtt.meta"/>
 
     <bean id="authManager" class="org.apache.rocketmq.mqtt.ds.auth.AuthManagerSample" init-method="init"/>
 
     <bean id="metaPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample" init-method="init"/>
+
+    <bean id="RetainedPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.RetainedPersistManagerImpl" init-method="init"/>
 
 
 </beans>

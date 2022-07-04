@@ -17,7 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.util;
 
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
+import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,18 +34,18 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class IpUtilTest {
     @Mock
-    private ServiceConf serviceConf;
+    private MetaConf metaConf;
 
     @Test
     public void convertAllNodeAddressTest() {
-        when(serviceConf.getAllNodeAddress()).thenReturn("127.0.0.1");
-        when(serviceConf.getMetaPort()).thenReturn(25000);
-        String allNodes = IpUtil.convertAllNodeAddress(serviceConf.getAllNodeAddress(), serviceConf.getMetaPort());
+        when(metaConf.getAllNodeAddress()).thenReturn("127.0.0.1");
+        when(metaConf.getMetaPort()).thenReturn(25000);
+        String allNodes = IpUtil.convertAllNodeAddress(metaConf.getAllNodeAddress(), metaConf.getMetaPort());
         Assert.assertEquals("127.0.0.1:25000", allNodes);
 
-        when(serviceConf.getAllNodeAddress()).thenReturn("127.0.0.1,127.0.0.2");
-        when(serviceConf.getMetaPort()).thenReturn(25000);
-        String allNodes1 = IpUtil.convertAllNodeAddress(serviceConf.getAllNodeAddress(), serviceConf.getMetaPort());
+        when(metaConf.getAllNodeAddress()).thenReturn("127.0.0.1,127.0.0.2");
+        when(metaConf.getMetaPort()).thenReturn(25000);
+        String allNodes1 = IpUtil.convertAllNodeAddress(metaConf.getAllNodeAddress(), metaConf.getMetaPort());
         Assert.assertEquals("127.0.0.1:25000,127.0.0.2:25000", allNodes1);
     }
 

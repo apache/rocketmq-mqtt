@@ -133,11 +133,9 @@ public class TestTrie {
         allPath = reverseTrie.getAllPath(wcTopic);
         Assert.assertEquals(wcFilterSet,allPath);
 
-        System.out.println(reverseTrie.getNodeCount());
-        System.out.println(reverseTrie);
+
         reverseTrie.deleteTrieNode("k/r/c/","");
-        System.out.println(reverseTrie);
-        System.out.println(reverseTrie.getNodeCount());
+
 
 
 

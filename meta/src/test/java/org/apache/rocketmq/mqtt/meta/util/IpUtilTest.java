@@ -20,13 +20,8 @@ package org.apache.rocketmq.mqtt.meta.util;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import javax.management.MalformedObjectNameException;
-import java.net.InetAddress;
-
-import static org.mockito.Mockito.when;
 
 /**
  * @author dongyuan.pdy
@@ -39,13 +34,6 @@ public class IpUtilTest {
     @Test
     public void getLocalAddressCompatible() {
         String ip = IpUtil.getLocalAddressCompatible();
-//        String ip2 = IpUtil.getLocalHostExactAddress();
-//        System.out.println(ip + " " + ip2);
-        try {
-            System.out.println(ip + IpUtil.getLocalPort());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
         Assert.assertNotNull(ip);
     }
 

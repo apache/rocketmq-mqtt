@@ -32,6 +32,7 @@ import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
@@ -49,6 +50,7 @@ import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
+import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
@@ -106,6 +108,9 @@ public class SessionLoopImpl implements SessionLoop {
 
     @Resource
     private MqttMsgId mqttMsgId;
+
+    @Resource
+    private PublishProcessor publishProcessor;
 
     private ChannelManager channelManager;
     private ScheduledThreadPoolExecutor pullService;
@@ -278,7 +283,10 @@ public class SessionLoopImpl implements SessionLoop {
                 String clientId = new String(kvEntry.getKey()).substring((ip + Constants.CTRL_1).length());
                 WillMessage willMessage = JSON.parseObject(willKey, new TypeReference<WillMessage>() {
                 });
-                MQHandleWillMessage(willMessage, clientId);
+
+                int mqttId = mqttMsgId.nextId(clientId);
+                MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                publishProcessor.process(new MqttMessageUpContext(), mqttMessage);
 
                 metaClient.delete(new String(kvEntry.getKey())).whenComplete((result, e) -> {
                     if (!result || e != null) {

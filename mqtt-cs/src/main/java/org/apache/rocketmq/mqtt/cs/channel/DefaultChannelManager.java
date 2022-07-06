@@ -29,12 +29,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MqttTopic;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -45,6 +47,7 @@ import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
+import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
@@ -95,6 +98,9 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private FirstTopicManager firstTopicManager;
+
+    @Resource
+    private PublishProcessor publishProcessor;
 
 
     @PostConstruct
@@ -162,7 +168,10 @@ public class DefaultChannelManager implements ChannelManager {
             if (!reason.equals("disconnect")) {
                 WillMessage willMessage = JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {
                 });
-                CompletableFuture<Boolean> future = MQHandleWillMessage(willMessage, clientId);
+
+                int mqttId = mqttMsgId.nextId(clientId);
+                MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                publishProcessor.process(buildMqttMessageUpContext(channel), mqttMessage);
             }
             metaClient.delete(willKey).whenComplete((result, throwable) -> {
                 if (!result || throwable != null) {
@@ -190,6 +199,16 @@ public class DefaultChannelManager implements ChannelManager {
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
 
+    private MqttMessageUpContext buildMqttMessageUpContext(Channel channel) {
+        MqttMessageUpContext context = new MqttMessageUpContext();
+        context.setClientId(ChannelInfo.getClientId(channel));
+        context.setChannelId(ChannelInfo.getId(channel));
+        context.setNode(HostInfo.getInstall().getAddress());
+        context.setNamespace(ChannelInfo.getNamespace(channel));
+        return context;
+    }
+
+
     /**
      * distribute will message through MQ
      *
@@ -211,8 +230,6 @@ public class DefaultChannelManager implements ChannelManager {
         String msgId = MessageClientIDSetter.createUniqID();
         message.setMsgId(msgId);
         message.setBornTimestamp(System.currentTimeMillis());
-//        Set<String> queueNames = new HashSet<>();
-//        queueNames.add(willTopic);
 
         CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
         storeResultFuture.whenComplete((storeResult, throwable) -> {

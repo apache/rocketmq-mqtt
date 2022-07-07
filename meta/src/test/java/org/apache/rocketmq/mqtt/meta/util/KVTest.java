@@ -17,24 +17,17 @@
 
 package org.apache.rocketmq.mqtt.meta.util;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 
-/**
- * @author dongyuan.pdy
- * date 2022-05-31
- */
-
 @RunWith(MockitoJUnitRunner.class)
-public class IpUtilTest {
+public class KVTest {
+
 
     @Test
-    public void getLocalAddressCompatible() {
-        String ip = IpUtil.getLocalAddressCompatible();
-        Assert.assertNotNull(ip);
-    }
+    public void kvTest(){
 
+    }
 }

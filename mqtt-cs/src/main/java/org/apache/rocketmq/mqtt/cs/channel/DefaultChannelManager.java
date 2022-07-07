@@ -17,14 +17,30 @@
 
 package org.apache.rocketmq.mqtt.cs.channel;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
+
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.HostInfo;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
+import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -52,6 +68,18 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Resource
     private RetryDriver retryDriver;
+
+    @Resource
+    private MqttMsgId mqttMsgId;
+
+    @Resource
+    private MetaClient metaClient;
+
+    @Resource
+    private PublishProcessor publishProcessor;
+
+    @Resource
+    private InFlyCache inFlyCache;
 
 
     @PostConstruct
@@ -111,6 +139,34 @@ public class DefaultChannelManager implements ChannelManager {
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
+        String ip = IpUtil.getLocalAddressCompatible();
+
+        String willKey = ip + Constants.CTRL_1 + clientId;
+
+        if (metaClient.bContainsKey(willKey)) {
+            if (!reason.equals("disconnect")) {
+                WillMessage willMessage = JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {
+                });
+
+                int mqttId = mqttMsgId.nextId(clientId);
+                MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
+                final boolean isQos2Message = isQos2Message(mqttMessage);
+                if (isQos2Message && !inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
+                    inFlyCache.put(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId());
+                }
+                publishProcessor.process(buildMqttMessageUpContext(channel), mqttMessage);
+            }
+
+            metaClient.delete(willKey).whenComplete((result, throwable) -> {
+                if (!result || throwable != null) {
+                    logger.error("fail to delete will message key", willKey);
+                    return;
+                }
+                logger.info("delete will message key {} successfully", willKey);
+            });
+        }
+
         if (clientId == null) {
             channelMap.remove(channelId);
             sessionLoop.unloadSession(clientId, channelId);
@@ -127,6 +183,20 @@ public class DefaultChannelManager implements ChannelManager {
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
+
+    private MqttMessageUpContext buildMqttMessageUpContext(Channel channel) {
+        MqttMessageUpContext context = new MqttMessageUpContext();
+        context.setClientId(ChannelInfo.getClientId(channel));
+        context.setChannelId(ChannelInfo.getId(channel));
+        context.setNode(HostInfo.getInstall().getAddress());
+        context.setNamespace(ChannelInfo.getNamespace(channel));
+        return context;
+    }
+
+    private boolean isQos2Message(MqttPublishMessage mqttPublishMessage) {
+        return MqttQoS.EXACTLY_ONCE.equals(mqttPublishMessage.fixedHeader().qosLevel());
+    }
+
 
     @Override
     public void closeConnect(String channelId, String reason) {

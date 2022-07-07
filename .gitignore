@@ -1,3 +1,5 @@
 .idea
 *.iml
 target/
+/mqtt-example/src/main/java/org/apache/rocketmq/mqtt/example/MqttConsumer.java
+/mqtt-example/src/main/java/org/apache/rocketmq/mqtt/example/MqttProducer.java

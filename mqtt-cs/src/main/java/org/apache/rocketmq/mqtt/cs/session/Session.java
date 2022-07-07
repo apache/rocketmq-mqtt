@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,8 @@ public class Session {
     private volatile int pullSize;
     private String clientId;
     private String channelId;
+
+    private WillMessage willMessage;
     private AtomicBoolean needPersistOffset = new AtomicBoolean(false);
     private ConcurrentMap<String, Map<Queue, QueueOffset>> offsetMap = new ConcurrentHashMap<>(16);
     private Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
@@ -112,6 +115,14 @@ public class Session {
 
     public void setChannelId(String channelId) {
         this.channelId = channelId;
+    }
+
+    public WillMessage getWillMessage() {
+        return willMessage;
+    }
+
+    public void setWillMessage(WillMessage willMessage) {
+        this.willMessage = willMessage;
     }
 
     public boolean isDestroyed() {

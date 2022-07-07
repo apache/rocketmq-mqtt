@@ -17,17 +17,25 @@
 
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
+import com.alipay.sofa.jraft.rhea.storage.KVEntry;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -35,14 +43,19 @@ import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
+import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.mqtt.meta.core.MetaClient;
+import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -86,11 +99,22 @@ public class SessionLoopImpl implements SessionLoop {
     @Resource
     private QueueFresh queueFresh;
 
+    @Resource
+    private MetaClient metaClient;
+
+    @Resource
+    private MqttMsgId mqttMsgId;
+
+    @Resource
+    private PublishProcessor publishProcessor;
+
     private ChannelManager channelManager;
     private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
     private ScheduledThreadPoolExecutor persistOffsetScheduler;
     private SubscriptionPersistManager subscriptionPersistManager;
+
+    private ScheduledThreadPoolExecutor aliveService;
 
     /**
      * channelId->session
@@ -103,13 +127,18 @@ public class SessionLoopImpl implements SessionLoop {
     private AtomicLong rid = new AtomicLong();
     private long pullIntervalMillis = 10;
 
+    private long checkAliveIntervalMillis = 5 * 1000;
+
     @PostConstruct
     public void init() {
         pullService = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("pull_message_thread_"));
+        aliveService = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("check_alive_thread_"));
         scheduler = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("loop_scheduler_"));
         persistOffsetScheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("persistOffset_scheduler_"));
         persistOffsetScheduler.scheduleWithFixedDelay(() -> persistAllOffset(true), 5000, 5000, TimeUnit.MILLISECONDS);
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> csLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> masterLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
     }
 
     private void pullLoop() {
@@ -133,6 +162,139 @@ public class SessionLoopImpl implements SessionLoop {
         } catch (Exception e) {
             logger.error("", e);
         }
+    }
+
+    private void csLoop() {
+        String ip = IpUtil.getLocalAddressCompatible();
+        String csKey = Constants.CS_ALIVE + Constants.CTRL_1 + ip;
+        String masterKey = Constants.CS_MASTER;
+        long currentTime = System.currentTimeMillis();
+
+        metaClient.put(csKey, String.valueOf(currentTime).getBytes()).whenComplete((result, throwable) -> {
+            if (result == null || throwable != null) {
+                logger.error("{} fail to put csKey", csKey);
+                return;
+            }
+            logger.info("put csKey {} {}", csKey, JSON.parseObject(new String(metaClient.bGet(csKey)), new TypeReference<String>() {
+            }));
+        });
+
+        if (!metaClient.bContainsKey(masterKey)) {
+            logger.info("metaClient does not have master");
+            return;
+        }
+        byte[] masterValueBytes = metaClient.bGet(masterKey);
+        if (masterValueBytes == null || masterValueBytes.length == 0) {
+            return;
+        }
+        String masterValue = new String(masterValueBytes);
+        String masterUpdateTime = masterValue.substring((ip + Constants.PLUS_SIGN).length());
+        logger.info("masterUpdateTime is {}", masterUpdateTime);
+
+        if (currentTime - Long.parseLong(masterUpdateTime) > 20 * checkAliveIntervalMillis) {
+            metaClient.compareAndPut(masterKey, masterValueBytes, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+                if (!result || throwable != null) {
+                    logger.error("{} fail to update master", ip);
+                    return;
+                }
+                logger.info("{} update master successfully", ip);
+            });
+        }
+
+    }
+
+    private void masterLoop() {
+        String masterKey = Constants.CS_MASTER;
+        String ip = IpUtil.getLocalAddressCompatible();
+        long currentTime = System.currentTimeMillis();
+
+        if (!metaClient.bContainsKey(masterKey)) {
+//            metaClient.compareAndPut(masterKey, null, (ip+Constants.PLUS_SIGN+currentTime).getBytes()).whenComplete((result, throwable) -> {
+            metaClient.put(masterKey, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+                if (!result || throwable != null) {
+                    logger.error("{} fail to update master", ip);
+                    return;
+                }
+                logger.info("put master {}", JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<String>() {
+                }));
+            });
+        }
+        logger.info("master is {}", new String(metaClient.bGet(Constants.CS_MASTER)));
+        if (metaClient.bContainsKey(Constants.CS_MASTER) && !new String(metaClient.bGet(Constants.CS_MASTER)).startsWith(IpUtil.getLocalAddressCompatible())) {
+            logger.info("master is not {}", IpUtil.getLocalAddressCompatible());
+            return;
+        }
+
+        metaClient.put(masterKey, (ip + Constants.PLUS_SIGN + currentTime).getBytes()).whenComplete((result, throwable) -> {
+            if (result == null || throwable != null) {
+                logger.error("{} fail to put master", ip);
+                return;
+            }
+            logger.info("put master  {} {}", ip, JSON.parseObject(new String(metaClient.bGet(masterKey)), new TypeReference<String>() {
+            }));
+        });
+
+        String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
+        String endCSKey = Constants.CS_ALIVE + Constants.CTRL_2;
+        metaClient.scan(startCSKey, endCSKey).whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.error("{} master fail to scan cs", ip);
+                return;
+            }
+
+            if (result.size() == 0) {
+                logger.info("master scanned 0 cs");
+                return;
+            }
+            for (KVEntry kvEntry : result) {
+                logger.info("master {} scan cs {} {}", ip, new String(kvEntry.getKey()), new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(new String(kvEntry.getValue()))));
+                if (System.currentTimeMillis() - Long.parseLong(new String(kvEntry.getValue())) > 20 * checkAliveIntervalMillis) {
+                    String csIp = new String(kvEntry.getKey()).substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
+                    handleShutDownCS(csIp);
+                }
+            }
+        });
+        logger.info("{} update master successfully", ip);
+    }
+
+    private CompletableFuture handleShutDownCS(String ip) {
+        CompletableFuture future = new CompletableFuture();
+
+        String startClientKey = ip + Constants.CTRL_0;
+        String endClientKey = ip + Constants.CTRL_2;
+        metaClient.scan(startClientKey, endClientKey).whenComplete((willList, throwable) -> {
+            if (throwable != null) {
+                logger.error("{} master fail to scan cs", ip);
+                return;
+            }
+
+            if (willList.size() == 0) {
+                logger.info("master handle 0 will");
+                future.complete(null);
+                return;
+            }
+            for (KVEntry kvEntry : willList) {
+                logger.info("master handle will {} {}", kvEntry.getKey(), kvEntry.getValue());
+                String willKey = new String(kvEntry.getValue());
+                String clientId = new String(kvEntry.getKey()).substring((ip + Constants.CTRL_1).length());
+                WillMessage willMessage = JSON.parseObject(willKey, new TypeReference<WillMessage>() {
+                });
+
+                int mqttId = mqttMsgId.nextId(clientId);
+                MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                publishProcessor.process(new MqttMessageUpContext(), mqttMessage);
+
+                metaClient.delete(new String(kvEntry.getKey())).whenComplete((result, e) -> {
+                    if (!result || e != null) {
+                        logger.error("fail to delete will message key", willKey);
+                        return;
+                    }
+                    logger.info("delete will message key {} successfully", willKey);
+                });
+            }
+            future.complete(null);
+        });
+        return future;
     }
 
     @Override
@@ -386,6 +548,39 @@ public class SessionLoopImpl implements SessionLoop {
                 }
             }
         }
+    }
+
+    @Override
+    public void addWillMessage(Channel channel, WillMessage willMessage) {
+        Session session = getSession(ChannelInfo.getId(channel));
+        String clientId = ChannelInfo.getClientId(channel);
+        String ip = IpUtil.getLocalAddressCompatible();
+
+        if (session == null) {
+            return;
+        }
+        if (willMessage == null) {
+            return;
+        }
+
+        String topic = willMessage.getWillTopic();
+        String message = JSON.toJSONString(willMessage);
+        String willKey = ip + Constants.CTRL_1 + clientId;
+
+        if (metaClient.bContainsKey(willKey)) {
+            logger.error("client {} already have will topic {} will message {}", clientId, topic, willMessage);
+            return;
+        }
+
+        // key: ip + clientId; value: WillMessage
+        metaClient.put(willKey, message.getBytes()).whenComplete((result, throwable) -> {
+            if (!result || throwable != null) {
+                logger.error("fail to put will message key {} value {}", willKey, willMessage);
+                return;
+            }
+            logger.info("put will message key {} value {} successfully", willKey, JSON.parseObject(new String(metaClient.bGet(willKey)), new TypeReference<WillMessage>() {
+            }));
+        });
     }
 
     private String eventQueueKey(Session session, Queue queue) {

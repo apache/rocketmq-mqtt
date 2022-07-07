@@ -20,33 +20,24 @@ package org.apache.rocketmq.mqtt.cs.channel;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.rocketmq.common.message.MessageClientIDSetter;
-import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
-import org.apache.rocketmq.mqtt.common.model.StoreResult;
-import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Constants;
-import org.apache.rocketmq.mqtt.common.model.MqttTopic;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
-import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
-import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
-import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
-import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.apache.rocketmq.mqtt.meta.util.IpUtil;
@@ -56,10 +47,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -85,22 +73,13 @@ public class DefaultChannelManager implements ChannelManager {
     private MqttMsgId mqttMsgId;
 
     @Resource
-    private PushAction pushAction;
-
-    @Resource
-    private LmqQueueStore lmqQueueStore;
-
-    @Resource
     private MetaClient metaClient;
 
     @Resource
-    private WildcardManager wildcardManager;
-
-    @Resource
-    private FirstTopicManager firstTopicManager;
-
-    @Resource
     private PublishProcessor publishProcessor;
+
+    @Resource
+    private InFlyCache inFlyCache;
 
 
     @PostConstruct
@@ -170,9 +149,15 @@ public class DefaultChannelManager implements ChannelManager {
                 });
 
                 int mqttId = mqttMsgId.nextId(clientId);
-                MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
+                final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
+                final boolean isQos2Message = isQos2Message(mqttMessage);
+                if (isQos2Message && !inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
+                    inFlyCache.put(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId());
+                }
                 publishProcessor.process(buildMqttMessageUpContext(channel), mqttMessage);
             }
+
             metaClient.delete(willKey).whenComplete((result, throwable) -> {
                 if (!result || throwable != null) {
                     logger.error("fail to delete will message key", willKey);
@@ -208,110 +193,10 @@ public class DefaultChannelManager implements ChannelManager {
         return context;
     }
 
-
-    /**
-     * distribute will message through MQ
-     *
-     * @param willMessage
-     * @param clientId
-     * @return
-     */
-    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId) {
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
-
-        int mqttId = mqttMsgId.nextId(clientId);
-        MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
-        String willTopic = willMessage.getWillTopic();
-        String pubTopic = TopicUtils.normalizeTopic(willTopic);
-        MqttTopic mqttTopic = TopicUtils.decode(pubTopic);
-        firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic());
-        Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, null);
-        Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
-        String msgId = MessageClientIDSetter.createUniqID();
-        message.setMsgId(msgId);
-        message.setBornTimestamp(System.currentTimeMillis());
-
-        CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
-        storeResultFuture.whenComplete((storeResult, throwable) -> {
-            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
-            if (throwable != null) {
-                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
-            }
-            result.complete(throwable == null);
-        });
-
-        return result;
+    private boolean isQos2Message(MqttPublishMessage mqttPublishMessage) {
+        return MqttQoS.EXACTLY_ONCE.equals(mqttPublishMessage.fixedHeader().qosLevel());
     }
 
-    /**
-     * @param willMessage distribute will message to clients that subscribe the will topic
-     */
-    private boolean handleWillMessage(WillMessage willMessage) {
-        // get all clients subscribing the will topic
-        Set<Session> sessions = new HashSet<>();
-        for (Channel channel : channelMap.values()) {
-            Session session = sessionLoop.getSession(ChannelInfo.getId(channel));
-            if (session == null) {
-                continue;
-            }
-            Set<Subscription> tmp = session.subscriptionSnapshot();
-            if (tmp != null && !tmp.isEmpty()) {
-                for (Subscription subscription : tmp) {
-                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
-                        sessions.add(session);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // distribute will message
-        int qos = willMessage.getQos();
-        ChannelFuture flushFuture = null;
-        boolean isFlushSuccess = true;
-        Integer subMaxQos = -1;
-        for (Session session : sessions) {
-            int mqttId = mqttMsgId.nextId(session.getClientId());
-            MqttMessage message = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
-            Set<Subscription> tmp = session.subscriptionSnapshot();
-            if (tmp != null && !tmp.isEmpty()) {
-                for (Subscription subscription : tmp) {
-                    if (TopicUtils.isMatch(willMessage.getWillTopic(), subscription.getTopicFilter())) {
-                        subMaxQos = Math.max(subMaxQos, subscription.getQos());
-                    }
-                }
-            }
-            qos = Math.min(subMaxQos, qos);
-            if (qos == 0) {
-                if (!session.getChannel().isWritable()) {
-                    logger.error("UnWritable:{}", session.getClientId());
-                    continue;
-                }
-                try {
-                    flushFuture = session.getChannel().writeAndFlush(message).sync();
-                } catch (InterruptedException e) {
-                    isFlushSuccess = false;
-                    logger.error(flushFuture.toString(), "flush process is not correct");
-                    throw new RuntimeException(e);
-                }
-                pushAction.rollNextByAck(session, mqttId);
-            } else {
-                retryDriver.mountPublish(mqttId, MessageUtil.toMessage((MqttPublishMessage) message), willMessage.getQos(), ChannelInfo.getId(session.getChannel()), null);
-                try {
-                    flushFuture = session.getChannel().writeAndFlush(message).sync();
-                } catch (InterruptedException e) {
-                    isFlushSuccess = false;
-                    logger.error(flushFuture.toString(), "flush process is not correct");
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        if (willMessage.isRetain()) {
-            //complete this part after retainMessage is complete
-        }
-
-        return isFlushSuccess;
-    }
 
     @Override
     public void closeConnect(String channelId, String reason) {

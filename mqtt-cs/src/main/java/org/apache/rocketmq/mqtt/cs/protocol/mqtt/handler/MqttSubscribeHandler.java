@@ -36,7 +36,6 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
-import org.apache.rocketmq.mqtt.meta.core.MetaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -63,9 +62,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
     @Resource
     private ChannelManager channelManager;
-
-    @Resource
-    private MetaClient metaClient;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
@@ -97,9 +93,8 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                 Set<Subscription> subscriptions = new HashSet<>(mqttTopicSubscriptions.size());
                 for (MqttTopicSubscription mqttTopicSubscription : mqttTopicSubscriptions) {
                     Subscription subscription = new Subscription();
-                    String topicFilter = TopicUtils.normalizeTopic(mqttTopicSubscription.topicName());
                     subscription.setQos(mqttTopicSubscription.qualityOfService().value());
-                    subscription.setTopicFilter(topicFilter);
+                    subscription.setTopicFilter(TopicUtils.normalizeTopic(mqttTopicSubscription.topicName()));
                     subscriptions.add(subscription);
                 }
                 sessionLoop.addSubscription(ChannelInfo.getId(ctx.channel()), subscriptions);

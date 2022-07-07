@@ -122,9 +122,6 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                     return;
                 }
 
-//                //todo
-//                metaClient.bDelete(Constants.MQTT_WILL_MESSAGE+Constants.PLUS_SIGN+payload.willTopic());
-
                 willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
                 sessionLoop.addWillMessage(channel, willMessage);
             }

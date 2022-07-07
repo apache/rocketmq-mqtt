@@ -23,20 +23,16 @@ import com.alibaba.fastjson.TypeReference;
 import com.alipay.sofa.jraft.rhea.storage.KVEntry;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
-import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Constants;
-import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
-import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
@@ -299,38 +295,6 @@ public class SessionLoopImpl implements SessionLoop {
             future.complete(null);
         });
         return future;
-    }
-
-    /**
-     * distribute will message through MQ
-     *
-     * @param willMessage
-     * @param clientId
-     * @return
-     */
-    private CompletableFuture<Boolean> MQHandleWillMessage(WillMessage willMessage, String clientId) {
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
-
-        int mqttId = mqttMsgId.nextId(clientId);
-        MqttMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(), willMessage.getQos(), mqttId);
-        Message message = MessageUtil.toMessage((MqttPublishMessage) mqttMessage);
-        String willTopic = willMessage.getWillTopic();
-        String msgId = MessageClientIDSetter.createUniqID();
-        message.setMsgId(msgId);
-        message.setBornTimestamp(System.currentTimeMillis());
-        Set<String> queueNames = new HashSet<>();
-        queueNames.add(willTopic);
-
-        CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
-        storeResultFuture.whenComplete((storeResult, throwable) -> {
-            logger.info("will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
-            if (throwable != null) {
-                logger.error("fail to send will message : {}, {}, {}", storeResult.getQueue().getBrokerName(), storeResult.getQueue().getQueueName(), storeResult.getMsgId());
-            }
-            result.complete(throwable == null);
-        });
-
-        return result;
     }
 
     @Override

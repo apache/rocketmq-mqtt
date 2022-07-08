@@ -34,7 +34,7 @@ public class MetaConf {
     private String clusterName = "defaultCluster";
     private String allNodeAddress;
     private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db/";
-    private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft_data/";
+    private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft/";
     private int metaPort = 25000;
 
     private String selfAddress;

@@ -29,6 +29,7 @@ import com.alipay.sofa.jraft.rpc.impl.GrpcRaftRpcFactory;
 import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import com.google.protobuf.Message;
+import org.apache.commons.io.FileUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -105,7 +106,6 @@ public class MqttRaftServer {
         }
 
         rpcServer = createRpcServer(this, localPeerId);
-        rpcServer.init(null);
         if (!this.rpcServer.init(null)) {
             logger.error("Fail to init [BaseRpcServer].");
             throw new RuntimeException("Fail to init [BaseRpcServer].");
@@ -139,10 +139,6 @@ public class MqttRaftServer {
     }
 
     public void start() {
-        String dataPath = metaConf.getRaftDataPath();
-        nodeOptions.setLogUri(dataPath + File.separator + "log");
-        nodeOptions.setRaftMetaUri(dataPath + File.separator + "raft_meta");
-        nodeOptions.setSnapshotUri(dataPath + File.separator + "snapshot");
 
         int eachProcessRaftGroupNum = metaConf.getRaftGroupNum();
         for (StateProcessor processor:stateProcessors) {
@@ -156,7 +152,9 @@ public class MqttRaftServer {
                 String groupIdentity = wrapGroupName(processor.groupCategory(), i);
 
                 Configuration groupConfiguration = initConf.copy();
+                // LogUri RaftMetaUri SnapshotUri will not be copy, so need to be set
                 NodeOptions groupNodeOption = nodeOptions.copy();
+                initStoreUri(groupIdentity, groupNodeOption);
 
                 MqttStateMachine groupMqttStateMachine = new MqttStateMachine(this, processor, groupIdentity);
                 groupNodeOption.setFsm(groupMqttStateMachine);
@@ -181,6 +179,27 @@ public class MqttRaftServer {
                 logger.info("create raft group, groupIdentity: {}", groupIdentity);
             }
         }
+    }
+
+    private void initStoreUri(String groupIdentity, NodeOptions nodeOptions) {
+        String dataPath = metaConf.getRaftDataPath();
+
+        String logUri = dataPath + File.separator + groupIdentity + File.separator + "log";
+        String raftMetaUri = dataPath + File.separator + groupIdentity + File.separator + "raft_meta";
+        String snapshotUri = dataPath + File.separator + groupIdentity + File.separator + "snapshot";
+
+        try {
+            FileUtils.forceMkdir(new File(logUri));
+            FileUtils.forceMkdir(new File(raftMetaUri));
+            FileUtils.forceMkdir(new File(snapshotUri));
+        } catch (Exception e) {
+            logger.error("create dir for raft store uri error, e:{}", e.toString());
+            throw new RuntimeException(e);
+        }
+
+        nodeOptions.setLogUri(logUri);
+        nodeOptions.setRaftMetaUri(raftMetaUri);
+        nodeOptions.setSnapshotUri(snapshotUri);
     }
 
     private String wrapGroupName(String category, int seq) {

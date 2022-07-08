@@ -8,6 +8,7 @@ import com.alipay.sofa.jraft.option.CliOptions;
 import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import org.apache.rocketmq.mqtt.common.model.consistency.IncrementAndGetRequest;
+import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -16,9 +17,9 @@ public class CounterClient {
 
     public static void main(final String[] args) throws Exception {
 
-        final String groupId = "group0";
-        final String confStr = "11.163.70.102:8080,11.163.70.100:8080,11.163.70.99:8080";
-//        final String confStr = "127.0.0.1:8081";
+        final String groupId = Constants.COUNTER + "-" + 0;
+//        final String confStr = "11.163.70.102:8080,11.163.70.100:8080,11.163.70.99:8080";
+        final String confStr = "127.0.0.1:8081";
 
         final Configuration conf = new Configuration();
         if (!conf.parse(confStr)) {

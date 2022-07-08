@@ -40,6 +40,11 @@ public class MetaConf {
     private String selfAddress;
     private String membersAddress;
 
+    private int electionTimeoutMs = 1000;
+
+    private int snapshotIntervalSecs = 1000;
+    private int raftGroupNum = 4;
+
     public MetaConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -108,5 +113,29 @@ public class MetaConf {
 
     public void setMembersAddress(String membersAddress) {
         this.membersAddress = membersAddress;
+    }
+
+    public int getElectionTimeoutMs() {
+        return electionTimeoutMs;
+    }
+
+    public void setElectionTimeoutMs(int electionTimeoutMs) {
+        this.electionTimeoutMs = electionTimeoutMs;
+    }
+
+    public int getSnapshotIntervalSecs() {
+        return snapshotIntervalSecs;
+    }
+
+    public void setSnapshotIntervalSecs(int snapshotIntervalSecs) {
+        this.snapshotIntervalSecs = snapshotIntervalSecs;
+    }
+
+    public int getRaftGroupNum() {
+        return raftGroupNum;
+    }
+
+    public void setRaftGroupNum(int raftGroupNum) {
+        this.raftGroupNum = raftGroupNum;
     }
 }

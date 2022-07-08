@@ -7,7 +7,7 @@ import com.alipay.sofa.jraft.error.RemotingException;
 import com.alipay.sofa.jraft.option.CliOptions;
 import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
-import org.apache.rocketmq.mqtt.common.model.IncrementAndGetRequest;
+import org.apache.rocketmq.mqtt.common.model.consistency.IncrementAndGetRequest;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;

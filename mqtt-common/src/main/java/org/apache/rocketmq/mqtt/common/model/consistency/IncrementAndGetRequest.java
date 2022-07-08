@@ -1,4 +1,4 @@
-package org.apache.rocketmq.mqtt.common.model;
+package org.apache.rocketmq.mqtt.common.model.consistency;
 
 import java.io.Serializable;
 

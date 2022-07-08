@@ -1,4 +1,4 @@
-package org.apache.rocketmq.mqtt.meta.raft;
+package org.apache.rocketmq.mqtt.meta.raft.snapshot;
 
 import java.io.File;
 import java.io.IOException;

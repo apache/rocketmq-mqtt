@@ -15,18 +15,29 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft;
+syntax = "proto3";
 
-public interface MqttRaftService {
-    /**
-     * Get current value from counter
-     *
-     * Provide consistent reading if {@code readOnlySafe} is true.
-     */
-    void get(final boolean readOnlySafe, final MqttClosure closure);
+option java_multiple_files = true;
+option java_package = "org.apache.rocketmq.mqtt.common.model.consistency";
 
-    /**
-     * Add delta to counter then get value
-     */
-    void incrementAndGet(final long delta, final MqttClosure closure);
+message WriteRequest {
+  string group = 1;
+  string key = 2;
+  bytes data = 3;
+  string type = 4;
+  string operation = 5;
+  map<string, string> extendInfo = 6;
 }
+
+message ReadRequest {
+  string group = 1;
+  bytes data = 2;
+  map<string, string> extendInfo = 3;
+}
+
+message Response {
+  bytes data = 1;
+  string errMsg = 2;
+  bool success = 3;
+}
+

@@ -26,13 +26,15 @@ message WriteRequest {
   bytes data = 3;
   string type = 4;
   string operation = 5;
-  map<string, string> extendInfo = 6;
+  map<string, string> extData = 6;
 }
 
 message ReadRequest {
   string group = 1;
-  bytes data = 2;
-  map<string, string> extendInfo = 3;
+  string key = 2;
+  string type = 3;
+  string operation = 4;
+  map<string, string> extData = 5;
 }
 
 message Response {

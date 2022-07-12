@@ -19,14 +19,20 @@ package org.apache.rocketmq.mqtt.meta.raft;
 
 import com.alipay.sofa.jraft.*;
 import com.alipay.sofa.jraft.conf.Configuration;
+import com.alipay.sofa.jraft.core.CliServiceImpl;
 import com.alipay.sofa.jraft.entity.PeerId;
 import com.alipay.sofa.jraft.entity.Task;
+import com.alipay.sofa.jraft.error.RaftError;
+import com.alipay.sofa.jraft.option.CliOptions;
 import com.alipay.sofa.jraft.option.NodeOptions;
 import com.alipay.sofa.jraft.option.RaftOptions;
+import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.alipay.sofa.jraft.rpc.RaftRpcServerFactory;
 import com.alipay.sofa.jraft.rpc.RpcServer;
 import com.alipay.sofa.jraft.rpc.impl.GrpcRaftRpcFactory;
 import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
+import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
+import com.alipay.sofa.jraft.util.Endpoint;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import com.google.protobuf.Message;
 import org.apache.commons.io.FileUtils;
@@ -43,6 +49,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.*;
@@ -62,6 +70,10 @@ public class MqttRaftServer {
     private NodeOptions nodeOptions;
     private Configuration initConf;
     private RpcServer rpcServer;
+
+    private CliClientServiceImpl cliClientService;
+
+    private CliService cliService;
     private Map<String, List<RaftGroupHolder>> multiRaftGroup = new ConcurrentHashMap<>();
     private Collection<StateProcessor> stateProcessors = Collections.synchronizedSet(new HashSet<>());
 
@@ -81,7 +93,6 @@ public class MqttRaftServer {
                 TimeUnit.MINUTES,
                 new LinkedBlockingQueue<>(10000),
                 new ThreadFactoryImpl("requestExecutor_"));
-
 
         localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
         nodeOptions = new NodeOptions();
@@ -110,6 +121,10 @@ public class MqttRaftServer {
             logger.error("Fail to init [BaseRpcServer].");
             throw new RuntimeException("Fail to init [BaseRpcServer].");
         }
+
+        CliOptions cliOptions = new CliOptions();
+        this.cliService = RaftServiceFactory.createAndInitCliService(cliOptions);
+        this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
         registerStateProcessor(new CounterStateProcessor());
         start();
@@ -146,6 +161,10 @@ public class MqttRaftServer {
             List<RaftGroupHolder> raftGroupHolderList = multiRaftGroup.get(processor.groupCategory());
             if (raftGroupHolderList == null) {
                 raftGroupHolderList = new ArrayList<>();
+                List<RaftGroupHolder> raftGroupHolderListOld = multiRaftGroup.putIfAbsent(processor.groupCategory(), raftGroupHolderList);
+                if (raftGroupHolderListOld != null) {
+                    raftGroupHolderList = raftGroupHolderListOld;
+                }
             }
 
             for (int i = 0; i < eachProcessRaftGroupNum; ++i) {
@@ -172,7 +191,7 @@ public class MqttRaftServer {
                 groupMqttStateMachine.setNode(node);
                 RouteTable.getInstance().updateConfiguration(groupIdentity, groupConfiguration);
 
-                // to-dp : a new node start, it can be added to this group, without restart running server. maybe need refresh route tables
+                // to-do : a new node start, it can be added to this group, without restart running server. maybe need refresh route tables
                 // add to multiRaftGroup
                 raftGroupHolderList.add(new RaftGroupHolder(raftGroupService, groupMqttStateMachine, node));
 
@@ -229,4 +248,40 @@ public class MqttRaftServer {
         node.apply(task);
     }
 
+    protected PeerId getLeader(final String raftGroupId) {
+        return RouteTable.getInstance().selectLeader(raftGroupId);
+    }
+
+    public void invokeToLeader(final String group, final Message request, final int timeoutMillis,
+                                FailoverClosure closure) {
+        try {
+            final PeerId peerId = getLeader(group);
+            final Endpoint leaderIp = peerId.getEndpoint();
+            cliClientService.getRpcClient().invokeAsync(leaderIp, request, new InvokeCallback() {
+                @Override
+                public void complete(Object o, Throwable ex) {
+                    if (Objects.nonNull(ex)) {
+                        closure.setThrowable(ex);
+                        closure.run(new Status(RaftError.UNKNOWN, ex.getMessage()));
+                        return;
+                    }
+                    if (!((Response)o).getSuccess()) {
+                        closure.setThrowable(new IllegalStateException(((Response) o).getErrMsg()));
+                        closure.run(new Status(RaftError.UNKNOWN, ((Response) o).getErrMsg()));
+                        return;
+                    }
+                    closure.setResponse((Response) o);
+                    closure.run(Status.OK());
+                }
+
+                @Override
+                public Executor executor() {
+                    return requestExecutor;
+                }
+            }, timeoutMillis);
+        } catch (Exception e) {
+            closure.setThrowable(e);
+            closure.run(new Status(RaftError.UNKNOWN, e.toString()));
+        }
+    }
 }

@@ -59,7 +59,7 @@ public class SslFactory {
             InputStream keyStream = new ClassPathResource(KEY_FILE_NAME).getInputStream();
             SslContextBuilder contextBuilder = SslContextBuilder.forServer(certStream, keyStream);
             contextBuilder.clientAuth(ClientAuth.OPTIONAL);
-            contextBuilder.sslProvider(SslProvider.JDK);
+            contextBuilder.sslProvider(SslProvider.OPENSSL);
             if (connectConf.isNeedClientAuth()) {
                 LOG.info("client tls authentication is required.");
                 contextBuilder.clientAuth(ClientAuth.REQUIRE);

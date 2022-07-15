@@ -16,15 +16,36 @@
  */
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.function.BiConsumer;
 
 public abstract class StateProcessor {
 
     public abstract Response onReadRequest(ReadRequest request);
 
     public abstract Response onWriteRequest(WriteRequest log);
+
+    public SnapshotOperation loadSnapshotOperate() {
+        return new SnapshotOperation() {
+            @Override
+            public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
+
+            }
+
+            @Override
+            public boolean onSnapshotLoad(SnapshotReader reader) {
+                return false;
+            }
+        };
+    }
 
     public void onError(Throwable error) {
     }

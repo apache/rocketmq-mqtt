@@ -17,6 +17,8 @@
 
 package org.apache.rocketmq.mqtt.exporter.http;
 
+import com.google.common.io.ByteSource;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -26,8 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Objects;
-
-import com.google.common.io.ByteSource;
 
 /**
  * An {@link OutputStream} that starts buffering to a byte array, but switches to file buffering
@@ -197,7 +197,7 @@ public class BackedFileOutputStream extends OutputStream {
      * switches to file buffering if so.
      */
     private void update(int len) throws IOException {
-        if (memory != null && (memory.getCount() + len > fileThreshold)) {
+        if (memory != null && memory.getCount() + len > fileThreshold) {
             File temp = File.createTempFile("FileBackedOutputStream", null, parentDirectory);
             if (resetOnFinalize) {
                 // Finalizers are not guaranteed to be called on system shutdown;

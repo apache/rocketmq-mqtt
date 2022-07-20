@@ -61,7 +61,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
             return;
         }
         String upgrade = req.headers().get("Upgrade");
-        if (upgrade == null || (!"websocket".equals(upgrade.toLowerCase()))) {
+        if (upgrade == null || !"websocket".equals(upgrade.toLowerCase())) {
             return;
         }
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory("ws://localhost:8888/mqtt",

@@ -1,11 +1,12 @@
 /*
- * Copyright 1999-2020 Alibaba Group Holding Ltd.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,7 +30,6 @@ import java.util.function.BiConsumer;
 /**
  * Abstract snapshot operation.
  *
- * @author xiweng.yy
  */
 public abstract class AbstractSnapshotOperation implements SnapshotOperation {
 
@@ -71,36 +71,8 @@ public abstract class AbstractSnapshotOperation implements SnapshotOperation {
             lock.unlock();
         }
     }
-    
-    /**
-     * Write snapshot.
-     *
-     * @param writer snapshot writer
-     * @return {@code true} if write snapshot successfully, otherwise {@code false}
-     * @throws Exception any exception during writing
-     */
+
     protected abstract boolean writeSnapshot(SnapshotWriter writer) throws Exception;
-    
-    /**
-     * Read snapshot.
-     *
-     * @param reader snapshot reader
-     * @return {@code true} if read snapshot successfully, otherwise {@code false}
-     * @throws Exception any exception during reading
-     */
+
     protected abstract boolean readSnapshot(SnapshotReader reader) throws Exception;
-    
-    /**
-     * Get snapshot save tag. It will be used to see time metric time context.
-     *
-     * @return snapshot save tag
-     */
-    protected abstract String getSnapshotSaveTag();
-    
-    /**
-     * Get snapshot load tag. It will be used to see time metric time context.
-     *
-     * @return snapshot load tag
-     */
-    protected abstract String getSnapshotLoadTag();
 }

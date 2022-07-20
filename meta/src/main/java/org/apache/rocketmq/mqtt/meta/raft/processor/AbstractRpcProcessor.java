@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 
 public abstract class AbstractRpcProcessor {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRpcProcessor.class);
+    private static Logger logger = LoggerFactory.getLogger(AbstractRpcProcessor.class);
 
     protected void handleRequest(final MqttRaftServer server, final String group, final RpcContext rpcCtx, Message message) {
         try {

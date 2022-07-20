@@ -133,6 +133,7 @@ public class TopicUtils {
                 (topicFilter.contains(Constants.NUMBER_SIGN) || topicFilter.contains(Constants.PLUS_SIGN));
     }
 
+    @SuppressWarnings("checkstyle:UnnecessaryParentheses")
     public static boolean isMatch(String topic, String topicFilter) {
         if (topic.equals(topicFilter)) {
             return true;
@@ -163,9 +164,9 @@ public class TopicUtils {
             }
             boolean last = i == minTopicLength - 1 &&
                     (sourceTopicLength == targetTopicLength ||
-                            (sourceTopicLength == targetTopicLength + 1 &&
+                            sourceTopicLength == targetTopicLength + 1 &&
                                     Constants.NUMBER_SIGN.equals(subscribeTopics[sourceTopicLength - 1])
-                            )
+
                     );
             if (last) {
                 return true;

@@ -23,8 +23,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.function.BiConsumer;
 
 public abstract class StateProcessor {

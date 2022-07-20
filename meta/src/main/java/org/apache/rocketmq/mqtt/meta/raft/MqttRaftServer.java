@@ -17,7 +17,14 @@
 
 package org.apache.rocketmq.mqtt.meta.raft;
 
-import com.alipay.sofa.jraft.*;
+import com.alipay.sofa.jraft.CliService;
+import com.alipay.sofa.jraft.JRaftUtils;
+import com.alipay.sofa.jraft.Node;
+import com.alipay.sofa.jraft.NodeManager;
+import com.alipay.sofa.jraft.RaftGroupService;
+import com.alipay.sofa.jraft.RaftServiceFactory;
+import com.alipay.sofa.jraft.RouteTable;
+import com.alipay.sofa.jraft.Status;
 import com.alipay.sofa.jraft.conf.Configuration;
 import com.alipay.sofa.jraft.core.CliServiceImpl;
 import com.alipay.sofa.jraft.entity.PeerId;
@@ -41,7 +48,10 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.config.MetaConf;
-import org.apache.rocketmq.mqtt.meta.raft.processor.*;
+import org.apache.rocketmq.mqtt.meta.raft.processor.CounterStateProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.MqttReadRpcProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.MqttWriteRpcProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -49,15 +59,24 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class MqttRaftServer {
-    private static final Logger logger = LoggerFactory.getLogger(MqttRaftServer.class);
+    private static Logger logger = LoggerFactory.getLogger(MqttRaftServer.class);
 
     @Resource
     private MetaConf metaConf;
@@ -112,7 +131,7 @@ public class MqttRaftServer {
         initConf = JRaftUtils.getConfiguration(metaConf.getMembersAddress());
         nodeOptions.setInitialConf(initConf);
 
-        for (PeerId peerId:initConf.getPeers()) {
+        for (PeerId peerId : initConf.getPeers()) {
             NodeManager.getInstance().addAddress(peerId.getEndpoint());
         }
 
@@ -130,24 +149,24 @@ public class MqttRaftServer {
         start();
     }
 
-   public RpcServer createRpcServer(MqttRaftServer server, PeerId peerId) {
-       GrpcRaftRpcFactory raftRpcFactory = (GrpcRaftRpcFactory) RpcFactoryHelper.rpcFactory();
-       raftRpcFactory.registerProtobufSerializer(WriteRequest.class.getName(), WriteRequest.getDefaultInstance());
-       raftRpcFactory.registerProtobufSerializer(ReadRequest.class.getName(), ReadRequest.getDefaultInstance());
-       raftRpcFactory.registerProtobufSerializer(Response.class.getName(), Response.getDefaultInstance());
+    public RpcServer createRpcServer(MqttRaftServer server, PeerId peerId) {
+        GrpcRaftRpcFactory raftRpcFactory = (GrpcRaftRpcFactory) RpcFactoryHelper.rpcFactory();
+        raftRpcFactory.registerProtobufSerializer(WriteRequest.class.getName(), WriteRequest.getDefaultInstance());
+        raftRpcFactory.registerProtobufSerializer(ReadRequest.class.getName(), ReadRequest.getDefaultInstance());
+        raftRpcFactory.registerProtobufSerializer(Response.class.getName(), Response.getDefaultInstance());
 
-       MarshallerRegistry registry = raftRpcFactory.getMarshallerRegistry();
-       registry.registerResponseInstance(WriteRequest.class.getName(), Response.getDefaultInstance());
-       registry.registerResponseInstance(ReadRequest.class.getName(), Response.getDefaultInstance());
+        MarshallerRegistry registry = raftRpcFactory.getMarshallerRegistry();
+        registry.registerResponseInstance(WriteRequest.class.getName(), Response.getDefaultInstance());
+        registry.registerResponseInstance(ReadRequest.class.getName(), Response.getDefaultInstance());
 
-       final RpcServer rpcServer = raftRpcFactory.createRpcServer(peerId.getEndpoint());
-       RaftRpcServerFactory.addRaftRequestProcessors(rpcServer, raftExecutor, requestExecutor);
+        final RpcServer rpcServer = raftRpcFactory.createRpcServer(peerId.getEndpoint());
+        RaftRpcServerFactory.addRaftRequestProcessors(rpcServer, raftExecutor, requestExecutor);
 
-       rpcServer.registerProcessor(new MqttWriteRpcProcessor(server));
-       rpcServer.registerProcessor(new MqttReadRpcProcessor(server));
+        rpcServer.registerProcessor(new MqttWriteRpcProcessor(server));
+        rpcServer.registerProcessor(new MqttReadRpcProcessor(server));
 
-       return rpcServer;
-   }
+        return rpcServer;
+    }
 
     public void registerStateProcessor(StateProcessor processor) {
         stateProcessors.add(processor);
@@ -156,7 +175,7 @@ public class MqttRaftServer {
     public void start() {
 
         int eachProcessRaftGroupNum = metaConf.getRaftGroupNum();
-        for (StateProcessor processor:stateProcessors) {
+        for (StateProcessor processor : stateProcessors) {
 
             List<RaftGroupHolder> raftGroupHolderList = multiRaftGroup.get(processor.groupCategory());
             if (raftGroupHolderList == null) {
@@ -253,7 +272,7 @@ public class MqttRaftServer {
     }
 
     public void invokeToLeader(final String group, final Message request, final int timeoutMillis,
-                                FailoverClosure closure) {
+                               FailoverClosure closure) {
         try {
             final PeerId peerId = getLeader(group);
             final Endpoint leaderIp = peerId.getEndpoint();
@@ -265,7 +284,7 @@ public class MqttRaftServer {
                         closure.run(new Status(RaftError.UNKNOWN, ex.getMessage()));
                         return;
                     }
-                    if (!((Response)o).getSuccess()) {
+                    if (!((Response) o).getSuccess()) {
                         closure.setThrowable(new IllegalStateException(((Response) o).getErrMsg()));
                         closure.run(new Status(RaftError.UNKNOWN, ((Response) o).getErrMsg()));
                         return;

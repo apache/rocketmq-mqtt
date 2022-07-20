@@ -31,7 +31,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.Writer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 public class MqttStateMachine extends StateMachineAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(MqttRaftServer.class);
+    private static Logger logger = LoggerFactory.getLogger(MqttRaftServer.class);
 
     protected final MqttRaftServer server;
 

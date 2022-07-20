@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class CounterStateProcessor extends StateProcessor{
+public class CounterStateProcessor extends StateProcessor {
 
     private final AtomicLong value = new AtomicLong(0);
 

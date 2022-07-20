@@ -1,11 +1,12 @@
 /*
- * Copyright 1999-2018 Alibaba Group Holding Ltd.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +19,6 @@ package org.apache.rocketmq.mqtt.meta.raft.snapshot.impl;
 
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
-import com.alipay.sofa.jraft.util.CRC64;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.AbstractSnapshotOperation;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.LocalFileMeta;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.Writer;
@@ -30,21 +30,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.zip.Checksum;
 
 /**
  * Snapshot processing of persistent service data for accelerated Raft protocol recovery and data synchronization.
- *
- * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
- * @author xiweng.yy
  */
 public class AlphaSnapshotOperation extends AbstractSnapshotOperation {
-    
-    private static final String NAMING_SNAPSHOT_SAVE = AlphaSnapshotOperation.class.getSimpleName() + ".SAVE";
-    
-    private static final String NAMING_SNAPSHOT_LOAD = AlphaSnapshotOperation.class.getSimpleName() + ".LOAD";
     
     private final String snapshotDir = "alpha_persistent";
     
@@ -90,24 +81,12 @@ public class AlphaSnapshotOperation extends AbstractSnapshotOperation {
     protected boolean readSnapshot(SnapshotReader reader) throws Exception {
         final String readerPath = reader.getPath();
         final String sourceFile = Paths.get(readerPath, snapshotArchive).toString();
-        final Checksum checksum = new CRC64();
-        DiskUtils.decompress(sourceFile, readerPath, checksum);
-        String s = DiskUtils.readFile(snapshotDir, fileName);
+        String s = DiskUtils.readFile(snapshotDir, sourceFile);
         Map<String, String> map = new HashMap<>();
         map.put("alpha", s);
         value = map;
         final String loadPath = Paths.get(snapshotDir, fileName).toString();
         DiskUtils.deleteDirectory(loadPath);
         return true;
-    }
-    
-    @Override
-    protected String getSnapshotSaveTag() {
-        return NAMING_SNAPSHOT_SAVE;
-    }
-    
-    @Override
-    protected String getSnapshotLoadTag() {
-        return NAMING_SNAPSHOT_LOAD;
     }
 }

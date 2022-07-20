@@ -27,10 +27,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Counter snapshot file.
- *
- * @author boyan (boyan@alibaba-inc.com)
- *
- * 2018-Apr-09 5:14:55 PM
  */
 public class CounterSnapshotFile {
 

@@ -17,7 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.util;
 
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
+import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class IpUtilTest {
     @Mock
-    private ServiceConf serviceConf;
+    private MetaConf serviceConf;
 
     @Test
     public void convertAllNodeAddressTest() {

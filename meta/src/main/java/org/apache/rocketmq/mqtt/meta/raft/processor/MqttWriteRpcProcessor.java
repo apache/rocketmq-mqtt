@@ -15,34 +15,27 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.core;
+package org.apache.rocketmq.mqtt.meta.raft.processor;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.alipay.sofa.jraft.rpc.RpcContext;
+import com.alipay.sofa.jraft.rpc.RpcProcessor;
+import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
-import com.alipay.sofa.jraft.rhea.client.DefaultRheaKVStore;
-import com.alipay.sofa.jraft.rhea.client.RheaKVStore;
-import com.alipay.sofa.jraft.rhea.options.RheaKVStoreOptions;
+public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<WriteRequest> {
+    private final MqttRaftServer server;
 
-public class Node {
-    private static final Logger log = LoggerFactory.getLogger(Node.class);
-    private final RheaKVStoreOptions options;
-    private RheaKVStore rheaKVStore;
-
-    public Node(RheaKVStoreOptions options) {
-        this.options = options;
+    public MqttWriteRpcProcessor(MqttRaftServer server) {
+        this.server = server;
     }
 
-    public boolean start() {
-        this.rheaKVStore = new DefaultRheaKVStore();
-        return this.rheaKVStore.init(this.options);
+    @Override
+    public void handleRequest(RpcContext rpcCtx, WriteRequest request) {
+        handleRequest(server, request.getGroup(), rpcCtx, request);
     }
 
-    public void stop() {
-        this.rheaKVStore.shutdown();
-    }
-
-    public RheaKVStore getRheaKVStore() {
-        return rheaKVStore;
+    @Override
+    public String interest() {
+        return WriteRequest.class.getName();
     }
 }

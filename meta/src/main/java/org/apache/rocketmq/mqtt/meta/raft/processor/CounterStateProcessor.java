@@ -18,22 +18,26 @@
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
 import com.alibaba.fastjson.JSON;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.impl.AlphaSnapshotOperation;
+import org.apache.rocketmq.mqtt.meta.raft.snapshot.impl.CounterSnapshotOperation;
 
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.BiConsumer;
 
 public class CounterStateProcessor extends StateProcessor {
 
     private final AtomicLong value = new AtomicLong(0);
 
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+    private SnapshotOperation snapshotOperation;
 
     @Override
     public Response onReadRequest(ReadRequest request) {
@@ -70,9 +74,20 @@ public class CounterStateProcessor extends StateProcessor {
 
     @Override
     public SnapshotOperation loadSnapshotOperate() {
-        HashMap<String, String> map = new HashMap<>();
-        map.put("alpha", value.toString());
-        return new AlphaSnapshotOperation(lock, map);
+        snapshotOperation = new CounterSnapshotOperation(lock);
+        return snapshotOperation;
+    }
+
+    @Override
+    public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
+        snapshotOperation.onSnapshotSave(writer, callFinally, value.toString());
+    }
+
+    @Override
+    public boolean onSnapshotLoad(SnapshotReader reader) {
+        String load = snapshotOperation.onSnapshotLoad(reader);
+        value.set(Long.parseLong(load));
+        return true;
     }
 
     @Override

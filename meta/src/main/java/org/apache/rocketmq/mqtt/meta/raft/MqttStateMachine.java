@@ -63,7 +63,7 @@ public class MqttStateMachine extends StateMachineAdapter {
         this.server = server;
         this.processor = processor;
         this.groupId = groupId;
-        this.snapshotOperation = processor.loadSnapshotOperate();
+        this.snapshotOperation = this.processor.loadSnapshotOperate();
     }
 
 
@@ -129,13 +129,13 @@ public class MqttStateMachine extends StateMachineAdapter {
                     writer.getPath(), t == null ? "" : t.getMessage());
             done.run(status);
         };
-        snapshotOperation.onSnapshotSave(writer, callFinally);
+        processor.onSnapshotSave(writer, callFinally);
     }
 
     @Override
     public boolean onSnapshotLoad(SnapshotReader reader) {
         super.onSnapshotLoad(reader);
-        return snapshotOperation.onSnapshotLoad(reader);
+        return processor.onSnapshotLoad(reader);
     }
 
     public Message parseMessage(byte[] bytes) throws Exception {

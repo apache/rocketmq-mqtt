@@ -20,22 +20,18 @@ package org.apache.rocketmq.mqtt.meta.raft.snapshot.impl;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.AbstractSnapshotOperation;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.LocalFileMeta;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.Writer;
 import org.apache.rocketmq.mqtt.meta.util.DiskUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Snapshot processing of persistent service data for accelerated Raft protocol recovery and data synchronization.
  */
-public class AlphaSnapshotOperation extends AbstractSnapshotOperation {
+public class CounterSnapshotOperation extends AbstractSnapshotOperation {
     
     private final String snapshotDir = "alpha_persistent";
     
@@ -49,22 +45,19 @@ public class AlphaSnapshotOperation extends AbstractSnapshotOperation {
 
     private final ReentrantReadWriteLock.WriteLock writeLock = lock.writeLock();
 
-    private Map<String, String> value;
-
     
-    public AlphaSnapshotOperation(ReentrantReadWriteLock lock, Map<String, String> value) {
+    public CounterSnapshotOperation(ReentrantReadWriteLock lock) {
         super(lock);
-        this.value = value;
     }
     
     @Override
-    protected boolean writeSnapshot(SnapshotWriter writer) throws Exception {
+    protected boolean writeSnapshot(SnapshotWriter writer, String value) throws Exception {
         readLock.lock();
         try {
             File file = Paths.get(snapshotDir, fileName).toFile();
             try {
                 DiskUtils.touch(file);
-                DiskUtils.writeFile(file, value.toString().getBytes(StandardCharsets.UTF_8), false);
+                DiskUtils.writeFile(file, value.getBytes(StandardCharsets.UTF_8), false);
             } catch (IOException e) {
                 throw new Exception("fail to write snapshot");
             }
@@ -72,21 +65,16 @@ public class AlphaSnapshotOperation extends AbstractSnapshotOperation {
             readLock.unlock();
         }
 
-        final LocalFileMeta meta = new LocalFileMeta();
-        final Writer wCtx = new Writer(writer.getPath());
-        return wCtx.addFile(snapshotArchive, meta);
+        return true;
     }
     
     @Override
-    protected boolean readSnapshot(SnapshotReader reader) throws Exception {
+    protected String readSnapshot(SnapshotReader reader) throws Exception {
         final String readerPath = reader.getPath();
         final String sourceFile = Paths.get(readerPath, snapshotArchive).toString();
         String s = DiskUtils.readFile(snapshotDir, sourceFile);
-        Map<String, String> map = new HashMap<>();
-        map.put("alpha", s);
-        value = map;
         final String loadPath = Paths.get(snapshotDir, fileName).toString();
         DiskUtils.deleteDirectory(loadPath);
-        return true;
+        return s;
     }
 }

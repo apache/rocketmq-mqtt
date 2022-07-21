@@ -42,12 +42,12 @@ public abstract class AbstractSnapshotOperation implements SnapshotOperation {
     }
     
     @Override
-    public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
+    public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally, String value) {
         RaftExecutor.doSnapshot(() -> {
             final Lock lock = writeLock;
             lock.lock();
             try {
-                callFinally.accept(writeSnapshot(writer), null);
+                callFinally.accept(writeSnapshot(writer, value), null);
             } catch (Throwable t) {
                 logger.error("Fail to compress snapshot, path={}, file list={}.", writer.getPath(),
                         writer.listFiles(), t);
@@ -59,20 +59,20 @@ public abstract class AbstractSnapshotOperation implements SnapshotOperation {
     }
 
     @Override
-    public boolean onSnapshotLoad(SnapshotReader reader) {
+    public String onSnapshotLoad(SnapshotReader reader) {
         final Lock lock = writeLock;
         lock.lock();
         try {
             return readSnapshot(reader);
         } catch (final Throwable t) {
             logger.error("Fail to load snapshot, path={}, file list={}.", reader.getPath(), reader.listFiles(), t);
-            return false;
+            return null;
         } finally {
             lock.unlock();
         }
     }
 
-    protected abstract boolean writeSnapshot(SnapshotWriter writer) throws Exception;
+    protected abstract boolean writeSnapshot(SnapshotWriter writer, String value) throws Exception;
 
-    protected abstract boolean readSnapshot(SnapshotReader reader) throws Exception;
+    protected abstract String readSnapshot(SnapshotReader reader) throws Exception;
 }

@@ -27,16 +27,16 @@ public interface SnapshotOperation {
     /**
      * do snapshot save operation.
      *
-     * @param writer      {@link Writer}
-     * @param callFinally Callback {@link BiConsumer} when the snapshot operation is complete
+     * @param writer
+     * @param callFinally
      */
-    void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally);
+    void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally, String value);
 
     /**
      * do snapshot load operation.
      *
-     * @param reader {@link Reader}
+     * @param reader
      * @return operation label
      */
-    boolean onSnapshotLoad(SnapshotReader reader);
+    String onSnapshotLoad(SnapshotReader reader);
 }

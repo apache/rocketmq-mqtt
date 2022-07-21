@@ -16,6 +16,7 @@
  */
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
+
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
@@ -32,18 +33,12 @@ public abstract class StateProcessor {
     public abstract Response onWriteRequest(WriteRequest log);
 
     public SnapshotOperation loadSnapshotOperate() {
-        return new SnapshotOperation() {
-            @Override
-            public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
-
-            }
-
-            @Override
-            public boolean onSnapshotLoad(SnapshotReader reader) {
-                return false;
-            }
-        };
+        return null;
     }
+
+    public abstract void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally);
+
+    public abstract boolean onSnapshotLoad(SnapshotReader reader);
 
     public void onError(Throwable error) {
     }

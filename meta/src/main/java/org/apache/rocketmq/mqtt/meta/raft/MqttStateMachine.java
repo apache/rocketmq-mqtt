@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.raft;
 
+import com.alipay.sofa.jraft.Closure;
 import com.alipay.sofa.jraft.Iterator;
 import com.alipay.sofa.jraft.Node;
 import com.alipay.sofa.jraft.Status;

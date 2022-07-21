@@ -231,6 +231,9 @@
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
                             <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                            <sourceDirectories>
+                                <sourceDirectory>src/main/java</sourceDirectory>
+                            </sourceDirectories>
                         </configuration>
                         <goals>
                             <goal>check</goal>

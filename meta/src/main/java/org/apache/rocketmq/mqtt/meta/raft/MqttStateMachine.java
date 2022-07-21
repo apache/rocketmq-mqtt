@@ -36,7 +36,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MqttStateMachine extends StateMachineAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(MqttRaftServer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
 
     protected final MqttRaftServer server;
 
@@ -77,7 +77,7 @@ public class MqttStateMachine extends StateMachineAdapter {
                         message = parseMessage(data.array());
                     }
 
-                    logger.debug("get message:{} and apply to state machine", message);
+                    LOGGER.debug("get message:{} and apply to state machine", message);
 
                     if (message instanceof WriteRequest) {
                         Response response = processor.onWriteRequest((WriteRequest) message);
@@ -106,7 +106,7 @@ public class MqttStateMachine extends StateMachineAdapter {
                 iterator.next();
             }
         } catch (Throwable t) {
-            logger.error("processor : {}, stateMachine meet critical error: {}.", processor, t);
+            LOGGER.error("processor : {}, stateMachine meet critical error: {}.", processor, t);
             iterator.setErrorAndRollback(index - applied,
                     new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }

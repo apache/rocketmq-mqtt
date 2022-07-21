@@ -22,9 +22,10 @@ import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+
 import java.util.concurrent.atomic.AtomicLong;
 
-public class CounterStateProcessor extends StateProcessor{
+public class CounterStateProcessor extends StateProcessor {
 
     private final AtomicLong value = new AtomicLong(0);
 

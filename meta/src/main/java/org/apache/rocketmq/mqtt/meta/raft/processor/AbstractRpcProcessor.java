@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 
 public abstract class AbstractRpcProcessor {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractRpcProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRpcProcessor.class);
 
     protected void handleRequest(final MqttRaftServer server, final String group, final RpcContext rpcCtx, Message message) {
         try {
@@ -51,7 +51,7 @@ public abstract class AbstractRpcProcessor {
                         Response.newBuilder().setSuccess(false).setErrMsg("Could not find leader : " + group).build());
             }
         } catch (Throwable e) {
-            logger.error("handleRequest has error : ", e);
+            LOGGER.error("handleRequest has error : ", e);
             rpcCtx.sendResponse(Response.newBuilder().setSuccess(false).setErrMsg(e.toString()).build());
         }
     }
@@ -76,7 +76,7 @@ public abstract class AbstractRpcProcessor {
             @Override
             public void run(Status status) {
                 if (Objects.nonNull(ex)) {
-                    logger.error("execute has error : ", ex);
+                    LOGGER.error("execute has error : ", ex);
                     rpcCtx.sendResponse(Response.newBuilder().setErrMsg(ex.toString()).setSuccess(false).build());
                 } else {
                     rpcCtx.sendResponse(data);
@@ -107,23 +107,23 @@ public abstract class AbstractRpcProcessor {
                                 Response response = processor.onReadRequest(request);
                                 rpcCtx.sendResponse(response);
                             } catch (Throwable t) {
-                                logger.info("process read request in handleReadIndex error : {}", t.toString());
+                                LOGGER.info("process read request in handleReadIndex error : {}", t.toString());
                                 rpcCtx.sendResponse(Response.newBuilder().setErrMsg(t.toString()).setSuccess(false).build());
                             }
                             return;
                         }
-                        logger.error("ReadIndex has error : {}, go to Leader read.", status.getErrorMsg());
+                        LOGGER.error("ReadIndex has error : {}, go to Leader read.", status.getErrorMsg());
                         readFromLeader(server, group, rpcCtx, request);
                     }
                 });
             } catch (Throwable e) {
-                logger.error("ReadIndex has error : {}, go to Leader read.", e.toString());
+                LOGGER.error("ReadIndex has error : {}, go to Leader read.", e.toString());
                 // run raft read
                 readFromLeader(server, group, rpcCtx, request);
             }
 
         } catch (Throwable e) {
-            logger.error("handleReadIndex has error : ", e);
+            LOGGER.error("handleReadIndex has error : ", e);
             rpcCtx.sendResponse(Response.newBuilder().setSuccess(false).setErrMsg(e.toString()).build());
         }
     }

@@ -15,33 +15,28 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.processor;
+package org.apache.rocketmq.mqtt.meta.raft.snapshot;
 
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
-import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
-import org.apache.rocketmq.mqtt.common.model.consistency.Response;
-import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 
 import java.util.function.BiConsumer;
 
-public abstract class StateProcessor {
+public interface SnapshotOperation {
 
-    public abstract Response onReadRequest(ReadRequest request);
+    /**
+     * do snapshot save operation.
+     *
+     * @param writer
+     * @param callFinally
+     */
+    void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally, String value);
 
-    public abstract Response onWriteRequest(WriteRequest log);
-
-    public SnapshotOperation loadSnapshotOperate() {
-        return null;
-    }
-
-    public abstract void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally);
-
-    public abstract boolean onSnapshotLoad(SnapshotReader reader);
-
-    public void onError(Throwable error) {
-    }
-    public abstract String groupCategory();
-
+    /**
+     * do snapshot load operation.
+     *
+     * @param reader
+     * @return operation label
+     */
+    String onSnapshotLoad(SnapshotReader reader);
 }

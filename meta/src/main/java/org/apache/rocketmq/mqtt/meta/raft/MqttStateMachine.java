@@ -17,16 +17,20 @@
 
 package org.apache.rocketmq.mqtt.meta.raft;
 
+import com.alipay.sofa.jraft.Closure;
 import com.alipay.sofa.jraft.Iterator;
 import com.alipay.sofa.jraft.Node;
 import com.alipay.sofa.jraft.Status;
 import com.alipay.sofa.jraft.core.StateMachineAdapter;
 import com.alipay.sofa.jraft.error.RaftError;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
+import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import com.google.protobuf.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 public class MqttStateMachine extends StateMachineAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
@@ -52,10 +57,13 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     private volatile String leaderIp = "unknown";
 
+    private SnapshotOperation snapshotOperation;
+
     public MqttStateMachine(MqttRaftServer server, StateProcessor processor, String groupId) {
         this.server = server;
         this.processor = processor;
         this.groupId = groupId;
+        this.snapshotOperation = this.processor.loadSnapshotOperate();
     }
 
 
@@ -110,6 +118,24 @@ public class MqttStateMachine extends StateMachineAdapter {
             iterator.setErrorAndRollback(index - applied,
                     new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }
+    }
+
+    @Override
+    public void onSnapshotSave(SnapshotWriter writer, Closure done) {
+        super.onSnapshotSave(writer, done);
+        final BiConsumer<Boolean, Throwable> callFinally = (result, t) -> {
+            final Status status = result ? Status.OK()
+                    : new Status(RaftError.EIO, "Fail to compress snapshot at %s, error is %s",
+                    writer.getPath(), t == null ? "" : t.getMessage());
+            done.run(status);
+        };
+        processor.onSnapshotSave(writer, callFinally);
+    }
+
+    @Override
+    public boolean onSnapshotLoad(SnapshotReader reader) {
+        super.onSnapshotLoad(reader);
+        return processor.onSnapshotLoad(reader);
     }
 
     public Message parseMessage(byte[] bytes) throws Exception {

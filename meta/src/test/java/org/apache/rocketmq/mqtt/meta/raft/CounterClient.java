@@ -35,10 +35,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
 public class CounterClient {
+    private static final String GROUP_SEQ_NUM_SPLIT = "%";
 
     public static void main(final String[] args) throws Exception {
 
-        final String groupId = Constants.COUNTER + "-" + 0;
+        final String groupId = Constants.COUNTER + GROUP_SEQ_NUM_SPLIT + 0;
         final String confStr = "";
         initRpcServer();
         final Configuration conf = new Configuration();
@@ -85,7 +86,7 @@ public class CounterClient {
             InterruptedException {
         HashMap<String, String> map = new HashMap<>();
         map.put("delta", "1");
-        final WriteRequest request = WriteRequest.newBuilder().setGroup("counter%0").putAllExtData(map).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup("counter" + GROUP_SEQ_NUM_SPLIT + "0").putAllExtData(map).build();
         cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 
             @Override
@@ -109,7 +110,7 @@ public class CounterClient {
     private static void get(final CliClientServiceImpl cliClientService, final PeerId leader,
                                         final long delta, CountDownLatch latch) throws RemotingException,
             InterruptedException {
-        final ReadRequest request = ReadRequest.newBuilder().setGroup("counter%0").setType(Constants.READ_INDEX_TYPE).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup("counter" + GROUP_SEQ_NUM_SPLIT + "0").setType(Constants.READ_INDEX_TYPE).build();
         cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 
             @Override

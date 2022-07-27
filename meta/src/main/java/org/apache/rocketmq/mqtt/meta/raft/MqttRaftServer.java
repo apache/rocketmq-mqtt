@@ -78,6 +78,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class MqttRaftServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
 
+    private static final String GROUP_SEQ_NUM_SPLIT = "%";
     @Resource
     private MetaConf metaConf;
 
@@ -241,11 +242,11 @@ public class MqttRaftServer {
     }
 
     private String wrapGroupName(String category, int seq) {
-        return category + "-" + seq;
+        return category + GROUP_SEQ_NUM_SPLIT + seq;
     }
 
     public RaftGroupHolder getRaftGroupHolder(String groupId) throws Exception {
-        String[] groupParam = groupId.split("%");
+        String[] groupParam = groupId.split(GROUP_SEQ_NUM_SPLIT);
         if (groupParam.length != 2) {
             throw new Exception("Fail to get RaftGroupHolder");
         }

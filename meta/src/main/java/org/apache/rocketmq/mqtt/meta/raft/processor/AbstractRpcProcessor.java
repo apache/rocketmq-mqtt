@@ -33,9 +33,20 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
+/**
+ * RPC abstract processor
+ */
 public abstract class AbstractRpcProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRpcProcessor.class);
 
+    /**
+     * The default RPC request handling method, where the current node is the master node of the requested RAFT group, processes the request
+     *
+     * @param server
+     * @param group
+     * @param rpcCtx
+     * @param message
+     */
     protected void handleRequest(final MqttRaftServer server, final String group, final RpcContext rpcCtx, Message message) {
         try {
             final RaftGroupHolder raftGroupHolder = server.getRaftGroupHolder(group);
@@ -86,6 +97,13 @@ public abstract class AbstractRpcProcessor {
         return closure;
     }
 
+    /**
+     * To process linear consistent reads, read from the current node first and redirect the request to the master node if the read fails
+     * @param server
+     * @param group
+     * @param rpcCtx
+     * @param request
+     */
     public void handleReadIndex(final MqttRaftServer server, final String group, final RpcContext rpcCtx, ReadRequest request) {
         try {
             final RaftGroupHolder raftGroupHolder = server.getRaftGroupHolder(group);

@@ -84,9 +84,9 @@ public class PushAction {
         try {
             if (session.isClean()) {
                 if (message.getStoreTimestamp() > 0 &&
-                        message.getStoreTimestamp() < session.getStartTime()) {
+                    message.getStoreTimestamp() < session.getStartTime()) {
                     logger.warn("old msg:{},{},{},{}", session.getClientId(), message.getMsgId(),
-                            message.getStoreTimestamp(), session.getStartTime());
+                        message.getStoreTimestamp(), session.getStartTime());
                     rollNext(session, mqttId);
                     return;
                 }
@@ -94,6 +94,13 @@ public class PushAction {
         } catch (Exception e) {
             logger.error("", e);
         }
+
+        //deal with message with empty payload
+        String msgPayLoad = new String(message.getPayload());
+        if (msgPayLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            message.setPayload("".getBytes());
+        }
+
         int qos = subscription.getQos();
         if (subscription.isP2p() && message.qos() != null) {
             qos = message.qos();
@@ -113,6 +120,7 @@ public class PushAction {
         String clientId = session.getClientId();
         String topicName = message.getOriginTopic();
         String mqttRealTopic = message.getUserProperty(Message.extPropertyMqttRealTopic);
+        boolean retained = message.isRetained();
         if (StringUtils.isNotBlank(mqttRealTopic)) {
             topicName = mqttRealTopic;
         }
@@ -124,7 +132,7 @@ public class PushAction {
             logger.error("UnWritable:{}", clientId);
             return;
         }
-        Object data = MessageUtil.toMqttMessage(topicName, message.getPayload(), qos, mqttId);
+        Object data = MessageUtil.toMqttMessage(topicName, message.getPayload(), qos, mqttId, retained);
         ChannelFuture writeFuture = session.getChannel().writeAndFlush(data);
         int bodySize = message.getPayload() != null ? message.getPayload().length : 0;
         writeFuture.addListener((ChannelFutureListener) future -> {

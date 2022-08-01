@@ -20,18 +20,21 @@ package org.apache.rocketmq.mqtt.common.model;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 
-public class Message {
+public class Message implements Serializable {
     private String msgId;
     private String firstTopic;
     private String originTopic;
     private long offset;
     private long nextOffset;
     private int retry;
+    private boolean retained;
+    private boolean isEmpty;
     private byte[] payload;
     private long bornTimestamp;
     private long storeTimestamp;
@@ -66,6 +69,8 @@ public class Message {
         message.setPayload(this.getPayload());
         message.setBornTimestamp(this.bornTimestamp);
         message.setStoreTimestamp(this.storeTimestamp);
+        message.setRetained(this.retained);
+        message.setEmpty(this.isEmpty());
         message.getUserProperties().putAll(this.userProperties);
         return message;
     }
@@ -209,4 +214,20 @@ public class Message {
         return Objects.hash(offset);
     }
 
+
+    public boolean isRetained() {
+        return retained;
+    }
+
+    public void setRetained(boolean retained) {
+        this.retained = retained;
+    }
+
+    public boolean isEmpty() {
+        return isEmpty;
+    }
+
+    public void setEmpty(boolean empty) {
+        isEmpty = empty;
+    }
 }

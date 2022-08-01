@@ -197,7 +197,7 @@ public class BackedFileOutputStream extends OutputStream {
      * switches to file buffering if so.
      */
     private void update(int len) throws IOException {
-        if (memory != null && (memory.getCount() + len > fileThreshold)) {
+        if (memory != null && memory.getCount() + len > fileThreshold) {
             File temp = File.createTempFile("FileBackedOutputStream", null, parentDirectory);
             if (resetOnFinalize) {
                 // Finalizers are not guaranteed to be called on system shutdown;

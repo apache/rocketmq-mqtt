@@ -15,22 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.ds.upstream;
+package org.apache.rocketmq.mqtt.common.facade;
 
-import io.netty.handler.codec.mqtt.MqttMessage;
-import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public interface UpstreamProcessor {
+public interface RetainedPersistManager {
+
     /**
-     * process mqtt upstream packet
-     * @param context
-     * @param message
+     * get wildcards of the first topic
+     *
+     * @param firstTopic
      * @return
      */
-    CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException;
+    Trie<String, String> getTries(String firstTopic);
+
+    CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) throws RemotingException, InterruptedException, ExecutionException, com.alipay.sofa.jraft.error.RemotingException;
+
+    CompletableFuture<Message> getRetainedMessage(String preciseTopic) throws InterruptedException, com.alipay.sofa.jraft.error.RemotingException, RemotingException;
+
+    Set<String> getTopicsFromTrie(Subscription topicFilter) throws com.alipay.sofa.jraft.error.RemotingException, InterruptedException;
 }

@@ -31,6 +31,7 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessorManager;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,7 +70,7 @@ public class TestUpstreamProcessorManager {
     }
 
     @Test
-    public void test() {
+    public void test() throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException {
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_LEAST_ONCE, false, 1);
         MqttPublishMessage publishMessage = new MqttPublishMessage(mqttFixedHeader, variableHeader, payload);
 
@@ -79,7 +80,7 @@ public class TestUpstreamProcessorManager {
     }
 
     @Test
-    public void testDefaultCase() throws ExecutionException, InterruptedException {
+    public void testDefaultCase() throws ExecutionException, InterruptedException, RemotingException, com.alipay.sofa.jraft.error.RemotingException {
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PINGREQ, false, MqttQoS.AT_LEAST_ONCE, false, 1);
         MqttPublishMessage publishMessage = new MqttPublishMessage(mqttFixedHeader, variableHeader, payload);
 

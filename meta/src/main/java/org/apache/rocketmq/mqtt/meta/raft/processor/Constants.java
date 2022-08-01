@@ -20,5 +20,7 @@ package org.apache.rocketmq.mqtt.meta.raft.processor;
 public class Constants {
     public static final String COUNTER = "counter";
 
+    public static final String RETAINEDMSG = "retainedmsg";
+
     public static final String READ_INDEX_TYPE = "readIndexType";
 }

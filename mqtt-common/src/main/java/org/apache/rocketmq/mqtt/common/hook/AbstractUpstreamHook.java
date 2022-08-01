@@ -19,10 +19,12 @@ package org.apache.rocketmq.mqtt.common.hook;
 
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public abstract class AbstractUpstreamHook implements UpstreamHook {
     public static Logger logger = LoggerFactory.getLogger(AbstractUpstreamHook.class);
@@ -63,6 +65,6 @@ public abstract class AbstractUpstreamHook implements UpstreamHook {
 
     public abstract void register();
 
-    public abstract CompletableFuture<HookResult> processMqttMessage(MqttMessageUpContext context, MqttMessage message);
+    public abstract CompletableFuture<HookResult> processMqttMessage(MqttMessageUpContext context, MqttMessage message) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException;
 
 }

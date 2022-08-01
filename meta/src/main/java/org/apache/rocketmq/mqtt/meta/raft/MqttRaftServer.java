@@ -51,6 +51,7 @@ import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.apache.rocketmq.mqtt.meta.raft.processor.CounterStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.MqttReadRpcProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.MqttWriteRpcProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcess;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,6 +147,7 @@ public class MqttRaftServer {
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
         registerStateProcessor(new CounterStateProcessor());
+        registerStateProcessor(new RetainedMsgStateProcess());  //add retained msg porcessor
         start();
     }
 
@@ -245,7 +247,7 @@ public class MqttRaftServer {
     }
 
     public RaftGroupHolder getRaftGroupHolder(String groupId) throws Exception {
-        String[] groupParam = groupId.split("%");
+        String[] groupParam = groupId.split("-");
         if (groupParam.length != 2) {
             throw new Exception("Fail to get RaftGroupHolder");
         }

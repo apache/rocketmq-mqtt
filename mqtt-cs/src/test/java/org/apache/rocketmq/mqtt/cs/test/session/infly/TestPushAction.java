@@ -25,6 +25,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
@@ -106,6 +107,7 @@ public class TestPushAction {
         when(session.getChannelId()).thenReturn(channelId);
         when(session.getClientId()).thenReturn(channelId);
         when(message.getOffset()).thenReturn(offset);
+        when(message.getPayload()).thenReturn(MessageUtil.EMPTYSTRING.getBytes());
     }
 
     @Test
@@ -176,6 +178,10 @@ public class TestPushAction {
         doNothing().when(spyPushAction).rollNextByAck(any(), anyInt());
         when(inFlyCache.getPendingDownCache()).thenReturn(new InFlyCache().getPendingDownCache());
 
+        if(message.getPayload()==null){
+            message.setPayload(new byte[10]);
+            message.setPayload(MessageUtil.EMPTYSTRING.getBytes());
+        }
         spyPushAction.push(message, subscription, session, queue);
         verify(spyPushAction).write(any(), any(), anyInt(), anyInt(), any());
         verify(spyPushAction).rollNextByAck(any(), anyInt());

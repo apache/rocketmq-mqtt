@@ -33,9 +33,17 @@ public class MetaConf {
 
     private String clusterName = "defaultCluster";
     private String allNodeAddress;
-    private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db/";
-    private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft_data/";
+    private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db";
+    private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft";
     private int metaPort = 25000;
+
+    private String selfAddress;
+    private String membersAddress;
+
+    private int electionTimeoutMs = 1000;
+
+    private int snapshotIntervalSecs = 1000;
+    private int raftGroupNum = 4;
 
     public MetaConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -89,5 +97,45 @@ public class MetaConf {
 
     public void setMetaPort(int metaPort) {
         this.metaPort = metaPort;
+    }
+
+    public String getSelfAddress() {
+        return selfAddress;
+    }
+
+    public void setSelfAddress(String selfAddress) {
+        this.selfAddress = selfAddress;
+    }
+
+    public String getMembersAddress() {
+        return membersAddress;
+    }
+
+    public void setMembersAddress(String membersAddress) {
+        this.membersAddress = membersAddress;
+    }
+
+    public int getElectionTimeoutMs() {
+        return electionTimeoutMs;
+    }
+
+    public void setElectionTimeoutMs(int electionTimeoutMs) {
+        this.electionTimeoutMs = electionTimeoutMs;
+    }
+
+    public int getSnapshotIntervalSecs() {
+        return snapshotIntervalSecs;
+    }
+
+    public void setSnapshotIntervalSecs(int snapshotIntervalSecs) {
+        this.snapshotIntervalSecs = snapshotIntervalSecs;
+    }
+
+    public int getRaftGroupNum() {
+        return raftGroupNum;
+    }
+
+    public void setRaftGroupNum(int raftGroupNum) {
+        this.raftGroupNum = raftGroupNum;
     }
 }

@@ -15,34 +15,33 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.core;
+package org.apache.rocketmq.mqtt.meta.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.rocketmq.common.ThreadFactoryImpl;
 
-import com.alipay.sofa.jraft.rhea.client.DefaultRheaKVStore;
-import com.alipay.sofa.jraft.rhea.client.RheaKVStore;
-import com.alipay.sofa.jraft.rhea.options.RheaKVStoreOptions;
+import javax.annotation.PostConstruct;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-public class Node {
-    private static final Logger log = LoggerFactory.getLogger(Node.class);
-    private final RheaKVStoreOptions options;
-    private RheaKVStore rheaKVStore;
 
-    public Node(RheaKVStoreOptions options) {
-        this.options = options;
+/**
+ * raft executor.
+ */
+public final class RaftExecutor {
+    
+    private static ExecutorService raftSnapshotExecutor;
+    
+    private RaftExecutor() {
     }
+    
+    @PostConstruct
+    public static void init() {
 
-    public boolean start() {
-        this.rheaKVStore = new DefaultRheaKVStore();
-        return this.rheaKVStore.init(this.options);
+        raftSnapshotExecutor = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("loop_snapshot"));
     }
-
-    public void stop() {
-        this.rheaKVStore.shutdown();
+    
+    public static void doSnapshot(Runnable runnable) {
+        raftSnapshotExecutor.execute(runnable);
     }
-
-    public RheaKVStore getRheaKVStore() {
-        return rheaKVStore;
-    }
+    
 }

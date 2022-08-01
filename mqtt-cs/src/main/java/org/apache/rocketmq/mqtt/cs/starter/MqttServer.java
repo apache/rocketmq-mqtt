@@ -30,11 +30,12 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
-import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
+import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public class MqttServer {
 
     private ServerBootstrap serverBootstrap = new ServerBootstrap();
     private ServerBootstrap wsServerBootstrap = new ServerBootstrap();
+    private ServerBootstrap tlsServerBootstrap = new ServerBootstrap();
 
     @Resource
     private ConnectHandler connectHandler;
@@ -65,12 +67,13 @@ public class MqttServer {
     private WebSocketServerHandler webSocketServerHandler;
 
     @Resource
-    private ChannelManager channelManager;
+    private SslFactory sslFactory;
 
     @PostConstruct
     public void init() throws Exception {
         start();
         startWs();
+        startTls();
     }
 
     private void start() {
@@ -95,6 +98,35 @@ public class MqttServer {
                 });
         serverBootstrap.bind();
         logger.warn("start mqtt server , port:{}", port);
+    }
+
+    private void startTls() {
+        if (!connectConf.isEnableTlsSever()) {
+            return;
+        }
+
+        int tlsPort = connectConf.getMqttTlsPort();
+        tlsServerBootstrap
+            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+            .channel(NioServerSocketChannel.class)
+            .option(ChannelOption.SO_BACKLOG, 8 * 1024)
+            .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+            .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
+            .childOption(ChannelOption.TCP_NODELAY, true)
+            .localAddress(new InetSocketAddress(tlsPort))
+            .childHandler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                public void initChannel(SocketChannel ch) throws Exception {
+                    ChannelPipeline pipeline = ch.pipeline();
+                    pipeline.addLast("sslHandler", new SslHandler(sslFactory.buildSslEngine(ch)));
+                    pipeline.addLast("connectHandler", connectHandler);
+                    pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
+                    pipeline.addLast("encoder", MqttEncoder.INSTANCE);
+                    pipeline.addLast("dispatcher", mqttPacketDispatcher);
+                }
+            });
+        tlsServerBootstrap.bind();
+        logger.warn("start mqtt tls server , port:{}", tlsPort);
     }
 
     private void startWs() {

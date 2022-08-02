@@ -47,11 +47,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
+
+
 @Service
 public class RetainedMsgClient {
 
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgClient.class);
-    final String groupId = Constants.RETAINEDMSG + "-" + 0;
+    private static final String GROUP_SEQ_NUM_SPLIT = "-";
+    final String groupId = Constants.RETAINEDMSG + GROUP_SEQ_NUM_SPLIT + 0;
     final Configuration conf = new Configuration();
     static final CliClientServiceImpl CLICLIENTSERVICE = new CliClientServiceImpl();
 

@@ -19,26 +19,15 @@ package org.apache.rocketmq.mqtt.common.facade;
 
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.common.model.Trie;
-import org.apache.rocketmq.remoting.exception.RemotingException;
-
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public interface RetainedPersistManager {
 
-    /**
-     * get wildcards of the first topic
-     *
-     * @param firstTopic
-     * @return
-     */
-    Trie<String, String> getTries(String firstTopic);
 
-    CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) throws RemotingException, InterruptedException, ExecutionException, com.alipay.sofa.jraft.error.RemotingException;
+    CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message);
 
-    CompletableFuture<Message> getRetainedMessage(String preciseTopic) throws InterruptedException, com.alipay.sofa.jraft.error.RemotingException, RemotingException;
+    CompletableFuture<Message> getRetainedMessage(String preciseTopic);
 
-    Set<String> getTopicsFromTrie(Subscription topicFilter) throws com.alipay.sofa.jraft.error.RemotingException, InterruptedException;
+    Set<String> getTopicsFromTrie(Subscription topicFilter);
 }

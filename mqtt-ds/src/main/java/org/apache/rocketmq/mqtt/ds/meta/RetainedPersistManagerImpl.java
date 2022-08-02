@@ -65,28 +65,12 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
             }
         }, 3, 3, TimeUnit.SECONDS);
 
-//        deleteTopicTrieScheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("deleteTopicKvStore"));
-//        deleteTopicTrieScheduler.scheduleWithFixedDelay(() -> {
-//            try {
-//                refreshDeleteQueue();
-//            } catch (Throwable t) {
-//                logger.error("", t);
-//            }
-//        }, 5, 3, TimeUnit.SECONDS);
     }
 
 
-    @Override
-    public Trie<String, String> getTries(String firstTopic) {
-        Set<String> allFirstTopics = metaPersistManager.getAllFirstTopics();
-        if (!allFirstTopics.contains(firstTopic)) {
-            return null;
-        } else {
-            return localRetainedTopicTrieCache.get(firstTopic);
-        }
-    }
 
-    private void refreshKVStore() throws RemotingException, InterruptedException { //Refresh all firstTopic
+
+    private void refreshKVStore() { //Refresh all firstTopic
         long start = System.currentTimeMillis();
         logger.info(" Start refresh the tries...");
         Set<String> allFirstTopics = metaPersistManager.getAllFirstTopics();
@@ -96,15 +80,19 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
             if (localRetainedTopicTrieCache.get(TopicUtils.normalizeTopic(firstTopic)) == null) {
                 localRetainedTopicTrieCache.put(TopicUtils.normalizeTopic(firstTopic), new Trie<String, String>());
             }
-            refreshSingleTopicTrieStore(TopicUtils.normalizeTopic(firstTopic));
 
-            logger.info("firstTopic:" + TopicUtils.normalizeTopic(firstTopic));
-            logger.info("firstTopic Trie: " + localRetainedTopicTrieCache.get(TopicUtils.normalizeTopic(firstTopic)).toString());
-
+            try {
+                refreshSingleTopicTrieStore(TopicUtils.normalizeTopic(firstTopic));
+                logger.info("firstTopic:" + TopicUtils.normalizeTopic(firstTopic));
+                logger.info("firstTopic Trie: " + localRetainedTopicTrieCache.get(TopicUtils.normalizeTopic(firstTopic)).toString());
+            } catch (RemotingException | InterruptedException e) {
+                logger.error(String.valueOf(e));
+            }
         }
         logger.info("Refresh the tries cost rt {}", System.currentTimeMillis() - start);
     }
 
+    @SuppressWarnings("checkstyle:WhitespaceAround")
     private void refreshSingleTopicTrieStore(String firstTopic) throws RemotingException, InterruptedException {   //Refresh single firstTopic
 
         CompletableFuture<Trie<String, String>> completableFuture = new CompletableFuture<>();
@@ -117,15 +105,14 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
             kvTrie = tmpTrie;
 
             logger.info("The firstTopic {} kvTrie: {}", firstTopic, kvTrie.toString());
-            Trie<String, String> localTrie = TrieUtil.rebuildLocalTrie(kvTrie);
-            TrieUtil.mergeKvToLocal(localTrie, kvTrie);         //local<-kvTrie
+            Trie<String, String> localTrie = TrieUtil.rebuildLocalTrie(kvTrie);//local<-kvTrie
             localRetainedTopicTrieCache.put(firstTopic, localTrie);
 
         });
 
     }
 
-    public CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) throws InterruptedException, RemotingException {
+    public CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         if (!metaPersistManager.getAllFirstTopics().contains(message.getFirstTopic())) {
@@ -134,19 +121,28 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
             return result;
         }
         logger.info("Start store retain msg...");
-        RetainedMsgClient.SetRetainedMsg(topic, message, result);
+
+        try {
+            RetainedMsgClient.SetRetainedMsg(topic, message, result);
+        } catch (RemotingException | InterruptedException e) {
+            logger.error(String.valueOf(e));
+        }
 
         return result;
-
     }
 
-    public CompletableFuture<Message> getRetainedMessage(String preciseTopic) throws InterruptedException, RemotingException {  //precise preciseTopic
+    public CompletableFuture<Message> getRetainedMessage(String preciseTopic) {  //precise preciseTopic
         CompletableFuture<Message> future = new CompletableFuture<>();
-        RetainedMsgClient.GetRetainedMsg(preciseTopic, future);
+
+        try {
+            RetainedMsgClient.GetRetainedMsg(preciseTopic, future);
+        } catch (RemotingException | InterruptedException e) {
+            logger.error(String.valueOf(e));
+        }
         return future;
     }
 
-    public Set<String> getTopicsFromTrie(Subscription subscription) throws RemotingException, InterruptedException {
+    public Set<String> getTopicsFromTrie(Subscription subscription) {
         Set<String> results;
         String firstTopic = subscription.toFirstTopic();
         String originTopicFilter = subscription.getTopicFilter();
@@ -154,9 +150,14 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         results = localRetainedTopicTrieCache.get(firstTopic).getAllPath(originTopicFilter);
         if (results.isEmpty()) {   //Refresh the trie about single firstTopic
             logger.info("Local trie does not exist. Try to find...");
-            refreshSingleTopicTrieStore(firstTopic);
-            results = localRetainedTopicTrieCache.get(firstTopic).getAllPath(originTopicFilter);
+            try {
+                refreshSingleTopicTrieStore(firstTopic);
+                results = localRetainedTopicTrieCache.get(firstTopic).getAllPath(originTopicFilter);
+            } catch (RemotingException | InterruptedException e) {
+                logger.error(String.valueOf(e));
+            }
         }
+
         return results;
     }
 

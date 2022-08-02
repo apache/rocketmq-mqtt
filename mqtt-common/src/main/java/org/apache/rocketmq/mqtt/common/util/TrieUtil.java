@@ -37,9 +37,8 @@ public class TrieUtil {
 
     public static Trie<String, String> rebuildLocalTrie(Trie<String, String> kvTrie) {
         Set<String> kvTrieNodePath = kvTrie.getNodePath();
-        Set<String> result = new HashSet<>(kvTrieNodePath);
         Trie<String, String> localTrie = new Trie<>();
-        for (String topic : result) {
+        for (String topic : kvTrieNodePath) {
             localTrie.addNode(topic, "", "");
         }
         return localTrie;

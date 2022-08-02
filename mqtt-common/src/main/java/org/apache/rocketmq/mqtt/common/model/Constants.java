@@ -41,6 +41,6 @@ public class Constants {
 
     public static final String MQTT_TAG = "MQTT_COMMON";
 
-    public static final String PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG = "isEmptyMsg";
+    public static final String PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG = "IS_EMPTY_MSG";
 
 }

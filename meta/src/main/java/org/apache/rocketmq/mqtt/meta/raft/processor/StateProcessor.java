@@ -26,22 +26,50 @@ import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 
 import java.util.function.BiConsumer;
 
+/**
+ * A concrete processing class for a business state machine
+ */
 public abstract class StateProcessor {
 
+    /**
+     * Process the read request to apply the state machine
+     * @param request
+     * @return
+     */
     public abstract Response onReadRequest(ReadRequest request);
 
+    /**
+     * Process the write request to apply the state machine
+     * @param log
+     * @return
+     */
     public abstract Response onWriteRequest(WriteRequest log);
 
     public SnapshotOperation loadSnapshotOperate() {
         return null;
     }
 
+    /**
+     * Save the state machine snapshot
+     * @param writer
+     * @param callFinally
+     */
     public abstract void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally);
 
+    /**
+     * Load the state machine snapshot
+     * @param reader
+     * @return
+     */
     public abstract boolean onSnapshotLoad(SnapshotReader reader);
 
     public void onError(Throwable error) {
     }
+
+    /**
+     * Raft Grouping category. The grouping category and sequence number identify the unique RAFT group
+     * @return
+     */
     public abstract String groupCategory();
 
 }

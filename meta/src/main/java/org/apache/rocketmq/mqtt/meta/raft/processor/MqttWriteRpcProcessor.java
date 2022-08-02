@@ -22,6 +22,9 @@ import com.alipay.sofa.jraft.rpc.RpcProcessor;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
+/**
+ * The RPC Processor for write request
+ */
 public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<WriteRequest> {
     private final MqttRaftServer server;
 

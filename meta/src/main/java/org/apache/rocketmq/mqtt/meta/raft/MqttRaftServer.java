@@ -78,7 +78,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class MqttRaftServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
 
-    private static final String GROUP_SEQ_NUM_SPLIT = "%";
+    private static final String GROUP_SEQ_NUM_SPLIT = "-";
     @Resource
     private MetaConf metaConf;
 

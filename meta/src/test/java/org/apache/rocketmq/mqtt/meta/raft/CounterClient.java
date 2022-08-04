@@ -35,7 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
 public class CounterClient {
-    private static final String GROUP_SEQ_NUM_SPLIT = "%";
+    private static final String GROUP_SEQ_NUM_SPLIT = "-";
 
     public static void main(final String[] args) throws Exception {
 

@@ -30,7 +30,6 @@ import org.springframework.stereotype.Component;
 public class MetaConf {
     private static final String CONF_FILE_NAME = "meta.conf";
     private File confFile;
-
     private String clusterName = "defaultCluster";
     private String allNodeAddress;
     private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db";
@@ -39,7 +38,7 @@ public class MetaConf {
 
     private String selfAddress;
     private String membersAddress;
-
+    private int limitRetainedMessageCount;
     private int electionTimeoutMs = 1000;
 
     private int snapshotIntervalSecs = 1000;
@@ -53,6 +52,7 @@ public class MetaConf {
         in.close();
         MixAll.properties2Object(properties, this);
         this.confFile = new File(classPathResource.getURL().getFile());
+        System.out.println(getLimitRetainedMessageCount());
     }
 
     public File getConfFile() {
@@ -137,5 +137,13 @@ public class MetaConf {
 
     public void setRaftGroupNum(int raftGroupNum) {
         this.raftGroupNum = raftGroupNum;
+    }
+
+    public int getLimitRetainedMessageCount() {
+        return limitRetainedMessageCount;
+    }
+
+    public void setLimitRetainedMessageCount(int limitRetainedMessageCount) {
+        this.limitRetainedMessageCount = limitRetainedMessageCount;
     }
 }

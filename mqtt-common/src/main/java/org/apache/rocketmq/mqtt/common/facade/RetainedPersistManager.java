@@ -19,7 +19,7 @@ package org.apache.rocketmq.mqtt.common.facade;
 
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
-import java.util.Set;
+import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 public interface RetainedPersistManager {
@@ -29,5 +29,5 @@ public interface RetainedPersistManager {
 
     CompletableFuture<Message> getRetainedMessage(String preciseTopic);
 
-    Set<String> getTopicsFromTrie(Subscription topicFilter);
+    CompletableFuture<ArrayList<String>> getMsgsFromTrie(Subscription topicFilter);
 }

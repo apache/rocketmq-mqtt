@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
 
+import com.alibaba.fastjson.JSON;
 import com.alipay.sofa.jraft.error.RemotingException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,6 +51,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -159,6 +161,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     }
 
 
+    @SuppressWarnings("checkstyle:Indentation")
     private void sendRetainMessage(ChannelHandlerContext ctx, Set<Subscription> subscriptions) throws InterruptedException, RemotingException, org.apache.rocketmq.remoting.exception.RemotingException {
 
         String clientId = ChannelInfo.getClientId(ctx.channel());
@@ -185,16 +188,19 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         }
 
         for (Subscription subscription : wildcardTopics) {
-            Set<String> topics = retainedPersistManager.getTopicsFromTrie(subscription);
-            for (String topic : topics) {
-                CompletableFuture<Message> retainedMessage = retainedPersistManager.getRetainedMessage(topic);
-                retainedMessage.whenComplete((msg, throwable) -> {
-                    if (msg == null) {
-                        return;
-                    }
+
+            CompletableFuture<ArrayList<String>> future = retainedPersistManager.getMsgsFromTrie(subscription);
+            future.whenComplete((msgsList,throwable) -> {
+                ArrayList<Message> results = new ArrayList<>();
+                for (String strMsg:msgsList) {
+                    results.add(JSON.parseObject(strMsg,Message.class));
+                }
+                logger.info("result:" + results);
+                for (Message msg : results) {
                     _sendMessage(session, clientId, subscription, msg);
-                });
-            }
+                }
+            });
+
         }
     }
 

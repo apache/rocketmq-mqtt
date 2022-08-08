@@ -43,7 +43,7 @@ public class MessageUtil {
 
 
 
-    public static final String EMPTYSTRING = "%@!@%";
+    public static final String EMPTYSTRING = "★\r\n\t☀";
 
     public static MqttPublishMessage toMqttMessage(String topicName, byte[] body, int qos, int mqttId, boolean retained) {
         ByteBuf payload = ALLOCATOR.buffer();

@@ -1,6 +1,8 @@
 package org.apache.rocketmq.mqtt.meta.raft;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
@@ -26,7 +28,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -38,7 +42,9 @@ public class RetainedMsgClientTest {
     @Mock
     private Message testMsg=new Message();
     String firstTopic="test-f1";
-    final String groupId = Constants.RETAINEDMSG + "%" + 0;
+
+    String originTopic="test-f1/f2/";
+    final String groupId = Constants.RETAINEDMSG + "-" + 0;
     final String confStr = "127.0.0.1:25001";
     CliClientServiceImpl cliClientService = new CliClientServiceImpl();
     Configuration conf = new Configuration();
@@ -77,7 +83,7 @@ public class RetainedMsgClientTest {
         testMsg.setPayload("hello world".getBytes());
         testMsg.setMsgId("12345678");
         testMsg.setFirstTopic(firstTopic);
-        testMsg.setOriginTopic(firstTopic+"/t1/");
+        testMsg.setOriginTopic(originTopic);
         testMsg.setEmpty(false);
         testMsg.setRetained(true);
 
@@ -98,14 +104,15 @@ public class RetainedMsgClientTest {
     public void TestSetRetainedMsg(){
         //test set retain msg
 
-        CompletableFuture<Boolean> future = new CompletableFuture<Boolean>();
-
         HashMap<String, String> option = new HashMap<>();
+        option.put("firstTopic",testMsg.getFirstTopic());
         option.put("message", JSON.toJSONString(testMsg, SerializerFeature.WriteClassName));
         option.put("topic", testMsg.getOriginTopic());
+        option.put("isEmpty", String.valueOf(testMsg.isEmpty()));
 
+        CompletableFuture<Boolean>future=new CompletableFuture<>();
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedmsg%0").putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").putAllExtData(option).build();
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
@@ -178,13 +185,14 @@ public class RetainedMsgClientTest {
     @Test
     public void TestGetRetainedTopicTrie(){
         //test get RetainedTopicTrie
-        CompletableFuture<Trie<String, String>> future = new CompletableFuture<>();
+        CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
 
         HashMap<String, String> option = new HashMap<>();
-        option.put("flag", "trie");
-        option.put("topic", TopicUtils.normalizeTopic(firstTopic));
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedmsg%0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        option.put("firstTopic", TopicUtils.normalizeTopic(firstTopic));
+        option.put("topic", TopicUtils.normalizeTopic(originTopic));
+
+        final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedMsg-0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
@@ -193,11 +201,12 @@ public class RetainedMsgClientTest {
                     if (err == null) {
                         Response rsp = (Response) result;
                         if (!rsp.getSuccess()) {
-                            System.out.println("error");
+                            future.complete(null);
                             return;
                         }
-                        Trie<String, String> tmpTrie = JSON.parseObject(rsp.getData().toStringUtf8(), Trie.class);
-                        future.complete(tmpTrie);
+                        JSONArray tmpResult = JSON.parseArray(rsp.getData().toStringUtf8());
+                        List<String> list = JSONObject.parseArray(tmpResult.toJSONString(), String.class);
+                        future.complete((ArrayList<String>) list);
 
                     } else {
                         future.complete(null);

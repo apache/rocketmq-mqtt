@@ -18,6 +18,8 @@
 package org.apache.rocketmq.mqtt.ds.retain;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
@@ -30,7 +32,6 @@ import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
@@ -42,7 +43,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
@@ -58,7 +61,7 @@ public class RetainedMsgClient {
     final Configuration conf = new Configuration();
     static final CliClientServiceImpl CLICLIENTSERVICE = new CliClientServiceImpl();
 
-    static final String GROUPNAME = "retainedmsg";
+    static final String GROUPNAME = "retainedMsg";
     static PeerId leader;
 
     @Resource
@@ -93,13 +96,16 @@ public class RetainedMsgClient {
         registry.registerResponseInstance(ReadRequest.class.getName(), Response.getDefaultInstance());
     }
 
-    public static void SetRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException,
-        InterruptedException {
+    public static void SetRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
 
         HashMap<String, String> option = new HashMap<>();
         option.put("message", JSON.toJSONString(msg, SerializerFeature.WriteClassName));
         option.put("topic", topic);
-        logger.info("SetRetainedMsg option:" + option.toString());
+        option.put("firstTopic",msg.getFirstTopic());
+        option.put("isEmpty",String.valueOf(msg.isEmpty()));
+
+
+        logger.info("SetRetainedMsg option:" + option);
 
         final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + "-0").putAllExtData(option).build();
 
@@ -126,17 +132,18 @@ public class RetainedMsgClient {
                 return null;
             }
         }, 5000);
+
     }
 
-    public static void GetRetainedTopicTrie(String firstTopic, CompletableFuture<Trie<String, String>> future) throws RemotingException,
-        InterruptedException {
+    public static void GetRetainedMsgsFromTrie(String firstTopic, String topic, CompletableFuture<ArrayList<String>> future) throws RemotingException, InterruptedException {
         HashMap<String, String> option = new HashMap<>();
 
-        option.put("flag", "trie");  //request for trie
-        option.put("topic", firstTopic);
+        option.put("firstTopic", firstTopic);
+        option.put("topic", topic);
 
+        logger.info("This is trie" + option);
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + "-0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -147,9 +154,9 @@ public class RetainedMsgClient {
                         logger.info("GetRetainedTopicTrie failed. {}", rsp.getErrMsg());
                         return;
                     }
-                    Trie<String, String> tmpTrie = JSON.parseObject(rsp.getData().toStringUtf8(), Trie.class);
-                    logger.info("GetRetainedTopicTrie success.Trie :" + tmpTrie);
-                    future.complete(tmpTrie);
+                    JSONArray tmpResult = JSON.parseArray(rsp.getData().toStringUtf8());
+                    List<String> list = JSONObject.parseArray(tmpResult.toJSONString(), String.class);
+                    future.complete((ArrayList<String>) list);
                     logger.info("-------------------------------GetRetainedTopicTrie success.----------------------------------");
                 } else {
                     logger.info("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
@@ -157,7 +164,6 @@ public class RetainedMsgClient {
                     err.printStackTrace();
                 }
             }
-
             @Override
             public Executor executor() {
                 return null;
@@ -165,15 +171,14 @@ public class RetainedMsgClient {
         }, 5000);
     }
 
-    public static void GetRetainedMsg(String topic, CompletableFuture<Message> future) throws RemotingException,
-        InterruptedException {
+
+    public static void GetRetainedMsg(String topic, CompletableFuture<Message> future) throws RemotingException, InterruptedException {
 
         HashMap<String, String> option = new HashMap<>();
-        option.put("flag", "topic");  //request for retain msg of topic
         option.put("topic", topic);
 
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + "-0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 
@@ -200,6 +205,4 @@ public class RetainedMsgClient {
             }
         }, 5000);
     }
-
-
 }

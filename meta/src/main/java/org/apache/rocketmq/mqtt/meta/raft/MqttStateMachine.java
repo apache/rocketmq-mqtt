@@ -57,15 +57,11 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     private volatile String leaderIp = "unknown";
 
-    private SnapshotOperation snapshotOperation;
-
     public MqttStateMachine(MqttRaftServer server, StateProcessor processor, String groupId) {
         this.server = server;
         this.processor = processor;
         this.groupId = groupId;
-        this.snapshotOperation = this.processor.loadSnapshotOperate();
     }
-
 
     @Override
     public void onApply(Iterator iterator) {

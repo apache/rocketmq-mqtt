@@ -30,7 +30,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

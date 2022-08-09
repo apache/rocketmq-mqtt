@@ -37,7 +37,11 @@ public class CounterStateProcessor extends StateProcessor {
 
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-    private SnapshotOperation snapshotOperation;
+    private final SnapshotOperation snapshotOperation;
+
+    public CounterStateProcessor() {
+        this.snapshotOperation = new CounterSnapshotOperation(lock);;
+    }
 
     @Override
     public Response onReadRequest(ReadRequest request) {
@@ -70,12 +74,6 @@ public class CounterStateProcessor extends StateProcessor {
                     .setErrMsg(e.getMessage())
                     .build();
         }
-    }
-
-    @Override
-    public SnapshotOperation loadSnapshotOperate() {
-        snapshotOperation = new CounterSnapshotOperation(lock);
-        return snapshotOperation;
     }
 
     @Override

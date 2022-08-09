@@ -40,7 +40,7 @@ public class CounterStateProcessor extends StateProcessor {
     private final SnapshotOperation snapshotOperation;
 
     public CounterStateProcessor() {
-        this.snapshotOperation = new CounterSnapshotOperation(lock);;
+        this.snapshotOperation = new CounterSnapshotOperation(lock);
     }
 
     @Override

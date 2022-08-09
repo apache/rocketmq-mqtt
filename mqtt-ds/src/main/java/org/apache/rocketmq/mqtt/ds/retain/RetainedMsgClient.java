@@ -18,8 +18,6 @@
 package org.apache.rocketmq.mqtt.ds.retain;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
@@ -31,6 +29,7 @@ import com.alipay.sofa.jraft.rpc.impl.GrpcRaftRpcFactory;
 import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
+import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -44,8 +43,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
@@ -99,7 +98,6 @@ public class RetainedMsgClient {
     public static void SetRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
 
         HashMap<String, String> option = new HashMap<>();
-        option.put("message", JSON.toJSONString(msg, SerializerFeature.WriteClassName));
         option.put("topic", topic);
         option.put("firstTopic",msg.getFirstTopic());
         option.put("isEmpty",String.valueOf(msg.isEmpty()));
@@ -107,7 +105,7 @@ public class RetainedMsgClient {
 
         logger.info("SetRetainedMsg option:" + option);
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + "-0").putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setData(ByteString.copyFrom(JSON.toJSONBytes(msg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -140,8 +138,7 @@ public class RetainedMsgClient {
 
         option.put("firstTopic", firstTopic);
         option.put("topic", topic);
-
-        logger.info("This is trie" + option);
+        logger.info("This is trie " + option);
 
         final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
@@ -154,14 +151,17 @@ public class RetainedMsgClient {
                         logger.info("GetRetainedTopicTrie failed. {}", rsp.getErrMsg());
                         return;
                     }
-                    JSONArray tmpResult = JSON.parseArray(rsp.getData().toStringUtf8());
-                    List<String> list = JSONObject.parseArray(tmpResult.toJSONString(), String.class);
-                    future.complete((ArrayList<String>) list);
+                    byte[] bytes = rsp.getData().toByteArray();
+                    ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
+                    for (int i = 0;i < resultList.size();i++) {
+                        resultList.set(i,new String(Base64.getDecoder().decode(resultList.get(i))));
+                    }
+                    future.complete(resultList);
                     logger.info("-------------------------------GetRetainedTopicTrie success.----------------------------------");
                 } else {
-                    logger.info("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
-                    future.complete(null);
+                    logger.error("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
                     err.printStackTrace();
+                    future.complete(null);
                 }
             }
             @Override
@@ -190,7 +190,7 @@ public class RetainedMsgClient {
                         logger.info("GetRetainedMsg failed. {}", rsp.getErrMsg());
                         return;
                     }
-                    String strMsg = (String) JSON.parse(rsp.getData().toStringUtf8());
+                    String strMsg = rsp.getData().toStringUtf8();
                     Message message = JSON.parseObject(strMsg, Message.class);
                     future.complete(message);
                 } else {

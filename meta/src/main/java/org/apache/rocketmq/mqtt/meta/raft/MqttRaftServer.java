@@ -148,7 +148,8 @@ public class MqttRaftServer {
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
         registerStateProcessor(new CounterStateProcessor());
-        registerStateProcessor(new RetainedMsgStateProcess());  //add retained msg porcessor
+        registerStateProcessor(new RetainedMsgStateProcess(metaConf.getMaxRetainedMessageNum()));  //add retained msg porcessor
+
         start();
     }
 

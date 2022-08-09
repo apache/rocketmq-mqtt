@@ -26,32 +26,29 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
-import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
-public class RetainedMsgStateProcess extends StateProcessor {
-    @Resource
-    private MetaConf metaConf;
-    private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcess.class);
 
-    private final AtomicLong value = new AtomicLong(0);
-    private final ConcurrentHashMap<String, String> retainedMsgMap = new ConcurrentHashMap<>();  //key:topic value:retained msg
+public class RetainedMsgStateProcess extends StateProcessor {
+
+    private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcess.class);
+    private final ConcurrentHashMap<String, byte[]> retainedMsgMap = new ConcurrentHashMap<>();  //key:topic value:retained msg
     private final ConcurrentHashMap<String, Trie<String, String>> retainedMsgTopicTrie = new ConcurrentHashMap<>();  //key:firstTopic value:retained topic Trie
 
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private SnapshotOperation snapshotOperation;
+    private int maxRetainedMessageNum ;
 
-
+    public RetainedMsgStateProcess(int maxRetainedMessageNum) {
+        setMaxRetainedMessageNum(maxRetainedMessageNum);
+    }
     @Override
     public Response onReadRequest(ReadRequest request) {
         try {
@@ -62,10 +59,10 @@ public class RetainedMsgStateProcess extends StateProcessor {
             logger.info("FirstTopic:{} Topic:{} Operation:{}",firstTopic,topic,operation);
 
             if (operation.equals("topic")) {    //return retained msg
-                String msg = retainedMsgMap.get(topic);
+                byte[] msgBytes = retainedMsgMap.get(topic);
                 return Response.newBuilder()
                     .setSuccess(true)
-                    .setData(ByteString.copyFrom(JSON.toJSONBytes(msg)))
+                    .setData(ByteString.copyFrom(msgBytes))
                     .build();
             } else { //return retain msgs of matched Topic
                 if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
@@ -73,24 +70,23 @@ public class RetainedMsgStateProcess extends StateProcessor {
                     retainedMsgTopicTrie.put(firstTopic, newTrie);
                 }
                 Trie<String, String> tmpTrie = retainedMsgTopicTrie.get(firstTopic);
-
                 Set<String> matchTopics = tmpTrie.getAllPath(topic);
 
-                ArrayList<String> msgResults = new ArrayList<>();
+                ArrayList<byte[]> msgResults = new ArrayList<>();
 
                 for (String tmpTopic:matchTopics) {
-                    String msg = retainedMsgMap.get(tmpTopic);
-                    if (msg != null) {
-                        msgResults.add(msg);
+                    byte[] msgBytes = retainedMsgMap.get(tmpTopic);
+                    if (msgBytes != null) {
+                        msgResults.add(msgBytes);
                     }
                 }
-
                 return Response.newBuilder()
                     .setSuccess(true)
                     .setData(ByteString.copyFrom(JSON.toJSONBytes(msgResults)))   //return retained msgs of matched Topic
                     .build();
             }
         } catch (Exception e) {
+            logger.error(String.valueOf(e));
             return Response.newBuilder()
                 .setSuccess(false)
                 .setErrMsg(e.getMessage())
@@ -98,12 +94,13 @@ public class RetainedMsgStateProcess extends StateProcessor {
         }
     }
 
-    boolean setRetainedMsg(String firstTopic,String topic, boolean isEmpty,String msg) {
+    boolean setRetainedMsg(String firstTopic,String topic, boolean isEmpty,byte[] msg) {
 
         // if the trie of firstTopic doesn't exist
         if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
             retainedMsgTopicTrie.put(TopicUtils.normalizeTopic(firstTopic), new Trie<String, String>());
         }
+
 
         if (isEmpty) {
             //delete from trie
@@ -113,7 +110,8 @@ public class RetainedMsgStateProcess extends StateProcessor {
         } else {
             //Add to trie
             Trie<String, String> trie = retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic));
-            if (trie.getNodePath().size() < metaConf.getLimitRetainedMessageCount()) {
+            logger.info("maxRetainedMessageNum:{}",maxRetainedMessageNum);
+            if (trie.getNodePath().size() < maxRetainedMessageNum) {
                 retainedMsgMap.put(TopicUtils.normalizeTopic(topic), msg);
                 retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic)).addNode(topic, "", "");
                 return true;
@@ -132,8 +130,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
             String firstTopic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("firstTopic"));     //retained msg firstTopic
             String topic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("topic"));     //retained msg topic
             boolean isEmpty = Boolean.parseBoolean(writeRequest.getExtDataMap().get("isEmpty"));     //retained msg is empty
-            String message = writeRequest.getExtDataMap().get("message");  //retained msg
-
+            byte[] message = writeRequest.getData().toByteArray();
             boolean res = setRetainedMsg(firstTopic,topic, isEmpty,message);
             if (!res) {
                 logger.warn("Put the topic {} retained message failed! Exceeded maximum number of reserved topics limit.",topic);
@@ -155,7 +152,6 @@ public class RetainedMsgStateProcess extends StateProcessor {
                 .setErrMsg(e.getMessage())
                 .build();
         }
-
 
     }
 
@@ -179,4 +175,11 @@ public class RetainedMsgStateProcess extends StateProcessor {
         return Constants.RETAINEDMSG;
     }
 
+    public int getMaxRetainedMessageNum() {
+        return maxRetainedMessageNum;
+    }
+
+    public void setMaxRetainedMessageNum(int maxRetainedMessageNum) {
+        this.maxRetainedMessageNum = maxRetainedMessageNum;
+    }
 }

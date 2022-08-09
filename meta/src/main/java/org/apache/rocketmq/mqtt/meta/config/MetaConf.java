@@ -35,12 +35,10 @@ public class MetaConf {
     private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db";
     private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft";
     private int metaPort = 25000;
-
     private String selfAddress;
     private String membersAddress;
-    private int limitRetainedMessageCount;
+    private int maxRetainedMessageNum;
     private int electionTimeoutMs = 1000;
-
     private int snapshotIntervalSecs = 1000;
     private int raftGroupNum = 4;
 
@@ -52,7 +50,6 @@ public class MetaConf {
         in.close();
         MixAll.properties2Object(properties, this);
         this.confFile = new File(classPathResource.getURL().getFile());
-        System.out.println(getLimitRetainedMessageCount());
     }
 
     public File getConfFile() {
@@ -139,11 +136,11 @@ public class MetaConf {
         this.raftGroupNum = raftGroupNum;
     }
 
-    public int getLimitRetainedMessageCount() {
-        return limitRetainedMessageCount;
+    public int getMaxRetainedMessageNum() {
+        return maxRetainedMessageNum;
     }
 
-    public void setLimitRetainedMessageCount(int limitRetainedMessageCount) {
-        this.limitRetainedMessageCount = limitRetainedMessageCount;
+    public void setMaxRetainedMessageNum(int maxRetainedMessageNum) {
+        this.maxRetainedMessageNum = maxRetainedMessageNum;
     }
 }

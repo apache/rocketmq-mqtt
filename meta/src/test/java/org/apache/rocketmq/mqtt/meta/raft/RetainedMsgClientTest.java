@@ -18,8 +18,6 @@
 package org.apache.rocketmq.mqtt.meta.raft;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
@@ -31,6 +29,7 @@ import com.alipay.sofa.jraft.rpc.impl.GrpcRaftRpcFactory;
 import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
+import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -42,13 +41,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
-
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
@@ -122,13 +118,12 @@ public class RetainedMsgClientTest {
 
         HashMap<String, String> option = new HashMap<>();
         option.put("firstTopic",testMsg.getFirstTopic());
-        option.put("message", JSON.toJSONString(testMsg, SerializerFeature.WriteClassName));
         option.put("topic", testMsg.getOriginTopic());
         option.put("isEmpty", String.valueOf(testMsg.isEmpty()));
 
         CompletableFuture<Boolean>future=new CompletableFuture<>();
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
@@ -162,7 +157,7 @@ public class RetainedMsgClientTest {
         option.put("flag", "topic");
         option.put("topic", firstTopic+"/t1/");
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedmsg%0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedmsg-0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CompletableFuture<Message>future=new CompletableFuture<>();
 
@@ -199,7 +194,7 @@ public class RetainedMsgClientTest {
     }
 
     @Test
-    public void TestGetRetainedTopicTrie(){
+    public void TestGetRetainedFromTopicTrie(){
         //test get RetainedTopicTrie
         CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
 
@@ -220,9 +215,13 @@ public class RetainedMsgClientTest {
                             future.complete(null);
                             return;
                         }
-                        JSONArray tmpResult = JSON.parseArray(rsp.getData().toStringUtf8());
-                        List<String> list = JSONObject.parseArray(tmpResult.toJSONString(), String.class);
-                        future.complete((ArrayList<String>) list);
+                        byte[] bytes = rsp.getData().toByteArray();
+                        ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
+                        for(int i=0;i<resultList.size();i++){
+                            resultList.set(i,new String(Base64.getDecoder().decode(resultList.get(i))));
+                        }
+
+                        future.complete(resultList);
 
                     } else {
                         future.complete(null);

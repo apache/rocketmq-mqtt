@@ -40,19 +40,8 @@ import java.util.concurrent.CompletableFuture;
 public class RetainedPersistManagerImpl implements RetainedPersistManager {
 
     private static Logger logger = LoggerFactory.getLogger(RetainedPersistManagerImpl.class);
-
-
     @Resource
     private MetaPersistManager metaPersistManager;
-
-    public void init() {
-
-
-    }
-
-
-
-
 
     public CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
@@ -62,12 +51,12 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
             result.complete(false);
             return result;
         }
-        logger.info("Start store retain msg...");
+        logger.debug("Start store retain msg...");
 
         try {
             RetainedMsgClient.SetRetainedMsg(topic, message, result);
         } catch (RemotingException | InterruptedException e) {
-            logger.error("",e);
+            logger.error("", e);
             result.completeExceptionally(e);
         }
 
@@ -76,11 +65,11 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
 
     public CompletableFuture<Message> getRetainedMessage(String preciseTopic) {  //precise preciseTopic
         CompletableFuture<Message> future = new CompletableFuture<>();
-        logger.info("topic:" + preciseTopic);
+        logger.debug("topic:" + preciseTopic);
         try {
             RetainedMsgClient.GetRetainedMsg(preciseTopic, future);
         } catch (RemotingException | InterruptedException e) {
-            logger.error("",e);
+            logger.error("", e);
             future.completeExceptionally(e);
         }
         return future;
@@ -89,13 +78,13 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
     public CompletableFuture<ArrayList<String>> getMsgsFromTrie(Subscription subscription) {
         String firstTopic = subscription.toFirstTopic();
         String originTopicFilter = subscription.getTopicFilter();
-        logger.info("firstTopic={} originTopicFilter={}", firstTopic, originTopicFilter);
+        logger.debug("firstTopic={} originTopicFilter={}", firstTopic, originTopicFilter);
 
         CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
         try {
             RetainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter,future);
         } catch (RemotingException | InterruptedException e) {
-            logger.error("",e);
+            logger.error("", e);
             future.completeExceptionally(e);
         }
 

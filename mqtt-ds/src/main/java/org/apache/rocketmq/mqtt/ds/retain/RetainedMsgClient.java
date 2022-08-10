@@ -102,8 +102,7 @@ public class RetainedMsgClient {
         option.put("firstTopic",msg.getFirstTopic());
         option.put("isEmpty",String.valueOf(msg.isEmpty()));
 
-
-        logger.info("SetRetainedMsg option:" + option);
+        logger.debug("SetRetainedMsg option:" + option);
 
         final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setData(ByteString.copyFrom(JSON.toJSONBytes(msg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
 
@@ -119,9 +118,9 @@ public class RetainedMsgClient {
                     logger.info("-------------------------------SetRetainedMsg success.----------------------------------");
                     future.complete(true);
                 } else {
-                    logger.info("-------------------------------SetRetainedMsg fail.-------------------------------------");
+                    logger.debug("-------------------------------SetRetainedMsg fail.-------------------------------------");
+                    logger.error("", err);
                     future.complete(false);
-                    err.printStackTrace();
                 }
             }
 
@@ -138,7 +137,8 @@ public class RetainedMsgClient {
 
         option.put("firstTopic", firstTopic);
         option.put("topic", topic);
-        logger.info("This is trie " + option);
+
+        logger.debug("GetRetainedMsgsFromTrie option:" + option);
 
         final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
@@ -157,10 +157,10 @@ public class RetainedMsgClient {
                         resultList.set(i,new String(Base64.getDecoder().decode(resultList.get(i))));
                     }
                     future.complete(resultList);
-                    logger.info("-------------------------------GetRetainedTopicTrie success.----------------------------------");
+                    logger.debug("-------------------------------GetRetainedTopicTrie success.----------------------------------");
                 } else {
-                    logger.error("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
-                    err.printStackTrace();
+                    logger.debug("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
+                    logger.error("",err);
                     future.complete(null);
                 }
             }
@@ -179,23 +179,25 @@ public class RetainedMsgClient {
 
         final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
-
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 
             @Override
             public void complete(Object result, Throwable err) {
                 if (err == null) {
                     Response rsp = (Response) result;
-                    if (rsp.getData().toStringUtf8().equals("null")) {
+                    if (!rsp.getSuccess()) {
                         logger.info("GetRetainedMsg failed. {}", rsp.getErrMsg());
+                        return;
+                    }
+                    if (rsp.getData().toStringUtf8().equals("null")) {  //this topic doesn't exist retained msg
                         return;
                     }
                     String strMsg = rsp.getData().toStringUtf8();
                     Message message = JSON.parseObject(strMsg, Message.class);
                     future.complete(message);
                 } else {
+                    logger.error("", err);
                     future.complete(null);
-                    err.printStackTrace();
                 }
             }
 

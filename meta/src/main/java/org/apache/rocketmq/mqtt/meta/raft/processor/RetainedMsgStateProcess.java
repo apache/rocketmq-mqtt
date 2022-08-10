@@ -68,6 +68,11 @@ public class RetainedMsgStateProcess extends StateProcessor {
                 if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
                     Trie<String, String> newTrie = new Trie<>();
                     retainedMsgTopicTrie.put(firstTopic, newTrie);
+
+                    return Response.newBuilder()
+                        .setSuccess(true)
+                        .setData(ByteString.copyFrom(JSON.toJSONBytes(new ArrayList<byte[]>())))
+                        .build();
                 }
                 Trie<String, String> tmpTrie = retainedMsgTopicTrie.get(firstTopic);
                 Set<String> matchTopics = tmpTrie.getAllPath(topic);
@@ -86,7 +91,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
                     .build();
             }
         } catch (Exception e) {
-            logger.error(String.valueOf(e));
+            logger.error("", e);
             return Response.newBuilder()
                 .setSuccess(false)
                 .setErrMsg(e.getMessage())
@@ -131,7 +136,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
             String topic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("topic"));     //retained msg topic
             boolean isEmpty = Boolean.parseBoolean(writeRequest.getExtDataMap().get("isEmpty"));     //retained msg is empty
             byte[] message = writeRequest.getData().toByteArray();
-            boolean res = setRetainedMsg(firstTopic,topic, isEmpty,message);
+            boolean res = setRetainedMsg(firstTopic,topic,isEmpty,message);
             if (!res) {
                 logger.warn("Put the topic {} retained message failed! Exceeded maximum number of reserved topics limit.",topic);
                 return Response.newBuilder()
@@ -146,7 +151,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
                 .setData(ByteString.copyFrom(JSON.toJSONBytes(topic)))
                 .build();
         } catch (Exception e) {
-            logger.error("Put the retained message error! {}",e.getMessage());
+            logger.error("Put the retained message error!",e);
             return Response.newBuilder()
                 .setSuccess(false)
                 .setErrMsg(e.getMessage())

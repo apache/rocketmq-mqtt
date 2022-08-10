@@ -78,9 +78,8 @@ public class PublishProcessor implements UpstreamProcessor {
         Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, context.getNamespace()); //According to topic to find queue
         long bornTime = System.currentTimeMillis();
 
-        MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
-
         if (mqttPublishMessage.fixedHeader().isRetain()) {
+            MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
             //Change the retained flag of message that will send MQ is 0
             mqttPublishMessage = MessageUtil.removeRetainedFlag(mqttPublishMessage);
             //Keep the retained flag of message that will store meta
@@ -88,8 +87,12 @@ public class PublishProcessor implements UpstreamProcessor {
             metaMessage.setMsgId(msgId);
             metaMessage.setBornTimestamp(bornTime);
             metaMessage.setEmpty(isEmpty);
-            CompletableFuture<Boolean> booleanCompletableFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
-
+            CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
+            storeRetainedFuture.whenComplete((res, throwable) -> {
+                if (throwable != null) {
+                    logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(),throwable);
+                }
+            });
         }
 
         Message message = MessageUtil.toMessage(mqttPublishMessage);

@@ -30,7 +30,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,15 +56,11 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     private volatile String leaderIp = "unknown";
 
-    private SnapshotOperation snapshotOperation;
-
     public MqttStateMachine(MqttRaftServer server, StateProcessor processor, String groupId) {
         this.server = server;
         this.processor = processor;
         this.groupId = groupId;
-        this.snapshotOperation = this.processor.loadSnapshotOperate();
     }
-
 
     @Override
     public void onApply(Iterator iterator) {

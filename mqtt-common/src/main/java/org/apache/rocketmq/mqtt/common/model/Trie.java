@@ -35,8 +35,6 @@ public class Trie<K, V> {
     private Set<String> nodePath = new HashSet<>();
 
 
-
-
     public synchronized V addNode(String key, V nodeValue, K nodeKey) {
         try {
             String[] keyArray = key.split(Constants.MQTT_TOPIC_DELIMITER);

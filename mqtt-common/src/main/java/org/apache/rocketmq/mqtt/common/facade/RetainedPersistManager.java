@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.common.facade;
 
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 

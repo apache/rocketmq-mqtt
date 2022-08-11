@@ -205,7 +205,7 @@ public class Message implements Serializable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Message message = (Message)o;
+        Message message = (Message) o;
         return offset == message.offset;
     }
 

@@ -29,6 +29,7 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,11 +45,12 @@ public class RetainedMsgStateProcess extends StateProcessor {
 
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private SnapshotOperation snapshotOperation;
-    private int maxRetainedMessageNum ;
+    private int maxRetainedMessageNum;
 
     public RetainedMsgStateProcess(int maxRetainedMessageNum) {
         setMaxRetainedMessageNum(maxRetainedMessageNum);
     }
+
     @Override
     public Response onReadRequest(ReadRequest request) {
         try {
@@ -56,7 +58,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
             String firstTopic = request.getExtDataMap().get("firstTopic");
             String operation = request.getOperation();
 
-            logger.info("FirstTopic:{} Topic:{} Operation:{}",firstTopic,topic,operation);
+            logger.info("FirstTopic:{} Topic:{} Operation:{}", firstTopic, topic, operation);
 
             if (operation.equals("topic")) {    //return retained msg
                 byte[] msgBytes = retainedMsgMap.get(topic);
@@ -79,7 +81,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
 
                 ArrayList<byte[]> msgResults = new ArrayList<>();
 
-                for (String tmpTopic:matchTopics) {
+                for (String tmpTopic : matchTopics) {
                     byte[] msgBytes = retainedMsgMap.get(tmpTopic);
                     if (msgBytes != null) {
                         msgResults.add(msgBytes);
@@ -99,7 +101,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
         }
     }
 
-    boolean setRetainedMsg(String firstTopic,String topic, boolean isEmpty,byte[] msg) {
+    boolean setRetainedMsg(String firstTopic, String topic, boolean isEmpty, byte[] msg) {
 
         // if the trie of firstTopic doesn't exist
         if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
@@ -115,7 +117,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
         } else {
             //Add to trie
             Trie<String, String> trie = retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic));
-            logger.info("maxRetainedMessageNum:{}",maxRetainedMessageNum);
+            logger.info("maxRetainedMessageNum:{}", maxRetainedMessageNum);
             if (trie.getNodePath().size() < maxRetainedMessageNum) {
                 retainedMsgMap.put(TopicUtils.normalizeTopic(topic), msg);
                 retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic)).addNode(topic, "", "");
@@ -136,9 +138,9 @@ public class RetainedMsgStateProcess extends StateProcessor {
             String topic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("topic"));     //retained msg topic
             boolean isEmpty = Boolean.parseBoolean(writeRequest.getExtDataMap().get("isEmpty"));     //retained msg is empty
             byte[] message = writeRequest.getData().toByteArray();
-            boolean res = setRetainedMsg(firstTopic,topic,isEmpty,message);
+            boolean res = setRetainedMsg(firstTopic, topic, isEmpty, message);
             if (!res) {
-                logger.warn("Put the topic {} retained message failed! Exceeded maximum number of reserved topics limit.",topic);
+                logger.warn("Put the topic {} retained message failed! Exceeded maximum number of reserved topics limit.", topic);
                 return Response.newBuilder()
                     .setSuccess(false)
                     .setErrMsg("Exceeded maximum number of reserved topics limit.")
@@ -151,7 +153,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
                 .setData(ByteString.copyFrom(JSON.toJSONBytes(topic)))
                 .build();
         } catch (Exception e) {
-            logger.error("Put the retained message error!",e);
+            logger.error("Put the retained message error!", e);
             return Response.newBuilder()
                 .setSuccess(false)
                 .setErrMsg(e.getMessage())

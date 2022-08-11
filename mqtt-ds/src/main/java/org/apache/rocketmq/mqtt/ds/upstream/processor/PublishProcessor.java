@@ -90,7 +90,7 @@ public class PublishProcessor implements UpstreamProcessor {
             CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
             storeRetainedFuture.whenComplete((res, throwable) -> {
                 if (throwable != null) {
-                    logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(),throwable);
+                    logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(), throwable);
                 }
             });
         }

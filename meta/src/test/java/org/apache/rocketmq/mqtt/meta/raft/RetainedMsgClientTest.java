@@ -41,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -52,24 +53,26 @@ public class RetainedMsgClientTest {
 
 
     @Mock
-    private Message testMsg=new Message();
-    String firstTopic="test-f1";
+    private Message testMsg = new Message();
+    String firstTopic = "test-f1";
 
-    String originTopic="test-f1/f2/";
+    String originTopic = "test-f1/f2/";
     final String groupId = Constants.RETAINEDMSG + "-" + 0;
     final String confStr = "127.0.0.1:25001";
     CliClientServiceImpl cliClientService = new CliClientServiceImpl();
     Configuration conf = new Configuration();
     PeerId leader;
 
-    class RouteTableWrap{
+    class RouteTableWrap {
         public boolean refreshLeader() throws InterruptedException, TimeoutException {
             return RouteTable.getInstance().refreshLeader(cliClientService, groupId, 3000).isOk();
         }
-        public PeerId selectLeader(String groupId){
+
+        public PeerId selectLeader(String groupId) {
             return RouteTable.getInstance().selectLeader(groupId);
         }
     }
+
     @Before
     public void init() throws InterruptedException, TimeoutException {
         initRpcServer();
@@ -82,7 +85,7 @@ public class RetainedMsgClientTest {
 
         cliClientService.init(new CliOptions());
 
-        RouteTableWrap tmpRouteTable =Mockito.mock(RouteTableWrap.class);
+        RouteTableWrap tmpRouteTable = Mockito.mock(RouteTableWrap.class);
         Mockito.when(tmpRouteTable.refreshLeader()).thenReturn(true);
         Mockito.when(tmpRouteTable.selectLeader(groupId)).thenReturn(new PeerId("127.0.0.1", 25001));
 
@@ -113,15 +116,15 @@ public class RetainedMsgClientTest {
     }
 
     @Test
-    public void TestSetRetainedMsg(){
+    public void TestSetRetainedMsg() {
         //test set retain msg
 
         HashMap<String, String> option = new HashMap<>();
-        option.put("firstTopic",testMsg.getFirstTopic());
+        option.put("firstTopic", testMsg.getFirstTopic());
         option.put("topic", testMsg.getOriginTopic());
         option.put("isEmpty", String.valueOf(testMsg.isEmpty()));
 
-        CompletableFuture<Boolean>future=new CompletableFuture<>();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
 
@@ -135,6 +138,7 @@ public class RetainedMsgClientTest {
                         future.complete(false);
                     }
                 }
+
                 @Override
                 public Executor executor() {
                     return null;
@@ -145,21 +149,21 @@ public class RetainedMsgClientTest {
         }
 
         future.whenComplete(((result, throwable) -> {
-            Assert.assertEquals(result,false);
+            Assert.assertEquals(result, false);
         }));
 
     }
 
     @Test
-    public void TestGetRetainedMsg()  {
+    public void TestGetRetainedMsg() {
 
         HashMap<String, String> option = new HashMap<>();
         option.put("flag", "topic");
-        option.put("topic", firstTopic+"/t1/");
+        option.put("topic", firstTopic + "/t1/");
 
         final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedmsg-0").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
-        CompletableFuture<Message>future=new CompletableFuture<>();
+        CompletableFuture<Message> future = new CompletableFuture<>();
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
@@ -177,6 +181,7 @@ public class RetainedMsgClientTest {
                         future.complete(null);
                     }
                 }
+
                 @Override
                 public Executor executor() {
                     return null;
@@ -187,14 +192,14 @@ public class RetainedMsgClientTest {
         }
 
         future.whenComplete(((message, throwable) -> {
-            Mockito.verify(message,null);
+            Mockito.verify(message, null);
         }));
 
 
     }
 
     @Test
-    public void TestGetRetainedFromTopicTrie(){
+    public void TestGetRetainedFromTopicTrie() {
         //test get RetainedTopicTrie
         CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
 
@@ -217,8 +222,8 @@ public class RetainedMsgClientTest {
                         }
                         byte[] bytes = rsp.getData().toByteArray();
                         ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
-                        for(int i=0;i<resultList.size();i++){
-                            resultList.set(i,new String(Base64.getDecoder().decode(resultList.get(i))));
+                        for (int i = 0; i < resultList.size(); i++) {
+                            resultList.set(i, new String(Base64.getDecoder().decode(resultList.get(i))));
                         }
 
                         future.complete(resultList);
@@ -238,7 +243,7 @@ public class RetainedMsgClientTest {
         }
 
         future.whenComplete(((trie, throwable) -> {
-            Mockito.verify(trie,null);
+            Mockito.verify(trie, null);
         }));
 
     }

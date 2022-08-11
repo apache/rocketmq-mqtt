@@ -50,7 +50,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
 
-
 @Service
 public class RetainedMsgClient {
 
@@ -99,8 +98,8 @@ public class RetainedMsgClient {
 
         HashMap<String, String> option = new HashMap<>();
         option.put("topic", topic);
-        option.put("firstTopic",msg.getFirstTopic());
-        option.put("isEmpty",String.valueOf(msg.isEmpty()));
+        option.put("firstTopic", msg.getFirstTopic());
+        option.put("isEmpty", String.valueOf(msg.isEmpty()));
 
         logger.debug("SetRetainedMsg option:" + option);
 
@@ -153,17 +152,18 @@ public class RetainedMsgClient {
                     }
                     byte[] bytes = rsp.getData().toByteArray();
                     ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
-                    for (int i = 0;i < resultList.size();i++) {
-                        resultList.set(i,new String(Base64.getDecoder().decode(resultList.get(i))));
+                    for (int i = 0; i < resultList.size(); i++) {
+                        resultList.set(i, new String(Base64.getDecoder().decode(resultList.get(i))));
                     }
                     future.complete(resultList);
                     logger.debug("-------------------------------GetRetainedTopicTrie success.----------------------------------");
                 } else {
                     logger.debug("-------------------------------GetRetainedTopicTrie fail.-------------------------------------");
-                    logger.error("",err);
+                    logger.error("", err);
                     future.complete(null);
                 }
             }
+
             @Override
             public Executor executor() {
                 return null;

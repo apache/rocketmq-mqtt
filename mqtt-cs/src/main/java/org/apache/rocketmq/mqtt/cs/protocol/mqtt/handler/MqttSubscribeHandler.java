@@ -20,10 +20,7 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
-import io.netty.handler.codec.mqtt.MqttSubAckPayload;
 import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
 import io.netty.handler.codec.mqtt.MqttSubscribePayload;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
@@ -35,6 +32,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,10 +45,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import static io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader.from;
-import static io.netty.handler.codec.mqtt.MqttMessageType.SUBACK;
-import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 
 
 @Component
@@ -85,7 +79,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
             if (!future.isDone()) {
                 future.complete(null);
             }
-        },1,TimeUnit.SECONDS);
+        }, 1, TimeUnit.SECONDS);
         try {
             MqttSubscribePayload payload = mqttMessage.payload();
             List<MqttTopicSubscription> mqttTopicSubscriptions = payload.topicSubscriptions();
@@ -121,11 +115,9 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         for (MqttTopicSubscription sub : mqttTopicSubscriptions) {
             qoss[i++] = sub.qualityOfService().value();
         }
-        MqttFixedHeader fixedHeader = new MqttFixedHeader(SUBACK, false, AT_MOST_ONCE, false, 0);
-        MqttMessageIdVariableHeader variableHeader = from(mqttSubscribeMessage.variableHeader().messageId());
-        MqttSubAckMessage mqttSubAckMessage = new MqttSubAckMessage(fixedHeader, variableHeader,
-            new MqttSubAckPayload(qoss));
-        return mqttSubAckMessage;
+
+        int messageId = mqttSubscribeMessage.variableHeader().messageId();
+        return MqttMessageFactory.buildSubAckMessage(messageId, qoss);
     }
 
 }

@@ -19,14 +19,12 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.springframework.stereotype.Component;
 
@@ -50,9 +48,6 @@ public class MqttPubRelHandler implements MqttPacketHandler<MqttMessage> {
         String channelId = ChannelInfo.getId(ctx.channel());
         inFlyCache.remove(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId());
 
-        MqttFixedHeader pubcompFixedHeader = new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE,
-                false, 0);
-        MqttMessage pubcomMqttMessage = new MqttMessage(pubcompFixedHeader, variableHeader);
-        ctx.channel().writeAndFlush(pubcomMqttMessage);
+        ctx.channel().writeAndFlush(MqttMessageFactory.buildPubCompMessage(variableHeader));
     }
 }

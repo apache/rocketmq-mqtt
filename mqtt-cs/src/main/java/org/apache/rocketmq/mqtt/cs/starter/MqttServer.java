@@ -79,7 +79,7 @@ public class MqttServer {
     private void start() {
         int port = connectConf.getMqttPort();
         serverBootstrap
-            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+            .group(new NioEventLoopGroup(connectConf.getNettySelectorThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_BACKLOG, 8 * 1024)
             .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -107,7 +107,7 @@ public class MqttServer {
 
         int tlsPort = connectConf.getMqttTlsPort();
         tlsServerBootstrap
-            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+            .group(new NioEventLoopGroup(connectConf.getNettySelectorThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_BACKLOG, 8 * 1024)
             .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -132,7 +132,7 @@ public class MqttServer {
     private void startWs() {
         int port = connectConf.getMqttWsPort();
         wsServerBootstrap
-            .group(new NioEventLoopGroup(connectConf.getNettySelectThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+            .group(new NioEventLoopGroup(connectConf.getNettySelectorThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_BACKLOG, 8 * 1024)
             .option(ChannelOption.SO_KEEPALIVE, true)

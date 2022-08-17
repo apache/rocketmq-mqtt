@@ -178,7 +178,7 @@ public class TestPushAction {
         doNothing().when(spyPushAction).rollNextByAck(any(), anyInt());
         when(inFlyCache.getPendingDownCache()).thenReturn(new InFlyCache().getPendingDownCache());
 
-        if(message.getPayload()==null){
+        if (message.getPayload() == null) {
             message.setPayload(new byte[10]);
             message.setPayload(MessageUtil.EMPTYSTRING.getBytes());
         }

@@ -98,7 +98,7 @@ public class TestMqttSubscribeHandler {
     @Test
     public void testDoHandlerAuthFailed() {
         HookResult authFailHook = new HookResult(HookResult.FAIL,
-                MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
+            MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
         doNothing().when(channelManager).closeConnect(channel, ChannelCloseFrom.SERVER, Remark.AUTH_FAILED);
 
         subscribeHandler.doHandler(ctx, subscribeMessage, authFailHook);
@@ -119,7 +119,8 @@ public class TestMqttSubscribeHandler {
         // wait scheduler execution
         try {
             Thread.sleep(2000);
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException ignored) {
+        }
 
         verify(ctx, times(3)).channel();
         verify(sessionLoop).addSubscription(anyString(), anySet());
@@ -137,7 +138,8 @@ public class TestMqttSubscribeHandler {
         // wait scheduler execution
         try {
             Thread.sleep(2000);
-        } catch (InterruptedException ignored) {}
+        } catch (InterruptedException ignored) {
+        }
 
         verify(ctx, times(3)).channel();
         verify(sessionLoop).addSubscription(anyString(), anySet());

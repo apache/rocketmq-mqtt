@@ -41,5 +41,6 @@ message Response {
   bytes data = 1;
   string errMsg = 2;
   bool success = 3;
+  repeated bytes datalist = 4;
 }
 

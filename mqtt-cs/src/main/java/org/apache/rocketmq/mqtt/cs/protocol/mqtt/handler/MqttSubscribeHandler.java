@@ -19,7 +19,6 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
 
-import com.alibaba.fastjson.JSON;
 import com.alipay.sofa.jraft.error.RemotingException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -161,7 +160,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     }
 
 
-    @SuppressWarnings("checkstyle:Indentation")
     private void sendRetainMessage(ChannelHandlerContext ctx, Set<Subscription> subscriptions) throws InterruptedException, RemotingException, org.apache.rocketmq.remoting.exception.RemotingException {
 
         String clientId = ChannelInfo.getClientId(ctx.channel());
@@ -189,14 +187,12 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
         for (Subscription subscription : wildcardTopics) {
 
-            CompletableFuture<ArrayList<String>> future = retainedPersistManager.getMsgsFromTrie(subscription);
-            future.whenComplete((msgsList,throwable) -> {
-                ArrayList<Message> results = new ArrayList<>();
-                for (String strMsg:msgsList) {
-                    results.add(JSON.parseObject(strMsg,Message.class));
-                }
-                logger.info("result:" + results);
-                for (Message msg : results) {
+            CompletableFuture<ArrayList<Message>> future = retainedPersistManager.getMsgsFromTrie(subscription);
+            future.whenComplete((msgsList, throwable) -> {
+                for (Message msg : msgsList) {
+                    if (msg == null) {
+                        return;
+                    }
                     _sendMessage(session, clientId, subscription, msg);
                 }
             });

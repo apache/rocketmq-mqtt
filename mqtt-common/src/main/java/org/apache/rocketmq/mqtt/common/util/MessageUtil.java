@@ -41,8 +41,6 @@ import java.util.Map;
 public class MessageUtil {
     public static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
 
-
-
     public static final String EMPTYSTRING = "★\r\n\t☀";
 
     public static MqttPublishMessage toMqttMessage(String topicName, byte[] body, int qos, int mqttId, boolean retained) {

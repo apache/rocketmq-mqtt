@@ -20,13 +20,12 @@ package org.apache.rocketmq.mqtt.common.model;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 
-public class Message implements Serializable {
+public class Message {
     private String msgId;
     private String firstTopic;
     private String originTopic;
@@ -54,6 +53,7 @@ public class Message implements Serializable {
     public static String extPropertyMqttRealTopic = "mqttRealTopic";
     public static String extPropertyQoS = "qosLevel";
     public static String extPropertyCleanSessionFlag = "cleanSessionFlag";
+
     public static String extPropertyNamespaceId = "namespace";
     public static String extPropertyClientId = "clientId";
 

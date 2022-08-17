@@ -35,15 +35,13 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
-import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-
 import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+
 
 @Component
 public class PublishProcessor implements UpstreamProcessor {
@@ -61,7 +59,7 @@ public class PublishProcessor implements UpstreamProcessor {
     RetainedPersistManager retainedPersistManager;
 
     @Override
-    public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage mqttMessage) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException {
+    public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
         boolean isEmpty = false;
         //deal empty payload

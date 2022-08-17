@@ -30,6 +30,7 @@ import org.apache.rocketmq.mqtt.ds.retain.RetainedMsgClient;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import javax.annotation.Resource;
 import java.util.ArrayList;
 
@@ -75,14 +76,14 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         return future;
     }
 
-    public CompletableFuture<ArrayList<String>> getMsgsFromTrie(Subscription subscription) {
+    public CompletableFuture<ArrayList<Message>> getMsgsFromTrie(Subscription subscription) {
         String firstTopic = subscription.toFirstTopic();
         String originTopicFilter = subscription.getTopicFilter();
         logger.debug("firstTopic={} originTopicFilter={}", firstTopic, originTopicFilter);
 
-        CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
+        CompletableFuture<ArrayList<Message>> future = new CompletableFuture<>();
         try {
-            RetainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter,future);
+            RetainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter, future);
         } catch (RemotingException | InterruptedException e) {
             logger.error("", e);
             future.completeExceptionally(e);

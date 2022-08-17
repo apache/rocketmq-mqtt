@@ -43,8 +43,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
@@ -131,7 +131,7 @@ public class RetainedMsgClient {
 
     }
 
-    public static void GetRetainedMsgsFromTrie(String firstTopic, String topic, CompletableFuture<ArrayList<String>> future) throws RemotingException, InterruptedException {
+    public static void GetRetainedMsgsFromTrie(String firstTopic, String topic, CompletableFuture<ArrayList<Message>> future) throws RemotingException, InterruptedException {
         HashMap<String, String> option = new HashMap<>();
 
         option.put("firstTopic", firstTopic);
@@ -150,10 +150,10 @@ public class RetainedMsgClient {
                         logger.info("GetRetainedTopicTrie failed. {}", rsp.getErrMsg());
                         return;
                     }
-                    byte[] bytes = rsp.getData().toByteArray();
-                    ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
-                    for (int i = 0; i < resultList.size(); i++) {
-                        resultList.set(i, new String(Base64.getDecoder().decode(resultList.get(i))));
+                    List<ByteString> datalistList = rsp.getDatalistList();
+                    ArrayList<Message> resultList = new ArrayList<>();
+                    for (ByteString tmp : datalistList) {
+                        resultList.add(JSON.parseObject(tmp.toStringUtf8(), Message.class));
                     }
                     future.complete(resultList);
                     logger.debug("-------------------------------GetRetainedTopicTrie success.----------------------------------");

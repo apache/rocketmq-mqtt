@@ -30,5 +30,5 @@ public interface RetainedPersistManager {
 
     CompletableFuture<Message> getRetainedMessage(String preciseTopic);
 
-    CompletableFuture<ArrayList<String>> getMsgsFromTrie(Subscription topicFilter);
+    CompletableFuture<ArrayList<Message>> getMsgsFromTrie(Subscription topicFilter);
 }

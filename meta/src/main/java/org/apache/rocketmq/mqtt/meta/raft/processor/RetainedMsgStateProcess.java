@@ -79,17 +79,17 @@ public class RetainedMsgStateProcess extends StateProcessor {
                 Trie<String, String> tmpTrie = retainedMsgTopicTrie.get(firstTopic);
                 Set<String> matchTopics = tmpTrie.getAllPath(topic);
 
-                ArrayList<byte[]> msgResults = new ArrayList<>();
+                ArrayList<ByteString> msgResults = new ArrayList<>();
 
                 for (String tmpTopic : matchTopics) {
                     byte[] msgBytes = retainedMsgMap.get(tmpTopic);
                     if (msgBytes != null) {
-                        msgResults.add(msgBytes);
+                        msgResults.add(ByteString.copyFrom(msgBytes));
                     }
                 }
                 return Response.newBuilder()
                     .setSuccess(true)
-                    .setData(ByteString.copyFrom(JSON.toJSONBytes(msgResults)))   //return retained msgs of matched Topic
+                    .addAllDatalist(msgResults)//return retained msgs of matched Topic
                     .build();
             }
         } catch (Exception e) {
@@ -107,7 +107,6 @@ public class RetainedMsgStateProcess extends StateProcessor {
         if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
             retainedMsgTopicTrie.put(TopicUtils.normalizeTopic(firstTopic), new Trie<String, String>());
         }
-
 
         if (isEmpty) {
             //delete from trie

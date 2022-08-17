@@ -43,8 +43,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
@@ -57,6 +57,8 @@ public class RetainedMsgClientTest {
     String firstTopic = "test-f1";
 
     String originTopic = "test-f1/f2/";
+
+    String topicFilter = "test-f1/+/";
     final String groupId = Constants.RETAINEDMSG + "-" + 0;
     final String confStr = "127.0.0.1:25001";
     CliClientServiceImpl cliClientService = new CliClientServiceImpl();
@@ -70,6 +72,20 @@ public class RetainedMsgClientTest {
 
         public PeerId selectLeader(String groupId) {
             return RouteTable.getInstance().selectLeader(groupId);
+        }
+    }
+
+    class RetainedMsgStateProcessWarp {
+        public Response setRetainedMsgRsp() {
+            return null;
+        }
+
+        public Response getRetainedMsgRsp() {
+            return null;
+        }
+
+        public Response getRetainedMsgFromTrieRsp() {
+            return null;
         }
     }
 
@@ -126,17 +142,20 @@ public class RetainedMsgClientTest {
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup("retainedMsg-0").setOperation("topic").setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
+
+        RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
+        Mockito.when(stateProcess.setRetainedMsgRsp()).thenReturn(Response.newBuilder()
+            .setSuccess(true)
+            .setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg.getOriginTopic())))
+            .build());
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
                 @Override
                 public void complete(Object result, Throwable err) {
-                    if (err == null) {
-                        future.complete(true);
-                    } else {
-                        future.complete(false);
-                    }
+                    Assert.assertEquals(stateProcess.setRetainedMsgRsp().getData().toStringUtf8(), request.getExtDataMap().get("topic"));
+                    future.complete(stateProcess.setRetainedMsgRsp().getSuccess());
                 }
 
                 @Override
@@ -149,7 +168,7 @@ public class RetainedMsgClientTest {
         }
 
         future.whenComplete(((result, throwable) -> {
-            Assert.assertEquals(result, false);
+            Assert.assertEquals(result, true);
         }));
 
     }
@@ -165,21 +184,18 @@ public class RetainedMsgClientTest {
 
         CompletableFuture<Message> future = new CompletableFuture<>();
 
+        RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
+        Mockito.when(stateProcess.getRetainedMsgRsp()).thenReturn(Response.newBuilder()
+            .setSuccess(true)
+            .setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg)))
+            .build());
+
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
                 @Override
                 public void complete(Object result, Throwable err) {
-                    if (err == null) {
-                        Response rsp = (Response) result;
-                        if (rsp.getData().toStringUtf8().equals("null")) {
-                            return;
-                        }
-                        String strMsg = (String) JSON.parse(rsp.getData().toStringUtf8());
-                        Message message = JSON.parseObject(strMsg, Message.class);
-                        future.complete(message);
-                    } else {
-                        future.complete(null);
-                    }
+                    Message msg = JSON.parseObject(stateProcess.getRetainedMsgRsp().getData().toStringUtf8(), Message.class);
+                    future.complete(msg);
                 }
 
                 @Override
@@ -192,21 +208,31 @@ public class RetainedMsgClientTest {
         }
 
         future.whenComplete(((message, throwable) -> {
-            Mockito.verify(message, null);
+            Assert.assertEquals(message, testMsg);
         }));
-
 
     }
 
     @Test
-    public void TestGetRetainedFromTopicTrie() {
+    public void TestGetRetainedMsgsFromTrie() {
         //test get RetainedTopicTrie
-        CompletableFuture<ArrayList<String>> future = new CompletableFuture<>();
+        CompletableFuture<ArrayList<Message>> future = new CompletableFuture<>();
 
         HashMap<String, String> option = new HashMap<>();
 
         option.put("firstTopic", TopicUtils.normalizeTopic(firstTopic));
-        option.put("topic", TopicUtils.normalizeTopic(originTopic));
+        option.put("topic", TopicUtils.normalizeTopic(topicFilter));
+
+
+        ArrayList<ByteString> msgResults = new ArrayList<>();
+        msgResults.add(ByteString.copyFrom(JSON.toJSONBytes(testMsg)));
+        msgResults.add(ByteString.copyFrom(JSON.toJSONBytes(testMsg)));
+
+        RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
+        Mockito.when(stateProcess.getRetainedMsgFromTrieRsp()).thenReturn(Response.newBuilder()
+            .setSuccess(true)
+            .addAllDatalist(msgResults)
+            .build());
 
         final ReadRequest request = ReadRequest.newBuilder().setGroup("retainedMsg-0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
@@ -214,23 +240,13 @@ public class RetainedMsgClientTest {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
                 @Override
                 public void complete(Object result, Throwable err) {
-                    if (err == null) {
-                        Response rsp = (Response) result;
-                        if (!rsp.getSuccess()) {
-                            future.complete(null);
-                            return;
-                        }
-                        byte[] bytes = rsp.getData().toByteArray();
-                        ArrayList<String> resultList = JSON.parseObject(new String(bytes), ArrayList.class);
-                        for (int i = 0; i < resultList.size(); i++) {
-                            resultList.set(i, new String(Base64.getDecoder().decode(resultList.get(i))));
-                        }
 
-                        future.complete(resultList);
-
-                    } else {
-                        future.complete(null);
+                    List<ByteString> datalistList = stateProcess.getRetainedMsgFromTrieRsp().getDatalistList();
+                    ArrayList<Message> resultList = new ArrayList<>();
+                    for (ByteString tmp : datalistList) {
+                        resultList.add(JSON.parseObject(tmp.toStringUtf8(), Message.class));
                     }
+                    future.complete(resultList);
                 }
 
                 @Override
@@ -242,8 +258,12 @@ public class RetainedMsgClientTest {
             throw new RuntimeException(e);
         }
 
-        future.whenComplete(((trie, throwable) -> {
-            Mockito.verify(trie, null);
+        ArrayList<Message> targetList = new ArrayList<>();
+        targetList.add(testMsg);
+        targetList.add(testMsg);
+
+        future.whenComplete(((msgList, throwable) -> {
+            Assert.assertEquals(msgList, targetList);
         }));
 
     }

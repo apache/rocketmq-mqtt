@@ -74,7 +74,7 @@ public class TestMessageUtil {
 
     @Test
     public void TestToMqttMessage() {
-        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId,false).toString());
+        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId, false).toString());
     }
 
     @Test
@@ -104,8 +104,8 @@ public class TestMessageUtil {
     }
 
     @Test
-    public void TestDealEmptyMessage(){
-        messageBody="";
+    public void TestDealEmptyMessage() {
+        messageBody = "";
         ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
         byte[] body = messageBody.getBytes(CharsetUtil.UTF_8);
         ByteBuf payload = ALLOCATOR.buffer();

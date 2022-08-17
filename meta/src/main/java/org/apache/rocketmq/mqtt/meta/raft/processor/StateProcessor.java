@@ -22,7 +22,7 @@ import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
+
 
 import java.util.function.BiConsumer;
 
@@ -33,6 +33,7 @@ public abstract class StateProcessor {
 
     /**
      * Process the read request to apply the state machine
+     *
      * @param request
      * @return
      */
@@ -40,17 +41,16 @@ public abstract class StateProcessor {
 
     /**
      * Process the write request to apply the state machine
+     *
      * @param log
      * @return
      */
     public abstract Response onWriteRequest(WriteRequest log);
 
-    public SnapshotOperation loadSnapshotOperate() {
-        return null;
-    }
 
     /**
      * Save the state machine snapshot
+     *
      * @param writer
      * @param callFinally
      */
@@ -58,6 +58,7 @@ public abstract class StateProcessor {
 
     /**
      * Load the state machine snapshot
+     *
      * @param reader
      * @return
      */
@@ -68,6 +69,7 @@ public abstract class StateProcessor {
 
     /**
      * Raft Grouping category. The grouping category and sequence number identify the unique RAFT group
+     *
      * @return
      */
     public abstract String groupCategory();

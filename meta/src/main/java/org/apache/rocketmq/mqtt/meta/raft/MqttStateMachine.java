@@ -30,7 +30,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.snapshot.SnapshotOperation;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,13 +57,12 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     private volatile String leaderIp = "unknown";
 
-    private SnapshotOperation snapshotOperation;
 
     public MqttStateMachine(MqttRaftServer server, StateProcessor processor, String groupId) {
         this.server = server;
         this.processor = processor;
         this.groupId = groupId;
-        this.snapshotOperation = this.processor.loadSnapshotOperate();
+
     }
 
 
@@ -116,7 +115,7 @@ public class MqttStateMachine extends StateMachineAdapter {
         } catch (Throwable t) {
             LOGGER.error("processor : {}, stateMachine meet critical error: {}.", processor, t);
             iterator.setErrorAndRollback(index - applied,
-                    new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
+                new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }
     }
 
@@ -125,8 +124,8 @@ public class MqttStateMachine extends StateMachineAdapter {
         super.onSnapshotSave(writer, done);
         final BiConsumer<Boolean, Throwable> callFinally = (result, t) -> {
             final Status status = result ? Status.OK()
-                    : new Status(RaftError.EIO, "Fail to compress snapshot at %s, error is %s",
-                    writer.getPath(), t == null ? "" : t.getMessage());
+                : new Status(RaftError.EIO, "Fail to compress snapshot at %s, error is %s",
+                writer.getPath(), t == null ? "" : t.getMessage());
             done.run(status);
         };
         processor.onSnapshotSave(writer, callFinally);

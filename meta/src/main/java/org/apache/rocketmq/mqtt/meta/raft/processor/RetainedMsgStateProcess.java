@@ -168,7 +168,6 @@ public class RetainedMsgStateProcess extends StateProcessor {
 
     @Override
     public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
-
     }
 
     @Override

@@ -162,12 +162,10 @@ public class RetainedMsgStateProcess extends StateProcessor {
     }
 
     @Override
-    public SnapshotOperation loadSnapshotOperate() {
-        return snapshotOperation;
-    }
-
-    @Override
     public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
+        snapshotOperation.onSnapshotSave(writer, callFinally, retainedMsgMap.toString());
+        snapshotOperation.onSnapshotSave(writer, callFinally, retainedMsgTopicTrie.toString());
+
     }
 
     @Override

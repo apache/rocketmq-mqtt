@@ -65,7 +65,6 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     }
 
-
     @Override
     public void onApply(Iterator iterator) {
         int index = 0;

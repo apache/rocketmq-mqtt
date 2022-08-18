@@ -47,7 +47,6 @@ public abstract class StateProcessor {
      */
     public abstract Response onWriteRequest(WriteRequest log);
 
-
     /**
      * Save the state machine snapshot
      *

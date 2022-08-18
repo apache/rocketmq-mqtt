@@ -34,7 +34,9 @@ import java.util.function.BiConsumer;
 public class CounterStateProcessor extends StateProcessor {
 
     private final AtomicLong value = new AtomicLong(0);
+    
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    
     private final SnapshotOperation snapshotOperation;
 
     public CounterStateProcessor() {
@@ -73,7 +75,6 @@ public class CounterStateProcessor extends StateProcessor {
                 .build();
         }
     }
-
 
     @Override
     public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {

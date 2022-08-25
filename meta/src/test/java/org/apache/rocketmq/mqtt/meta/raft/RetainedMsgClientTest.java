@@ -30,9 +30,11 @@ import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
+import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
@@ -147,7 +149,7 @@ public class RetainedMsgClientTest {
         RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
         Mockito.when(stateProcess.setRetainedMsgRsp()).thenReturn(Response.newBuilder()
             .setSuccess(true)
-            .setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg.getOriginTopic())))
+            .setData(ByteString.copyFrom(testMsg.getEncodeBytes()))
             .build());
 
         try {
@@ -187,14 +189,20 @@ public class RetainedMsgClientTest {
         RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
         Mockito.when(stateProcess.getRetainedMsgRsp()).thenReturn(Response.newBuilder()
             .setSuccess(true)
-            .setData(ByteString.copyFrom(JSON.toJSONBytes(testMsg)))
+            .setData(ByteString.copyFrom(testMsg.getEncodeBytes()))
             .build());
 
         try {
             cliClientService.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
                 @Override
                 public void complete(Object result, Throwable err) {
-                    Message msg = JSON.parseObject(stateProcess.getRetainedMsgRsp().getData().toStringUtf8(), Message.class);
+                    Response rsp = (Response) result;
+                    Message msg = null;
+                    try {
+                        msg = Message.copyFromStoreMessage(StoreMessage.parseFrom(rsp.getData().toByteArray()));
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new RuntimeException(e);
+                    }
                     future.complete(msg);
                 }
 
@@ -225,8 +233,8 @@ public class RetainedMsgClientTest {
 
 
         ArrayList<ByteString> msgResults = new ArrayList<>();
-        msgResults.add(ByteString.copyFrom(JSON.toJSONBytes(testMsg)));
-        msgResults.add(ByteString.copyFrom(JSON.toJSONBytes(testMsg)));
+        msgResults.add(ByteString.copyFrom(testMsg.getEncodeBytes()));
+        msgResults.add(ByteString.copyFrom(testMsg.getEncodeBytes()));
 
         RetainedMsgStateProcessWarp stateProcess = Mockito.mock(RetainedMsgStateProcessWarp.class);
         Mockito.when(stateProcess.getRetainedMsgFromTrieRsp()).thenReturn(Response.newBuilder()
@@ -244,7 +252,11 @@ public class RetainedMsgClientTest {
                     List<ByteString> datalistList = stateProcess.getRetainedMsgFromTrieRsp().getDatalistList();
                     ArrayList<Message> resultList = new ArrayList<>();
                     for (ByteString tmp : datalistList) {
-                        resultList.add(JSON.parseObject(tmp.toStringUtf8(), Message.class));
+                        try {
+                            resultList.add(Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray())));
+                        } catch (InvalidProtocolBufferException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     future.complete(resultList);
                 }

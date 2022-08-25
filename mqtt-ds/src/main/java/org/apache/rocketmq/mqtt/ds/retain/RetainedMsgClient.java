@@ -17,8 +17,6 @@
 
 package org.apache.rocketmq.mqtt.ds.retain;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
 import com.alipay.sofa.jraft.entity.PeerId;
@@ -30,9 +28,11 @@ import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
+import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
@@ -103,7 +103,7 @@ public class RetainedMsgClient {
 
         logger.debug("SetRetainedMsg option:" + option);
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setData(ByteString.copyFrom(JSON.toJSONBytes(msg, SerializerFeature.WriteClassName))).putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setData(ByteString.copyFrom(msg.getEncodeBytes())).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -153,7 +153,11 @@ public class RetainedMsgClient {
                     List<ByteString> datalistList = rsp.getDatalistList();
                     ArrayList<Message> resultList = new ArrayList<>();
                     for (ByteString tmp : datalistList) {
-                        resultList.add(JSON.parseObject(tmp.toStringUtf8(), Message.class));
+                        try {
+                            resultList.add(Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray())));
+                        } catch (InvalidProtocolBufferException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                     future.complete(resultList);
                     logger.debug("-------------------------------GetRetainedTopicTrie success.----------------------------------");
@@ -192,8 +196,12 @@ public class RetainedMsgClient {
                     if (rsp.getData().toStringUtf8().equals("null")) {  //this topic doesn't exist retained msg
                         return;
                     }
-                    String strMsg = rsp.getData().toStringUtf8();
-                    Message message = JSON.parseObject(strMsg, Message.class);
+                    Message message = null;
+                    try {
+                        message = Message.copyFromStoreMessage(StoreMessage.parseFrom(rsp.getData().toByteArray()));
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new RuntimeException(e);
+                    }
                     future.complete(message);
                 } else {
                     logger.error("", err);

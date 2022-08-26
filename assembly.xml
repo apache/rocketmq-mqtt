@@ -16,9 +16,12 @@
   limitations under the License.
   -->
 <assembly>
+    <id>all</id>
+    <includeBaseDirectory>true</includeBaseDirectory>
     <formats>
         <format>dir</format>
         <format>tar.gz</format>
+        <format>zip</format>
     </formats>
     <fileSets>
         <fileSet>
@@ -35,6 +38,7 @@
     </fileSets>
     <moduleSets>
         <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>org.apache.rocketmq:mqtt-cs</include>
                 <include>org.apache.rocketmq:mqtt-ds</include>

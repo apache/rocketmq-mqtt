@@ -17,6 +17,7 @@
   -->
 <assembly>
     <id>all</id>
+    <includeBaseDirectory>true</includeBaseDirectory>
     <formats>
         <format>dir</format>
         <format>tar.gz</format>

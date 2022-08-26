@@ -77,12 +77,7 @@ sh mqadmin updateKvConfig -s LMQ -k ALL_FIRST_TOPICS -v {topic1,topic2} -n {name
 ```shell
 sh mqadmin updateKvConfig  -s LMQ -k {topic} -v {topic/+}  -n {namesrv}
 ```
-6. start meta kv if necessary
-```shell
-cd bin
-sh meta.sh start
-```
-7. Start Process
+6. Start Process
 ```shell
 cd bin
 sh mqtt.sh start

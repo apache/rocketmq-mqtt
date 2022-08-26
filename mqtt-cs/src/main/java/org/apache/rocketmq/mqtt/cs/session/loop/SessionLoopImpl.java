@@ -275,9 +275,15 @@ public class SessionLoopImpl implements SessionLoop {
             return;
         }
         session.addSubscription(subscriptions);
-        AtomicInteger result = new AtomicInteger(subscriptions.size());
+        AtomicInteger result = new AtomicInteger(0);
         for (Subscription subscription : subscriptions) {
             queueFresh.freshQueue(session, subscription);
+            Map<Queue, QueueOffset> queueOffsets = session.getQueueOffset(subscription);
+            if (queueOffsets != null) {
+                result.addAndGet(queueOffsets.size());
+            }
+        }
+        for (Subscription subscription : subscriptions) {
             Map<Queue, QueueOffset> queueOffsets = session.getQueueOffset(subscription);
             if (queueOffsets != null) {
                 for (Map.Entry<Queue, QueueOffset> entry : queueOffsets.entrySet()) {

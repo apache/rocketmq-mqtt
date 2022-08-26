@@ -11,7 +11,7 @@
     <groupId>org.apache.rocketmq</groupId>
     <artifactId>rocketmq-mqtt</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <scm>
         <url>git@github.com:apache/rocketmq-mqtt.git</url>
@@ -237,11 +237,16 @@
 	   </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
+                <goals>
+                    <goal>single</goal>
+                </goals>
+                <phase>package</phase>
                 <configuration>
                     <finalName>rocketmq-mqtt</finalName>
                     <descriptors>
                         <descriptor>assembly.xml</descriptor>
                     </descriptors>
+                    <appendAssemblyId>false</appendAssemblyId>
                 </configuration>
             </plugin>
         </plugins>

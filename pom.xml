@@ -235,20 +235,7 @@
 		<check />
 	       </configuration>
 	   </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <goals>
-                    <goal>single</goal>
-                </goals>
-                <phase>package</phase>
-                <configuration>
-                    <finalName>rocketmq-mqtt</finalName>
-                    <descriptors>
-                        <descriptor>assembly.xml</descriptor>
-                    </descriptors>
-                    <appendAssemblyId>false</appendAssemblyId>
-                </configuration>
-            </plugin>
+
         </plugins>
     </build>
 

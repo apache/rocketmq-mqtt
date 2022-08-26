@@ -42,7 +42,6 @@
             <includes>
                 <include>org.apache.rocketmq:mqtt-cs</include>
                 <include>org.apache.rocketmq:mqtt-ds</include>
-                <include>org.apache.rocketmq:meta</include>
             </includes>
             <binaries>
                 <outputDirectory>lib</outputDirectory>

@@ -32,12 +32,11 @@ git clone https://github.com/apache/rocketmq-mqtt
 2. Build the package
 ```shell
 cd rocketmq-mqtt
-mvn clean package -DskipTests=true assembly:assembly
+mvn -Prelease-all -DskipTests clean install -U 
 ```
 3. Config
 ```shell
-cp -r  target/rocketmq-mqtt/rocketmq-mqtt ~
-cd ~/rocketmq-mqtt
+cd distribution/target/
 cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 

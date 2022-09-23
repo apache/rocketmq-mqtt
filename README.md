@@ -42,21 +42,21 @@ cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 
 
-**Config Key** | **Instruction**
------ | ----  
-username   |  used for auth
-secretKey   | used for auth
-NAMESRV_ADDR   | specify namesrv address
-eventNotifyRetryTopic   | notify event retry topic
-clientRetryTopic   | client retry topic
-
+| **Config Key**        | **Instruction**          |
+|-----------------------|--------------------------|
+| username              | used for auth            |
+| secretKey             | used for auth            |
+| NAMESRV_ADDR          | specify namesrv address  |
+| eventNotifyRetryTopic | notify event retry topic |
+| clientRetryTopic      | client retry topic       |
 
 And some configuration items in the**meta.conf** configuration file
 
-**Config Key** | **Instruction**
------ | ----  
-allNodeAddress   |  meta kv all nodes ip, e.g. 192.168.0.1,192.168.0.2,192.168.0.3
-metaPort   | corresponding port, e.g. 25000
+| **Config Key** | **Instruction**                                                                 |
+|----------------|---------------------------------------------------------------------------------|
+| selfAddress    | meta cur node ip:port, e.g. 192.168.0.1:8080                                    |
+| membersAddress | meta all nodes ip:port, e.g. 192.168.0.1:8080,192.168.0.2:8080,192.168.0.3:8080 |
+
 
 4. CreateTopic
 

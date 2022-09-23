@@ -37,10 +37,6 @@ import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
 
 import java.util.Objects;
 
-/**
- * @author Austin Wong
- * Created on 2022/8/12 17:07:56
- */
 public class MqttMessageFactory {
 
     public static MqttConnAckMessage buildConnAckMessage(MqttConnectReturnCode returnCode) {

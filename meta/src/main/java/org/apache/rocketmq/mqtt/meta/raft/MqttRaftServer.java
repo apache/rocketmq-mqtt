@@ -51,7 +51,7 @@ import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.apache.rocketmq.mqtt.meta.raft.processor.CounterStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.MqttReadRpcProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.MqttWriteRpcProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcess;
+import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,7 +148,7 @@ public class MqttRaftServer {
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
         registerStateProcessor(new CounterStateProcessor());
-        registerStateProcessor(new RetainedMsgStateProcess(metaConf.getMaxRetainedMessageNum()));  //add retained msg porcessor
+        registerStateProcessor(new RetainedMsgStateProcessor(metaConf.getMaxRetainedMessageNum()));  //add retained msg porcessor
 
         start();
     }

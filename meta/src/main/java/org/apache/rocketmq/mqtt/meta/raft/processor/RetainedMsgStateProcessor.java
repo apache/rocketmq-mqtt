@@ -37,9 +37,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
 
-public class RetainedMsgStateProcess extends StateProcessor {
+public class RetainedMsgStateProcessor extends StateProcessor {
 
-    private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcess.class);
+    private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcessor.class);
     private final ConcurrentHashMap<String, byte[]> retainedMsgMap = new ConcurrentHashMap<>();  //key:topic value:retained msg
     private final ConcurrentHashMap<String, Trie<String, String>> retainedMsgTopicTrie = new ConcurrentHashMap<>();  //key:firstTopic value:retained topic Trie
 
@@ -47,7 +47,7 @@ public class RetainedMsgStateProcess extends StateProcessor {
     private SnapshotOperation snapshotOperation;
     private int maxRetainedMessageNum;
 
-    public RetainedMsgStateProcess(int maxRetainedMessageNum) {
+    public RetainedMsgStateProcessor(int maxRetainedMessageNum) {
         setMaxRetainedMessageNum(maxRetainedMessageNum);
     }
 

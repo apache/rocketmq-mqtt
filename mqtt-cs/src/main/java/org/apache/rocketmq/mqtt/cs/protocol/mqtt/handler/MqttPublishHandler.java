@@ -20,10 +20,6 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -32,6 +28,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,24 +88,15 @@ public class MqttPublishHandler implements MqttPacketHandler<MqttPublishMessage>
     private void doResponse(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
+        int messageId = variableHeader.packetId();
         switch (fixedHeader.qosLevel()) {
             case AT_MOST_ONCE:
                 break;
             case AT_LEAST_ONCE:
-                MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBACK, false,
-                    MqttQoS.AT_MOST_ONCE, false, 0);
-                MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader
-                    .from(variableHeader.packetId());
-                MqttPubAckMessage pubackMessage = new MqttPubAckMessage(mqttFixedHeader, mqttMessageIdVariableHeader);
-                ctx.channel().writeAndFlush(pubackMessage);
+                ctx.channel().writeAndFlush(MqttMessageFactory.buildPubAckMessage(messageId));
                 break;
             case EXACTLY_ONCE:
-                MqttFixedHeader pubrecMqttHeader = new MqttFixedHeader(MqttMessageType.PUBREC, false,
-                    MqttQoS.AT_MOST_ONCE, false, 0);
-                MqttMessageIdVariableHeader pubrecMessageIdVariableHeader = MqttMessageIdVariableHeader
-                    .from(variableHeader.packetId());
-                MqttMessage pubrecMqttMessage = new MqttMessage(pubrecMqttHeader, pubrecMessageIdVariableHeader);
-                ctx.channel().writeAndFlush(pubrecMqttMessage);
+                ctx.channel().writeAndFlush(MqttMessageFactory.buildPubRecMessage(messageId));
                 break;
             default:
                 throw new IllegalArgumentException("unknown qos:" + fixedHeader.qosLevel());

@@ -19,13 +19,11 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,11 +40,8 @@ public class MqttPingHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
-        MqttFixedHeader mqttFixedHeader =
-                new MqttFixedHeader(MqttMessageType.PINGRESP, false, MqttQoS.AT_MOST_ONCE, false, 0);
         Channel channel = ctx.channel();
         ChannelInfo.touch(channel);
-        MqttMessage pingMessage = new MqttMessage(mqttFixedHeader);
-        channel.writeAndFlush(pingMessage);
+        channel.writeAndFlush(MqttMessageFactory.buildPingRespMessage());
     }
 }

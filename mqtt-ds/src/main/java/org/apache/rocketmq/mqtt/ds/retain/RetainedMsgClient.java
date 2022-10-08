@@ -94,7 +94,7 @@ public class RetainedMsgClient {
         registry.registerResponseInstance(ReadRequest.class.getName(), Response.getDefaultInstance());
     }
 
-    public static void SetRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
+    public static void setRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
 
         HashMap<String, String> option = new HashMap<>();
         option.put("topic", topic);
@@ -112,6 +112,7 @@ public class RetainedMsgClient {
                     Response rsp = (Response) result;
                     if (!rsp.getSuccess()) {
                         logger.info("SetRetainedMsg failed. {}", rsp.getErrMsg());
+                        future.complete(false);
                         return;
                     }
                     logger.info("-------------------------------SetRetainedMsg success.----------------------------------");
@@ -148,6 +149,7 @@ public class RetainedMsgClient {
                     Response rsp = (Response) result;
                     if (!rsp.getSuccess()) {
                         logger.info("GetRetainedTopicTrie failed. {}", rsp.getErrMsg());
+                        future.complete(null);
                         return;
                     }
                     List<ByteString> datalistList = rsp.getDatalistList();
@@ -156,6 +158,7 @@ public class RetainedMsgClient {
                         try {
                             resultList.add(Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray())));
                         } catch (InvalidProtocolBufferException e) {
+                            future.complete(null);
                             throw new RuntimeException(e);
                         }
                     }
@@ -191,15 +194,18 @@ public class RetainedMsgClient {
                     Response rsp = (Response) result;
                     if (!rsp.getSuccess()) {
                         logger.info("GetRetainedMsg failed. {}", rsp.getErrMsg());
+                        future.complete(null);
                         return;
                     }
                     if (rsp.getData().toStringUtf8().equals("null")) {  //this topic doesn't exist retained msg
+                        future.complete(null);
                         return;
                     }
                     Message message = null;
                     try {
                         message = Message.copyFromStoreMessage(StoreMessage.parseFrom(rsp.getData().toByteArray()));
                     } catch (InvalidProtocolBufferException e) {
+                        future.complete(null);
                         throw new RuntimeException(e);
                     }
                     future.complete(message);

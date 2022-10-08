@@ -44,6 +44,9 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
     @Resource
     private MetaPersistManager metaPersistManager;
 
+    public void init() {
+    }
+
     public CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
@@ -55,7 +58,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         logger.debug("Start store retain msg...");
 
         try {
-            RetainedMsgClient.SetRetainedMsg(topic, message, result);
+            RetainedMsgClient.setRetainedMsg(topic, message, result);
         } catch (RemotingException | InterruptedException e) {
             logger.error("", e);
             result.completeExceptionally(e);

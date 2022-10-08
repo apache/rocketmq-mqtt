@@ -18,7 +18,6 @@
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
-
 import com.alipay.sofa.jraft.error.RemotingException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -34,7 +33,6 @@ import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -181,7 +179,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                 if (msg == null) {
                     return;
                 }
-                _sendMessage(session, clientId, subscription, msg);
+                pushAction._sendMessage(session, clientId, subscription, msg);
             });
         }
 
@@ -193,29 +191,12 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                     if (msg == null) {
                         return;
                     }
-                    _sendMessage(session, clientId, subscription, msg);
+                    pushAction._sendMessage(session, clientId, subscription, msg);
                 }
             });
 
         }
     }
 
-    private void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
-
-        String payLoad = new String(message.getPayload());
-        if (payLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
-            return;
-        }
-
-        int mqttId = mqttMsgId.nextId(clientId);
-        int qos = min(subscription.getQos(), message.qos());
-        if (qos == 0) {
-            pushAction.write(session, message, mqttId, 0, subscription);
-            pushAction.rollNextByAck(session, mqttId);
-        } else {
-            retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
-            pushAction.write(session, message, mqttId, qos, subscription);
-        }
-    }
 
 }

@@ -36,6 +36,8 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.List;
 
+import static java.lang.Math.min;
+
 
 @Component
 public class PushAction {
@@ -113,6 +115,25 @@ public class PushAction {
             write(session, message, mqttId, qos, subscription);
         }
     }
+
+    public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
+
+        String payLoad = new String(message.getPayload());
+        if (payLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            return;
+        }
+
+        int mqttId = mqttMsgId.nextId(clientId);
+        int qos = min(subscription.getQos(), message.qos());
+        if (qos == 0) {
+            write(session, message, mqttId, 0, subscription);
+            rollNextByAck(session, mqttId);
+        } else {
+            retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
+            write(session, message, mqttId, qos, subscription);
+        }
+    }
+
 
     public void write(Session session, Message message, int mqttId, int qos, Subscription subscription) {
         Channel channel = session.getChannel();

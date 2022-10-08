@@ -38,6 +38,8 @@ import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 
+import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +55,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 
-
 @Component
 public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMessage> {
     private static Logger logger = LoggerFactory.getLogger(MqttSubscribeHandler.class);
@@ -64,17 +65,11 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
     @Resource
     private ChannelManager channelManager;
 
-
     @Resource
     private RetainedPersistManager retainedPersistManager;
 
     @Resource
     private PushAction pushAction;
-    @Resource
-    private RetryDriver retryDriver;
-
-    @Resource
-    private MqttMsgId mqttMsgId;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 

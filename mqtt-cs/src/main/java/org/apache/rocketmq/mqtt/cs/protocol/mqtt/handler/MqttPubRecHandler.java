@@ -18,12 +18,14 @@
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +33,8 @@ import javax.annotation.Resource;
 
 @Component
 public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
-
+    private final MqttFixedHeader pubRelMqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBREL, false,
+        MqttQoS.AT_LEAST_ONCE, false, 0);
     @Resource
     private RetryDriver retryDriver;
 
@@ -47,6 +50,7 @@ public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
         retryDriver.unMountPublish(variableHeader.messageId(), channelId);
         retryDriver.mountPubRel(variableHeader.messageId(), channelId);
 
-        ctx.channel().writeAndFlush(MqttMessageFactory.buildPubRelMessage(variableHeader));
+        MqttMessage pubRelMqttMessage = new MqttMessage(pubRelMqttFixedHeader, variableHeader);
+        ctx.channel().writeAndFlush(pubRelMqttMessage);
     }
 }

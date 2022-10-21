@@ -16,29 +16,41 @@
   limitations under the License.
   -->
 <assembly>
+    <id>all</id>
+    <includeBaseDirectory>true</includeBaseDirectory>
     <formats>
         <format>dir</format>
         <format>tar.gz</format>
+        <format>zip</format>
     </formats>
     <fileSets>
         <fileSet>
+            <directory>../</directory>
             <includes>
-                <include>bin/*</include>
+                <include>README.md</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <includes>
                 <include>conf/**</include>
             </includes>
-            <excludes>
-                <exclude>**/src/**</exclude>
-                <exclude>**/target/**</exclude>
-                <exclude>**/.*/**</exclude>
-            </excludes>
+        </fileSet>
+
+        <fileSet>
+            <includes>
+                <include>bin/**</include>
+            </includes>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
+
     <moduleSets>
         <moduleSet>
+            <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>org.apache.rocketmq:mqtt-cs</include>
                 <include>org.apache.rocketmq:mqtt-ds</include>
-                <include>org.apache.rocketmq:meta</include>
             </includes>
             <binaries>
                 <outputDirectory>lib</outputDirectory>

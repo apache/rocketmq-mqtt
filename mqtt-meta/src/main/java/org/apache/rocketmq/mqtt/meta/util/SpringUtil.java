@@ -15,18 +15,29 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.starter;
+package org.apache.rocketmq.mqtt.meta.util;
 
-import org.apache.rocketmq.client.log.ClientLogger;
-import org.apache.rocketmq.mqtt.meta.util.SpringUtil;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.context.ApplicationContext;
 
-public class Startup {
-    public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
+public class SpringUtil {
 
-        ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:meta_spring.xml");
-        SpringUtil.setApplicationContext(applicationContext);
-        System.out.println("start main ...");
+    private static ApplicationContext applicationContext;
+
+    public static void setApplicationContext(ApplicationContext applicationContext) {
+        SpringUtil.applicationContext = applicationContext;
+    }
+
+    public static <T> T getBeanByClass(Class<T> requiredType) {
+        return applicationContext.getBean(requiredType);
+    }
+
+    public static Object getBean(String beanName)
+    {
+        return applicationContext.getBean(beanName);
+    }
+
+
+    public static ApplicationContext getApplicationContext() {
+        return applicationContext;
     }
 }

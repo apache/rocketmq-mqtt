@@ -15,29 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.util;
+package org.apache.rocketmq.mqtt.meta.raft.processor;
 
-import org.springframework.context.ApplicationContext;
+import com.alipay.sofa.jraft.rpc.RpcContext;
+import com.alipay.sofa.jraft.rpc.RpcProcessor;
+import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
-public class SpringUtil {
+/**
+ * The RPC Processor for write request
+ */
+public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<WriteRequest> {
+    private final MqttRaftServer server;
 
-    private static ApplicationContext applicationContext;
-
-    public static void setApplicationContext(ApplicationContext applicationContext) {
-        SpringUtil.applicationContext = applicationContext;
+    public MqttWriteRpcProcessor(MqttRaftServer server) {
+        this.server = server;
     }
 
-    public static <T> T getBeanByClass(Class<T> requiredType) {
-        return applicationContext.getBean(requiredType);
+    @Override
+    public void handleRequest(RpcContext rpcCtx, WriteRequest request) {
+        handleRequest(server, request.getGroup(), rpcCtx, request);
     }
 
-    public static Object getBean(String beanName)
-    {
-        return applicationContext.getBean(beanName);
-    }
-
-
-    public static ApplicationContext getApplicationContext() {
-        return applicationContext;
+    @Override
+    public String interest() {
+        return WriteRequest.class.getName();
     }
 }

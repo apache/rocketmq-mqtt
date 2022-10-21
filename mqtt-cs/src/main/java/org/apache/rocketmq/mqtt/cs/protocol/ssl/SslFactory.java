@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.cs.protocol.ssl;
 
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -59,7 +60,7 @@ public class SslFactory {
             InputStream keyStream = new ClassPathResource(KEY_FILE_NAME).getInputStream();
             SslContextBuilder contextBuilder = SslContextBuilder.forServer(certStream, keyStream);
             contextBuilder.clientAuth(ClientAuth.OPTIONAL);
-            contextBuilder.sslProvider(SslProvider.JDK);
+            contextBuilder.sslProvider(OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
             if (connectConf.isNeedClientAuth()) {
                 LOG.info("client tls authentication is required.");
                 contextBuilder.clientAuth(ClientAuth.REQUIRE);

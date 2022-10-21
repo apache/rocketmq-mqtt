@@ -38,7 +38,7 @@ public class IpUtil {
             }
 
             throw new RuntimeException("InetAddress java.net.InetAddress.getLocalHost() throws UnknownHostException",
-                e);
+                    e);
         }
     }
 

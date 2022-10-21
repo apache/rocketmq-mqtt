@@ -32,12 +32,11 @@ git clone https://github.com/apache/rocketmq-mqtt
 2. Build the package
 ```shell
 cd rocketmq-mqtt
-mvn clean package -DskipTests=true assembly:assembly
+mvn -Prelease-all -DskipTests clean install -U 
 ```
 3. Config
 ```shell
-cp -r  target/rocketmq-mqtt/rocketmq-mqtt ~
-cd ~/rocketmq-mqtt
+cd distribution/target/
 cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 
@@ -56,7 +55,6 @@ And some configuration items in the**meta.conf** configuration file
 |----------------|---------------------------------------------------------------------------------|
 | selfAddress    | meta cur node ip:port, e.g. 192.168.0.1:8080                                    |
 | membersAddress | meta all nodes ip:port, e.g. 192.168.0.1:8080,192.168.0.2:8080,192.168.0.3:8080 |
-
 
 4. CreateTopic
 
@@ -77,12 +75,7 @@ sh mqadmin updateKvConfig -s LMQ -k ALL_FIRST_TOPICS -v {topic1,topic2} -n {name
 ```shell
 sh mqadmin updateKvConfig  -s LMQ -k {topic} -v {topic/+}  -n {namesrv}
 ```
-6. start meta kv if necessary
-```shell
-cd bin
-sh meta.sh start
-```
-7. Start Process
+6. Start Process
 ```shell
 cd bin
 sh mqtt.sh start

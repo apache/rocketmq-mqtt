@@ -41,5 +41,21 @@ message Response {
   bytes data = 1;
   string errMsg = 2;
   bool success = 3;
+  repeated bytes datalist = 4;
 }
 
+message StoreMessage {
+  string msgId = 1;
+  string firstTopic = 2;
+  string originTopic = 3;
+  int64 offset = 4;
+  int64 nextOffset = 5;
+  int32 retry = 6;
+  bool retained = 7;
+  bool isEmpty = 8;
+  bytes payload = 9;
+  int64 bornTimestamp = 10;
+  int64 storeTimestamp = 11;
+  int32 ack = 12;
+  map<string, string> userProperties = 13;
+}

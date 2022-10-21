@@ -18,6 +18,7 @@
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 
+import com.alipay.sofa.jraft.error.RemotingException;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
@@ -25,20 +26,27 @@ import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
 import io.netty.handler.codec.mqtt.MqttSubscribePayload;
 import io.netty.handler.codec.mqtt.MqttTopicSubscription;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
+
+import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -56,6 +64,12 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private RetainedPersistManager retainedPersistManager;
+
+    @Resource
+    private PushAction pushAction;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_subscribe_future"));
 
@@ -83,8 +97,8 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         try {
             MqttSubscribePayload payload = mqttMessage.payload();
             List<MqttTopicSubscription> mqttTopicSubscriptions = payload.topicSubscriptions();
+            Set<Subscription> subscriptions = new HashSet<>();
             if (mqttTopicSubscriptions != null && !mqttTopicSubscriptions.isEmpty()) {
-                Set<Subscription> subscriptions = new HashSet<>(mqttTopicSubscriptions.size());
                 for (MqttTopicSubscription mqttTopicSubscription : mqttTopicSubscriptions) {
                     Subscription subscription = new Subscription();
                     subscription.setQos(mqttTopicSubscription.qualityOfService().value());
@@ -99,6 +113,14 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                 }
                 ChannelInfo.removeFuture(channel, ChannelInfo.FUTURE_SUBSCRIBE);
                 channel.writeAndFlush(getResponse(mqttMessage));
+                if (!subscriptions.isEmpty()) {            //Write retained message
+                    try {
+                        sendRetainMessage(ctx, subscriptions);
+                    } catch (InterruptedException | RemotingException |
+                             org.apache.rocketmq.remoting.exception.RemotingException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             });
         } catch (Exception e) {
             logger.error("Subscribe:{}", clientId, e);
@@ -119,5 +141,47 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         int messageId = mqttSubscribeMessage.variableHeader().messageId();
         return MqttMessageFactory.buildSubAckMessage(messageId, qoss);
     }
+
+
+    private void sendRetainMessage(ChannelHandlerContext ctx, Set<Subscription> subscriptions) throws InterruptedException, RemotingException, org.apache.rocketmq.remoting.exception.RemotingException {
+
+        String clientId = ChannelInfo.getClientId(ctx.channel());
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
+        Set<Subscription> preciseTopics = new HashSet<>();
+        Set<Subscription> wildcardTopics = new HashSet<>();
+
+        for (Subscription subscription : subscriptions) {
+            if (!TopicUtils.isWildCard(subscription.getTopicFilter())) {
+                preciseTopics.add(subscription);
+            } else {
+                wildcardTopics.add(subscription);
+            }
+        }
+
+        for (Subscription subscription : preciseTopics) {
+            CompletableFuture<Message> retainedMessage = retainedPersistManager.getRetainedMessage(subscription.getTopicFilter());
+            retainedMessage.whenComplete((msg, throwable) -> {
+                if (msg == null) {
+                    return;
+                }
+                pushAction._sendMessage(session, clientId, subscription, msg);
+            });
+        }
+
+        for (Subscription subscription : wildcardTopics) {
+
+            CompletableFuture<ArrayList<Message>> future = retainedPersistManager.getMsgsFromTrie(subscription);
+            future.whenComplete((msgsList, throwable) -> {
+                for (Message msg : msgsList) {
+                    if (msg == null) {
+                        return;
+                    }
+                    pushAction._sendMessage(session, clientId, subscription, msg);
+                }
+            });
+
+        }
+    }
+
 
 }

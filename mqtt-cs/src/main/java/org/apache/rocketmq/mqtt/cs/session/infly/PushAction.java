@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -35,6 +36,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.List;
+
+import static java.lang.Math.min;
 
 
 @Component
@@ -84,9 +87,9 @@ public class PushAction {
         try {
             if (session.isClean()) {
                 if (message.getStoreTimestamp() > 0 &&
-                        message.getStoreTimestamp() < session.getStartTime()) {
+                    message.getStoreTimestamp() < session.getStartTime()) {
                     logger.warn("old msg:{},{},{},{}", session.getClientId(), message.getMsgId(),
-                            message.getStoreTimestamp(), session.getStartTime());
+                        message.getStoreTimestamp(), session.getStartTime());
                     rollNext(session, mqttId);
                     return;
                 }
@@ -94,6 +97,13 @@ public class PushAction {
         } catch (Exception e) {
             logger.error("", e);
         }
+
+        //deal with message with empty payload
+        String msgPayLoad = new String(message.getPayload());
+        if (msgPayLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            message.setPayload("".getBytes());
+        }
+
         int qos = subscription.getQos();
         if (subscription.isP2p() && message.qos() != null) {
             qos = message.qos();
@@ -107,12 +117,32 @@ public class PushAction {
         }
     }
 
+    public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
+
+        String payLoad = new String(message.getPayload());
+        if (payLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            return;
+        }
+
+        int mqttId = mqttMsgId.nextId(clientId);
+        int qos = min(subscription.getQos(), message.qos());
+        if (qos == 0) {
+            write(session, message, mqttId, 0, subscription);
+            rollNextByAck(session, mqttId);
+        } else {
+            retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
+            write(session, message, mqttId, qos, subscription);
+        }
+    }
+
+
     public void write(Session session, Message message, int mqttId, int qos, Subscription subscription) {
         Channel channel = session.getChannel();
         String owner = ChannelInfo.getOwner(channel);
         String clientId = session.getClientId();
         String topicName = message.getOriginTopic();
         String mqttRealTopic = message.getUserProperty(Message.extPropertyMqttRealTopic);
+        boolean retained = message.isRetained();
         if (StringUtils.isNotBlank(mqttRealTopic)) {
             topicName = mqttRealTopic;
         }
@@ -124,7 +154,9 @@ public class PushAction {
             logger.error("UnWritable:{}", clientId);
             return;
         }
+
         Object data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, mqttId);
+
         ChannelFuture writeFuture = session.getChannel().writeAndFlush(data);
         int bodySize = message.getPayload() != null ? message.getPayload().length : 0;
         writeFuture.addListener((ChannelFutureListener) future -> {

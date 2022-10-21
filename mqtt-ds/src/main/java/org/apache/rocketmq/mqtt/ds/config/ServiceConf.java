@@ -42,6 +42,8 @@ public class ServiceConf {
     private String username;
     private String secretKey;
 
+    private String metaAddr;
+
     public ServiceConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -56,6 +58,9 @@ public class ServiceConf {
         }
         if (StringUtils.isBlank(eventNotifyRetryTopic)) {
             throw new RemoteException("eventNotifyRetryTopic is blank");
+        }
+        if (StringUtils.isBlank(metaAddr)) {
+            throw new RemoteException("metaAddr is blank");
         }
     }
 
@@ -97,6 +102,14 @@ public class ServiceConf {
 
     public String getEventNotifyRetryTopic() {
         return eventNotifyRetryTopic;
+    }
+
+    public String getMetaAddr() {
+        return metaAddr;
+    }
+
+    public void setMetaAddr(String metaAddr) {
+        this.metaAddr = metaAddr;
     }
 
     public void setEventNotifyRetryTopic(String eventNotifyRetryTopic) {

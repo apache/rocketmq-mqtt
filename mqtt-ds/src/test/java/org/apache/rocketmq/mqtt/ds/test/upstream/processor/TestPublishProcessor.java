@@ -34,6 +34,7 @@ import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,7 +66,7 @@ public class TestPublishProcessor {
     private FirstTopicManager firstTopicManager;
 
     @Test
-    public void test() throws IllegalAccessException, ExecutionException, InterruptedException {
+    public void test() throws IllegalAccessException, ExecutionException, InterruptedException, RemotingException, com.alipay.sofa.jraft.error.RemotingException {
         PublishProcessor publishProcessor = new PublishProcessor();
         FieldUtils.writeDeclaredField(publishProcessor, "lmqQueueStore", lmqQueueStore, true);
         FieldUtils.writeDeclaredField(publishProcessor, "wildcardManager", wildcardManager, true);

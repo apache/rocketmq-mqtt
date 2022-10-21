@@ -30,18 +30,15 @@ import org.springframework.stereotype.Component;
 public class MetaConf {
     private static final String CONF_FILE_NAME = "meta.conf";
     private File confFile;
-
     private String clusterName = "defaultCluster";
     private String allNodeAddress;
     private String dbPath =  System.getProperty("user.home") + "/mqtt_meta/db";
     private String raftDataPath =  System.getProperty("user.home") + "/mqtt_meta/raft";
     private int metaPort = 25000;
-
     private String selfAddress;
     private String membersAddress;
-
+    private int maxRetainedMessageNum;
     private int electionTimeoutMs = 1000;
-
     private int snapshotIntervalSecs = 1000;
     private int raftGroupNum = 4;
 
@@ -137,5 +134,13 @@ public class MetaConf {
 
     public void setRaftGroupNum(int raftGroupNum) {
         this.raftGroupNum = raftGroupNum;
+    }
+
+    public int getMaxRetainedMessageNum() {
+        return maxRetainedMessageNum;
+    }
+
+    public void setMaxRetainedMessageNum(int maxRetainedMessageNum) {
+        this.maxRetainedMessageNum = maxRetainedMessageNum;
     }
 }

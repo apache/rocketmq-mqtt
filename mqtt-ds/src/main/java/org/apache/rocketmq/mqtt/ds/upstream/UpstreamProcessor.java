@@ -20,8 +20,10 @@ package org.apache.rocketmq.mqtt.ds.upstream;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public interface UpstreamProcessor {
     /**
@@ -30,5 +32,5 @@ public interface UpstreamProcessor {
      * @param message
      * @return
      */
-    CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message);
+    CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException;
 }

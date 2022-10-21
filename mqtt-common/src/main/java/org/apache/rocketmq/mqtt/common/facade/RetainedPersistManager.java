@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.test.util;
+package org.apache.rocketmq.mqtt.common.facade;
 
-import org.apache.rocketmq.mqtt.common.util.HostInfo;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 
-public class TestHostInfo {
+public interface RetainedPersistManager {
 
-    @Test
-    public void test() throws UnknownHostException {
-        HostInfo hostINFO = HostInfo.getInstall();
-        Assert.assertEquals(InetAddress.getLocalHost().getHostAddress(), hostINFO.getAddress());
-    }
+
+    CompletableFuture<Boolean> storeRetainedMessage(String topic, Message message);
+
+    CompletableFuture<Message> getRetainedMessage(String preciseTopic);
+
+    CompletableFuture<ArrayList<Message>> getMsgsFromTrie(Subscription topicFilter);
 }

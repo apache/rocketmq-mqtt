@@ -104,6 +104,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         org.apache.rocketmq.common.message.Message mqMessage = new org.apache.rocketmq.common.message.Message(finalMessage.getFirstTopic(), message.getPayload());
         MessageAccessor.putProperty(mqMessage, MessageConst.PROPERTY_UNIQ_CLIENT_MESSAGE_ID_KEYIDX, message.getMsgId());
         mqMessage.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC, message.getOriginTopic());
+        mqMessage.putUserProperty(Constants.PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG, String.valueOf(message.isEmpty()));  //new add
         if (message.getUserProperty(Message.extPropertyQoS) != null) {
             mqMessage.putUserProperty(Constants.PROPERTY_MQTT_QOS, message.getUserProperty(Message.extPropertyQoS));
         }
@@ -126,6 +127,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         Message message = new Message();
         message.setMsgId(mqMessage.getMsgId());
         message.setOffset(parseLmqOffset(queue, mqMessage));
+        message.setEmpty(Boolean.parseBoolean(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG)));
         if (StringUtils.isNotBlank(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC))) {
             message.setOriginTopic(mqMessage.getUserProperty(Constants.PROPERTY_ORIGIN_MQTT_TOPIC));
         } else if (StringUtils.isNotBlank(mqMessage.getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH))) {

@@ -17,7 +17,10 @@
 
 package org.apache.rocketmq.mqtt.common.test.model;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +40,7 @@ public class TestMessage {
     int extPropertyQoS = 2;
 
     @Test
-    public void testMessageCopy() {
+    public void testMessageCopy() throws InvalidProtocolBufferException {
         Message message = new Message();
         message.setMsgId(msgId);
         message.setFirstTopic(firstTopic);
@@ -65,5 +68,30 @@ public class TestMessage {
         Assert.assertNull(copyMsg.getUserProperty(Message.propertyMsgId));
         copyMsg.clearUserProperty(Message.extPropertyQoS);
         Assert.assertNull(copyMsg.getUserProperty(Message.extPropertyQoS));
+
+
+        StoreMessage storeMessage = StoreMessage.newBuilder()
+            .setMsgId(message.getMsgId())
+            .setFirstTopic(message.getFirstTopic())
+            .setOriginTopic(message.getOriginTopic())
+            .setOffset(message.getOffset())
+            .setNextOffset(message.getNextOffset())
+            .setRetry(message.getRetry())
+            .setRetained(message.isRetained())
+            .setIsEmpty(message.isEmpty())
+            .setPayload(ByteString.copyFrom(message.getPayload()))
+            .setBornTimestamp(message.getBornTimestamp())
+            .setStoreTimestamp(message.getStoreTimestamp())
+            .setAck(message.getAck())
+            .putAllUserProperties(message.getUserProperties())
+            .build();
+
+        byte[] bytes = storeMessage.toByteString().toByteArray();
+
+        StoreMessage tmpStoreMessage = StoreMessage.parseFrom(bytes);
+
+        Assert.assertEquals(storeMessage, tmpStoreMessage);
+
+
     }
 }

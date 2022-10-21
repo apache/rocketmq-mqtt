@@ -34,9 +34,9 @@ import java.util.function.BiConsumer;
 public class CounterStateProcessor extends StateProcessor {
 
     private final AtomicLong value = new AtomicLong(0);
-
+    
     protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-
+    
     private final SnapshotOperation snapshotOperation;
 
     public CounterStateProcessor() {
@@ -47,14 +47,14 @@ public class CounterStateProcessor extends StateProcessor {
     public Response onReadRequest(ReadRequest request) {
         try {
             return Response.newBuilder()
-                    .setSuccess(true)
-                    .setData(ByteString.copyFrom(JSON.toJSONBytes(value.toString())))
-                    .build();
+                .setSuccess(true)
+                .setData(ByteString.copyFrom(JSON.toJSONBytes(value.toString())))
+                .build();
         } catch (Exception e) {
             return Response.newBuilder()
-                    .setSuccess(false)
-                    .setErrMsg(e.getMessage())
-                    .build();
+                .setSuccess(false)
+                .setErrMsg(e.getMessage())
+                .build();
         }
     }
 
@@ -65,14 +65,14 @@ public class CounterStateProcessor extends StateProcessor {
             Long delta = Long.parseLong(writeRequest.getExtDataMap().get("delta"));
             Long res = value.addAndGet(delta);
             return Response.newBuilder()
-                    .setSuccess(true)
-                    .setData(ByteString.copyFrom(JSON.toJSONBytes(res.toString())))
-                    .build();
+                .setSuccess(true)
+                .setData(ByteString.copyFrom(JSON.toJSONBytes(res.toString())))
+                .build();
         } catch (Exception e) {
             return Response.newBuilder()
-                    .setSuccess(false)
-                    .setErrMsg(e.getMessage())
-                    .build();
+                .setSuccess(false)
+                .setErrMsg(e.getMessage())
+                .build();
         }
     }
 

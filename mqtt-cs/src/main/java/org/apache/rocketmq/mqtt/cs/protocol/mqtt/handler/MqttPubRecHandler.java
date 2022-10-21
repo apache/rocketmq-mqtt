@@ -34,7 +34,9 @@ import javax.annotation.Resource;
 @Component
 public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
     private final MqttFixedHeader pubRelMqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBREL, false,
+
             MqttQoS.AT_LEAST_ONCE, false, 0);
+
     @Resource
     private RetryDriver retryDriver;
 

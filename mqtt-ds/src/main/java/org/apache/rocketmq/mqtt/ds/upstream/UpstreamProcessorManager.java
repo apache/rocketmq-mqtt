@@ -36,6 +36,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.concurrent.CompletableFuture;
 
+
 @Component
 public class UpstreamProcessorManager extends AbstractUpstreamHook {
 

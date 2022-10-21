@@ -21,6 +21,7 @@
   </scm>
 
     <modules>
+        <module>mqtt-meta</module>
         <module>mqtt-common</module>
         <module>mqtt-cs</module>
         <module>mqtt-ds</module>
@@ -68,6 +69,11 @@
             <dependency>
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>mqtt-ds</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>mqtt-meta</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

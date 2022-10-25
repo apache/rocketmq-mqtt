@@ -46,7 +46,7 @@
         <rpc-grpc-impl.version>1.3.8</rpc-grpc-impl.version>
         <guava.version>30.1-jre</guava.version>
         <jraft-core.version>1.3.8</jraft-core.version>
-
+        <javax.annotation-api.version>1.3.2</javax.annotation-api.version>
     </properties>
 
     <dependencyManagement>
@@ -250,6 +250,11 @@
                 <groupId>com.alipay.sofa</groupId>
                 <artifactId>jraft-core</artifactId>
                 <version>${jraft-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>${javax.annotation-api.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

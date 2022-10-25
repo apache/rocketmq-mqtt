@@ -49,7 +49,7 @@ Some important configuration items in the **service.conf** configuration file
 | eventNotifyRetryTopic | notify event retry topic |
 | clientRetryTopic      | client retry topic       |
 
-And some configuration items in the**meta.conf** configuration file
+And some configuration items in the **meta.conf** configuration file
 
 | **Config Key** | **Instruction**                                                                 |
 |----------------|---------------------------------------------------------------------------------|

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.processor;
+package org.apache.rocketmq.mqtt.meta.raft.rpc;
 
 import com.alipay.sofa.jraft.Node;
 import com.alipay.sofa.jraft.Status;
@@ -28,6 +28,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.meta.raft.FailoverClosure;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.RaftGroupHolder;
+import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

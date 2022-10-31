@@ -35,7 +35,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
-import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
+import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

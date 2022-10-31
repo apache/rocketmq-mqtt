@@ -37,7 +37,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
-import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
+import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

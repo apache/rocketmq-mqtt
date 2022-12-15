@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.processor;
+package org.apache.rocketmq.mqtt.meta.raft.rpc;
 
 public class Constants {
     public static final String COUNTER = "counter";

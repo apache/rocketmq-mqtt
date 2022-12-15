@@ -26,6 +26,6 @@ public class Startup {
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:meta_spring.xml");
         SpringUtil.setApplicationContext(applicationContext);
-        System.out.println("start main ...");
+        System.out.println("start meta ...");
     }
 }

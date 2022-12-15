@@ -15,35 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.processor;
+package org.apache.rocketmq.mqtt.meta.raft.rpc;
 
 import com.alipay.sofa.jraft.rpc.RpcContext;
 import com.alipay.sofa.jraft.rpc.RpcProcessor;
-import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
+import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
 /**
- * The RPC Processor for read request.
+ * The RPC Processor for write request
  */
-public class MqttReadRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<ReadRequest> {
+public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<WriteRequest> {
     private final MqttRaftServer server;
 
-    public MqttReadRpcProcessor(MqttRaftServer server) {
+    public MqttWriteRpcProcessor(MqttRaftServer server) {
         this.server = server;
     }
 
     @Override
-    public void handleRequest(RpcContext rpcCtx, ReadRequest request) {
-        if (Constants.READ_INDEX_TYPE.equals(request.getType())) {
-            handleReadIndex(server, request.getGroup(), rpcCtx, request);
-        } else {
-            handleRequest(server, request.getGroup(), rpcCtx, request);
-        }
-
+    public void handleRequest(RpcContext rpcCtx, WriteRequest request) {
+        handleRequest(server, request.getGroup(), rpcCtx, request);
     }
 
     @Override
     public String interest() {
-        return ReadRequest.class.getName();
+        return WriteRequest.class.getName();
     }
 }

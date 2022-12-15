@@ -28,7 +28,7 @@ import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import org.apache.rocketmq.mqtt.common.model.consistency.*;
-import org.apache.rocketmq.mqtt.meta.raft.processor.Constants;
+import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
 
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
@@ -40,7 +40,7 @@ public class CounterClient {
     public static void main(final String[] args) throws Exception {
 
         final String groupId = Constants.COUNTER + GROUP_SEQ_NUM_SPLIT + 0;
-        final String confStr = "";
+        final String confStr = "localhost:25001";
         initRpcServer();
         final Configuration conf = new Configuration();
         if (!conf.parse(confStr)) {

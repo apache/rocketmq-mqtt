@@ -54,6 +54,6 @@ public class Constants {
 
     public static final byte CTRL_2 = '\u0002';
 
-    public static final String NOT_FOUND = "NOT_FOUNT";
+    public static final String NOT_FOUND = "NOT_FOUND";
 
 }

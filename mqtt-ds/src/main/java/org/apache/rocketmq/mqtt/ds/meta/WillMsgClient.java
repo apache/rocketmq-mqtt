@@ -31,6 +31,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 
 
 @Service
@@ -45,7 +46,7 @@ public class WillMsgClient {
     private ServiceConf serviceConf;
 
     @PostConstruct
-    public void init() {
+    public void init() throws InterruptedException, TimeoutException {
         metaRpcClient = new MetaRpcClient(serviceConf.getMetaAddr(), RAFT_GROUP_ID);
     }
 
@@ -103,6 +104,7 @@ public class WillMsgClient {
                 setGroup(RAFT_GROUP_ID).
                 setKey(key).
                 setOperation("get").
+                setType(Constants.READ_INDEX_TYPE).
                 build();
 
         metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
@@ -153,6 +155,7 @@ public class WillMsgClient {
                 setOperation("scan").
                 putExtData("startKey", startKey).
                 putExtData("endKey", endKey).
+                setType(Constants.READ_INDEX_TYPE).
                 build();
 
         metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {

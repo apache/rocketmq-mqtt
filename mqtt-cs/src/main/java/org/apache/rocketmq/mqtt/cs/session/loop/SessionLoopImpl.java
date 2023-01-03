@@ -239,6 +239,15 @@ public class SessionLoopImpl implements SessionLoop {
                     // is not master
                     return;
                 }
+                // master keep alive
+                long currentTime = System.currentTimeMillis();
+                willMsgPersistManager.compareAndPut(Constants.CS_MASTER, content, ip + Constants.COLON + currentTime).whenComplete((rs, tb) -> {
+                    if (!rs || tb != null) {
+                        logger.error("{} fail to update master", ip, tb);
+                        return;
+                    }
+                });
+
 
                 // master to check all cs state
                 String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
@@ -257,17 +266,23 @@ public class SessionLoopImpl implements SessionLoop {
                     for (Map.Entry<String, String> entry : rs.entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue();
-                        logger.info("master {} scan cs {} {}", ip, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
+                        logger.debug("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
                         if (System.currentTimeMillis() - Long.parseLong(value) > 20 * checkAliveIntervalMillis) {
                             // the cs has down
                             String csIp = key.substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
                             handleShutDownCS(csIp);
+
+                            willMsgPersistManager.delete(key).whenComplete((resultDel, tbDel) -> {
+                                if (!resultDel || tbDel != null) {
+                                    logger.error("fail to delete shutDown cs:{} in db", key);
+                                    return;
+                                }
+                                logger.debug("delete shutDown cs:{} in db successfully", key);
+                            });
                         }
                     }
                 });
             });
-
-            logger.info("{} update master successfully", ip);
         } catch (Exception e) {
             logger.error("", e);
         }

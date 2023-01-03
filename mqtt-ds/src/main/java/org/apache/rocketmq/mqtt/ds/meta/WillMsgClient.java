@@ -103,6 +103,7 @@ public class WillMsgClient {
                 setGroup(RAFT_GROUP_ID).
                 setKey(key).
                 setOperation("get").
+                setType(Constants.READ_INDEX_TYPE).
                 build();
 
         metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
@@ -153,6 +154,7 @@ public class WillMsgClient {
                 setOperation("scan").
                 putExtData("startKey", startKey).
                 putExtData("endKey", endKey).
+                setType(Constants.READ_INDEX_TYPE).
                 build();
 
         metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {

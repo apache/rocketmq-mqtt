@@ -43,7 +43,7 @@ public class MetaRpcClient {
     private String raftGroupId;
     private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
 
-    public MetaRpcClient(String metaAddress, String raftGroupId) {
+    public MetaRpcClient(String metaAddress, String raftGroupId) throws InterruptedException, TimeoutException {
         this.raftGroupId = raftGroupId;
 
         initRpcServer();
@@ -52,6 +52,11 @@ public class MetaRpcClient {
         }
         RouteTable.getInstance().updateConfiguration(raftGroupId, conf);
         cliClientService.init(new CliOptions());
+
+        refreshLeader();
+        final PeerId leader = RouteTable.getInstance().selectLeader(raftGroupId);
+        System.out.println("Leader is " + leader);
+
         raftClientExecutor.scheduleAtFixedRate(()-> {
             try {
                 refreshLeader();

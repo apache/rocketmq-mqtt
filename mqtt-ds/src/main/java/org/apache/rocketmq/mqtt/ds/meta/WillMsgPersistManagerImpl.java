@@ -77,10 +77,10 @@ public class WillMsgPersistManagerImpl implements WillMsgPersistManager {
     }
 
     @Override
-    public CompletableFuture<Boolean> compareAndPut(String key, String compareAndPut, String updateValue) {
+    public CompletableFuture<Boolean> compareAndPut(String key, String expectValue, String updateValue) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
-            willMsgClient.compareAndPut(key, compareAndPut, updateValue, future);
+            willMsgClient.compareAndPut(key, expectValue, updateValue, future);
             return future;
         } catch (Exception e) {
             future.completeExceptionally(e);

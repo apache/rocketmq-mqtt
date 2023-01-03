@@ -128,6 +128,10 @@ public class WillMsgStateProcessor extends StateProcessor {
             } else if ("delete".equals(operation)) {
                 return delete(key.getBytes());
             } else if ("compareAndPut".equals(operation)) {
+                String expectValue = log.getExtDataMap().get("expectValue");
+                if (Constants.NOT_FOUND.equals(expectValue)) {
+                    return compareAndPut(key.getBytes(), null, value);
+                }
                 return compareAndPut(key.getBytes(), log.getExtDataMap().get("expectValue").getBytes(), value);
             }
         } catch (Exception e) {

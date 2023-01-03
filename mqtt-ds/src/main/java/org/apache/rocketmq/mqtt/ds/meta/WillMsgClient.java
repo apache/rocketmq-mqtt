@@ -31,6 +31,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeoutException;
 
 
 @Service
@@ -45,7 +46,7 @@ public class WillMsgClient {
     private ServiceConf serviceConf;
 
     @PostConstruct
-    public void init() {
+    public void init() throws InterruptedException, TimeoutException {
         metaRpcClient = new MetaRpcClient(serviceConf.getMetaAddr(), RAFT_GROUP_ID);
     }
 

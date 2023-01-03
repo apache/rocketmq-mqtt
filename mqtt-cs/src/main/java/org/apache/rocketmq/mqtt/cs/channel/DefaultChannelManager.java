@@ -18,14 +18,9 @@
 package org.apache.rocketmq.mqtt.cs.channel;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.HashedWheelTimer;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
 
@@ -38,10 +33,7 @@ import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPublishHandler;
 import org.apache.rocketmq.mqtt.cs.session.Session;
-import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
@@ -56,7 +48,6 @@ import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;

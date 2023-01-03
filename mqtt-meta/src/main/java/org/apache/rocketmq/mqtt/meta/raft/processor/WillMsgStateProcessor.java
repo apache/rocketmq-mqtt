@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
@@ -31,7 +48,7 @@ import java.util.function.BiConsumer;
 public class WillMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(WillMsgStateProcessor.class);
 
-    private static final String dbPath = System.getProperty("user.home") + "/mqtt_meta/will_db/";
+    private static final String BD_PATH = System.getProperty("user.home") + "/mqtt_meta/will_db/";
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private RocksDB rocksDB;
     private WriteOptions writeOptions;
@@ -52,7 +69,7 @@ public class WillMsgStateProcessor extends StateProcessor {
             Options options = new Options();
             Statistics statistics = new Statistics();
             statistics.setStatsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
-            options.setDbLogDir(dbPath).
+            options.setDbLogDir(BD_PATH).
                     setInfoLogLevel(InfoLogLevel.DEBUG_LEVEL).
                     setCreateIfMissing(true).
                     setCreateMissingColumnFamilies(true).
@@ -65,7 +82,7 @@ public class WillMsgStateProcessor extends StateProcessor {
                     setMaxBackgroundJobs(32).
                     setMaxSubcompactions(4);
 
-            rocksDB = RocksDB.open(options, dbPath);
+            rocksDB = RocksDB.open(options, BD_PATH);
         } catch (RocksDBException e) {
             logger.error("init will processor: rocksdb open error", e);
         } finally {

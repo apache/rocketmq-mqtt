@@ -22,7 +22,6 @@ import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.rocksdb.RocksDBException;
 
 
 import java.util.function.BiConsumer;

@@ -22,5 +22,8 @@ public class Constants {
 
     public static final String RETAINEDMSG = "retainedMsg";
 
+    public static final String WILL_MSG = "willMsg";
+    public static final String NOT_FOUND = "NOT_FOUND";
+
     public static final String READ_INDEX_TYPE = "readIndexType";
 }

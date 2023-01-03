@@ -42,6 +42,7 @@ message Response {
   string errMsg = 2;
   bool success = 3;
   repeated bytes datalist = 4;
+  map<string, string> dataMap = 5;
 }
 
 message StoreMessage {

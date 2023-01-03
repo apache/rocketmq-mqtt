@@ -17,29 +17,28 @@
 
 package org.apache.rocketmq.mqtt.meta.util;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Set;
 
 public class IpUtil {
     public static String getLocalAddressCompatible() {
         try {
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (Throwable e) {
-            try {
-                String candidatesHost = getLocalAddress();
-                if (candidatesHost != null) {
-                    return candidatesHost;
-                }
-
-            } catch (Exception ignored) {
+            String candidatesHost = getLocalAddress();
+            if (candidatesHost != null) {
+                return candidatesHost;
             }
 
-            throw new RuntimeException("InetAddress java.net.InetAddress.getLocalHost() throws UnknownHostException",
-                    e);
+        } catch (Exception e) {
+            throw new RuntimeException("InetAddress java.net.InetAddress.getLocalHost() throws UnknownHostException", e);
         }
+        return null;
     }
 
     private static String getLocalAddress() throws Exception {
@@ -77,6 +76,23 @@ public class IpUtil {
         final InetAddress localHost = InetAddress.getLocalHost();
         return normalizeHostAddress(localHost);
     }
+
+    public static String getLocalPort() throws Exception {
+        MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+        Set<ObjectName> objectNames = mBeanServer.queryNames(new ObjectName("*:type=Connector,*"), null);
+        if (objectNames == null || objectNames.size() <= 0) {
+            throw new IllegalStateException("Cannot get the names of MBeans controlled by the MBean server.");
+        }
+        for (ObjectName objectName : objectNames) {
+            String protocol = String.valueOf(mBeanServer.getAttribute(objectName, "protocol"));
+            String port = String.valueOf(mBeanServer.getAttribute(objectName, "port"));
+            if (protocol.equals("HTTP/1.1") || protocol.equals("org.apache.coyote.http11.Http11NioProtocol")) {
+                return port;
+            }
+        }
+        throw new IllegalStateException("Failed to get the HTTP port of the current server");
+    }
+
 
     public static String normalizeHostAddress(final InetAddress localHost) {
         if (localHost instanceof Inet6Address) {

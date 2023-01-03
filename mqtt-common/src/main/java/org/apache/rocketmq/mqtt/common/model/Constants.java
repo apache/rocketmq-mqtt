@@ -23,6 +23,7 @@ public class Constants {
 
     public static final String PLUS_SIGN = "+";
     public static final String NUMBER_SIGN = "#";
+    public static final String COLON = ":";
 
     public static final String P2P = "/p2p/";
     public static final String RETRY = "/retry/";
@@ -42,5 +43,17 @@ public class Constants {
     public static final String MQTT_TAG = "MQTT_COMMON";
 
     public static final String PROPERTY_ORIGIN_MQTT_ISEMPTY_MSG = "IS_EMPTY_MSG";
+
+    public static final String CS_ALIVE = "alive";
+
+    public static final String CS_MASTER = "master";
+
+    public static final byte CTRL_0 = '\u0000';
+
+    public static final byte CTRL_1 = '\u0001';
+
+    public static final byte CTRL_2 = '\u0002';
+
+    public static final String NOT_FOUND = "NOT_FOUNT";
 
 }

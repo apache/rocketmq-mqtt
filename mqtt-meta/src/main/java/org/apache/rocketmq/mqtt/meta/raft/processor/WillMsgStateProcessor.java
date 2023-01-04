@@ -20,11 +20,14 @@ package org.apache.rocketmq.mqtt.meta.raft.processor;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 import com.alipay.sofa.jraft.util.BytesUtil;
+import com.alipay.sofa.jraft.util.Utils;
 import com.google.protobuf.ByteString;
+import org.apache.commons.io.FileUtils;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
+import org.rocksdb.Checkpoint;
 import org.rocksdb.InfoLogLevel;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
@@ -37,6 +40,8 @@ import org.rocksdb.util.SizeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +54,7 @@ public class WillMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(WillMsgStateProcessor.class);
 
     private static final String BD_PATH = System.getProperty("user.home") + "/mqtt_meta/will_db/";
+    private static final String SNAPSHOT_DIR = "willKv";
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private RocksDB rocksDB;
     private WriteOptions writeOptions;
@@ -66,23 +72,7 @@ public class WillMsgStateProcessor extends StateProcessor {
             this.writeOptions.setSync(sync);
             this.writeOptions.setDisableWAL(!sync && disableWAL);
 
-            Options options = new Options();
-            Statistics statistics = new Statistics();
-            statistics.setStatsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
-            options.setDbLogDir(BD_PATH).
-                    setInfoLogLevel(InfoLogLevel.DEBUG_LEVEL).
-                    setCreateIfMissing(true).
-                    setCreateMissingColumnFamilies(true).
-                    setMaxOpenFiles(-1).
-                    setMaxLogFileSize(SizeUnit.GB).
-                    setKeepLogFileNum(5).
-                    setMaxManifestFileSize(SizeUnit.GB).
-                    setAllowConcurrentMemtableWrite(false).
-                    setStatistics(statistics).
-                    setMaxBackgroundJobs(32).
-                    setMaxSubcompactions(4);
-
-            rocksDB = RocksDB.open(options, BD_PATH);
+            openRocksDB();
         } catch (RocksDBException e) {
             logger.error("init will processor: rocksdb open error", e);
         } finally {
@@ -143,12 +133,30 @@ public class WillMsgStateProcessor extends StateProcessor {
 
     @Override
     public void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally) {
-
+        final String writerPath = writer.getPath();
+        final String snapshotPath = Paths.get(writerPath, SNAPSHOT_DIR).toString();
+        try {
+            writeSnapshot(snapshotPath);
+            callFinally.accept(true, null);
+        } catch (Throwable t) {
+            logger.error("Fail to compress snapshot, path={}, file list={}.", writer.getPath(),
+                    writer.listFiles(), t);
+            callFinally.accept(false, t);
+        }
     }
 
     @Override
     public boolean onSnapshotLoad(SnapshotReader reader) {
-        return false;
+        final String readerPath = reader.getPath();
+        final String snapshotPath = Paths.get(readerPath, SNAPSHOT_DIR).toString();
+        try {
+            readSnapshot(snapshotPath);
+        } catch (Throwable t) {
+            logger.error("Fail to compress snapshot, path={}, file list={}.",readerPath,
+                    reader.listFiles(), t);
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -269,4 +277,78 @@ public class WillMsgStateProcessor extends StateProcessor {
         }
     }
 
+    private void writeSnapshot(final String snapshotPath) throws Exception {
+        final Lock writeLock = this.readWriteLock.writeLock();
+        writeLock.lock();
+        try (final Checkpoint checkpoint = Checkpoint.create(this.rocksDB)) {
+            final String tempPath = snapshotPath + "_temp";
+            final File tempFile = new File(tempPath);
+            FileUtils.deleteDirectory(tempFile);
+            checkpoint.createCheckpoint(tempPath);
+            final File snapshotFile = new File(snapshotPath);
+            FileUtils.deleteDirectory(snapshotFile);
+            if (!Utils.atomicMoveFile(tempFile, snapshotFile, true)) {
+                throw new Exception("Fail to rename [" + tempPath + "] to [" + snapshotPath + "].");
+            }
+            logger.info("will writeSnapshot success: {}", snapshotPath);
+        } catch (final Exception e) {
+            logger.error("Fail to writeSnapshot, snapshotPath {}", snapshotPath, e);
+            throw e;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    private void readSnapshot(final String snapshotPath) throws Exception {
+        final Lock writeLock = this.readWriteLock.writeLock();
+        writeLock.lock();
+        try {
+            final File snapshotFile = new File(snapshotPath);
+            if (!snapshotFile.exists()) {
+                logger.error("Snapshot file [{}] not exists.", snapshotPath);
+                return;
+            }
+            closeRocksDB();
+            final File dbFile = new File(BD_PATH);
+            FileUtils.deleteDirectory(dbFile);
+            if (!Utils.atomicMoveFile(snapshotFile, dbFile, true)) {
+                throw new Exception("Fail to rename [" + snapshotPath + "] to [" + BD_PATH + "].");
+            }
+            // reopen the db
+            openRocksDB();
+            logger.info("will readSnapshot success: {}", snapshotPath);
+        } catch (final Exception e) {
+            logger.error("Fail to readSnapshot, snapshotPath {}", snapshotPath, e);
+            throw e;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    private void closeRocksDB() {
+        if (this.rocksDB != null) {
+            this.rocksDB.close();
+            this.rocksDB = null;
+        }
+    }
+
+    private void openRocksDB() throws RocksDBException {
+        Options options = new Options();
+        Statistics statistics = new Statistics();
+        statistics.setStatsLevel(StatsLevel.EXCEPT_DETAILED_TIMERS);
+        options.setDbLogDir(BD_PATH).
+                setInfoLogLevel(InfoLogLevel.DEBUG_LEVEL).
+                setCreateIfMissing(true).
+                setCreateMissingColumnFamilies(true).
+                setMaxOpenFiles(-1).
+                setMaxLogFileSize(SizeUnit.GB).
+                setKeepLogFileNum(5).
+                setMaxManifestFileSize(SizeUnit.GB).
+                setAllowConcurrentMemtableWrite(false).
+                setStatistics(statistics).
+                setMaxBackgroundJobs(32).
+                setMaxSubcompactions(4);
+
+        rocksDB = RocksDB.open(options, BD_PATH);
+    }
 }

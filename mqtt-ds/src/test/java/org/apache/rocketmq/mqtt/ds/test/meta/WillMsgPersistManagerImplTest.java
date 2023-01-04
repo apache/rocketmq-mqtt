@@ -11,6 +11,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -91,5 +93,26 @@ public class WillMsgPersistManagerImplTest {
 
         return System.currentTimeMillis() - Long.parseLong(ipTime[1]) > 10 * checkAliveIntervalMillis;
     }
+
+    @Test
+    public void scan() throws ExecutionException, InterruptedException, TimeoutException {
+        String ip = "172.17.0.1";
+        String startClientKey = ip + Constants.CTRL_0;
+        String endClientKey = ip + Constants.CTRL_2;
+        willMsgPersistManager.scan(startClientKey, endClientKey).whenComplete((willMap, throwable) -> {
+            if (willMap == null || throwable != null) {
+                return;
+            }
+
+            if (willMap.size() == 0) {
+                return;
+            }
+        });
+        Thread.sleep(10000);
+
+
+    }
+
+
 
 }

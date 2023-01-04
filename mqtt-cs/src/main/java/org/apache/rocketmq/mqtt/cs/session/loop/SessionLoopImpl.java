@@ -253,7 +253,7 @@ public class SessionLoopImpl implements SessionLoop {
                 String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
                 String endCSKey = Constants.CS_ALIVE + Constants.CTRL_2;
                 willMsgPersistManager.scan(startCSKey, endCSKey).whenComplete((rs, tb) -> {
-                    if (rs == null || throwable != null) {
+                    if (rs == null || tb != null) {
                         logger.error("{} master fail to scan cs", ip, tb);
                         return;
                     }
@@ -325,7 +325,7 @@ public class SessionLoopImpl implements SessionLoop {
                                             logger.error("fail to delete will message key:{}", willKey);
                                             return;
                                         }
-                                        logger.debug("delete will message key {} successfully", willKey);
+                                        logger.info("delete will message key {} successfully", willKey);
                                     });
                                 }
                             } catch (Throwable t) {

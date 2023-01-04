@@ -40,7 +40,7 @@ public class MqttWillProducer {
         String sendClientId = "send01";
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
-        mqttConnectOptions.setWill(firstTopic + "/willTopic", "will message: hello".getBytes(), 1, true);
+        mqttConnectOptions.setWill("dongyuan-f2/willTopic", "will message: hello".getBytes(), 1, true);
 
         MqttClient mqttClient = new MqttClient(brokerUrl, sendClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);

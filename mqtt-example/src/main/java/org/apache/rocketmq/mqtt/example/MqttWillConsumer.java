@@ -45,7 +45,7 @@ public class MqttWillConsumer {
             public void connectComplete(boolean reconnect, String serverURI) {
                 System.out.println(recvClientId + " connect success to " + serverURI);
                 try {
-                    final String topicFilter[] = {firstTopic + "/r1", firstTopic + "/willTopic"};
+                    final String topicFilter[] = {firstTopic + "/r1", "dongyuan-f2/willTopic"};
                     final int[] qos = {1, 1};
                     mqttClient.subscribe(topicFilter, qos);
                 } catch (Exception e) {
@@ -62,9 +62,8 @@ public class MqttWillConsumer {
             public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
                 try {
                     String payload = new String(mqttMessage.getPayload());
-                    String[] ss = payload.split("_");
                     System.out.println(now() + "receive:" + topic + "," + payload
-                            + " ---- rt:" + (System.currentTimeMillis() - Long.parseLong(ss[1])));
+                            + " ---- rt:");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

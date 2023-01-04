@@ -25,14 +25,14 @@ public class WillMessage {
 
     private byte[] body;
 
-    private boolean isRetain;
+    private boolean retain;
 
     private int qos;
 
-    public WillMessage(String willTopic, byte[] body, boolean isRetain, int qos) {
+    public WillMessage(String willTopic, byte[] body, boolean retain, int qos) {
         this.willTopic = willTopic;
         this.body = body;
-        this.isRetain = isRetain;
+        this.retain = retain;
         this.qos = qos;
     }
 
@@ -53,11 +53,11 @@ public class WillMessage {
     }
 
     public boolean isRetain() {
-        return isRetain;
+        return retain;
     }
 
     public void setRetain(boolean retain) {
-        isRetain = retain;
+        this.retain = retain;
     }
 
     public int getQos() {
@@ -73,7 +73,7 @@ public class WillMessage {
         return "WillMessage{" +
                 "willTopic='" + willTopic + '\'' +
                 ", body=" + Arrays.toString(body) +
-                ", isRetain=" + isRetain +
+                ", retain=" + retain +
                 ", qos=" + qos +
                 '}';
     }

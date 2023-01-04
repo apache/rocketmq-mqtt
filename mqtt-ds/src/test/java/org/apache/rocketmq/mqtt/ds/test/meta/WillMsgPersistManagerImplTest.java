@@ -8,6 +8,7 @@ import org.apache.rocketmq.mqtt.ds.meta.WillMsgPersistManagerImpl;
 import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeoutException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@Ignore
 public class WillMsgPersistManagerImplTest {
     public WillMsgPersistManagerImpl willMsgPersistManager;
     public WillMsgClient willMsgClient;
@@ -30,7 +32,7 @@ public class WillMsgPersistManagerImplTest {
     public void Before() throws IOException, IllegalAccessException, InterruptedException, TimeoutException {
         willMsgClient = new WillMsgClient();
         ServiceConf serviceConf = mock(ServiceConf.class);
-        when(serviceConf.getMetaAddr()).thenReturn("11.164.204.116:8080,11.164.204.117:8080,11.164.204.118:8080");
+        when(serviceConf.getMetaAddr()).thenReturn("");
         FieldUtils.writeDeclaredField(willMsgClient, "serviceConf", serviceConf, true);
 
         willMsgClient.init();
@@ -96,7 +98,7 @@ public class WillMsgPersistManagerImplTest {
 
     @Test
     public void scan() throws ExecutionException, InterruptedException, TimeoutException {
-        String ip = "172.17.0.1";
+        String ip = "xxxx";
         String startClientKey = ip + Constants.CTRL_0;
         String endClientKey = ip + Constants.CTRL_2;
         willMsgPersistManager.scan(startClientKey, endClientKey).whenComplete((willMap, throwable) -> {

@@ -45,7 +45,7 @@ public class MqttWillConsumer {
             public void connectComplete(boolean reconnect, String serverURI) {
                 System.out.println(recvClientId + " connect success to " + serverURI);
                 try {
-                    final String topicFilter[] = {firstTopic + "/r1", "dongyuan-f2/willTopic"};
+                    final String topicFilter[] = {firstTopic + "/r1", "dongyuan-f2/willTopic1"};
                     final int[] qos = {1, 1};
                     mqttClient.subscribe(topicFilter, qos);
                 } catch (Exception e) {

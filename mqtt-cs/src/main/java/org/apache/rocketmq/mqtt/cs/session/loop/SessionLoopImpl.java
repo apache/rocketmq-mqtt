@@ -139,8 +139,8 @@ public class SessionLoopImpl implements SessionLoop {
         persistOffsetScheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("persistOffset_scheduler_"));
         persistOffsetScheduler.scheduleWithFixedDelay(() -> persistAllOffset(true), 5000, 5000, TimeUnit.MILLISECONDS);
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
-        aliveService.scheduleWithFixedDelay(() -> csLoop(), 10 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
-        aliveService.scheduleWithFixedDelay(() -> masterLoop(), 0, 10 * 1000, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> csLoop(), 15 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> masterLoop(), 10 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
 
         executor = new ThreadPoolExecutor(
                 1,

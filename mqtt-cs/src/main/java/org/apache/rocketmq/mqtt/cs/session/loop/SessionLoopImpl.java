@@ -266,7 +266,7 @@ public class SessionLoopImpl implements SessionLoop {
                     for (Map.Entry<String, String> entry : rs.entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue();
-                        logger.debug("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
+                        logger.info("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
                         if (System.currentTimeMillis() - Long.parseLong(value) > 10 * checkAliveIntervalMillis) {
                             // the cs has down
                             String csIp = key.substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
@@ -298,7 +298,7 @@ public class SessionLoopImpl implements SessionLoop {
             }
 
             if (willMap.size() == 0) {
-                logger.info("the cs has no will");
+                logger.info("the cs:{} has no will", ip);
                 return;
             }
 

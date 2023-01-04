@@ -139,8 +139,8 @@ public class SessionLoopImpl implements SessionLoop {
         persistOffsetScheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("persistOffset_scheduler_"));
         persistOffsetScheduler.scheduleWithFixedDelay(() -> persistAllOffset(true), 5000, 5000, TimeUnit.MILLISECONDS);
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
-        aliveService.scheduleWithFixedDelay(() -> csLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
-        aliveService.scheduleWithFixedDelay(() -> masterLoop(), checkAliveIntervalMillis, checkAliveIntervalMillis, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> csLoop(), 10 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
+        aliveService.scheduleWithFixedDelay(() -> masterLoop(), 0, 10 * 1000, TimeUnit.MILLISECONDS);
 
         executor = new ThreadPoolExecutor(
                 1,
@@ -266,8 +266,8 @@ public class SessionLoopImpl implements SessionLoop {
                     for (Map.Entry<String, String> entry : rs.entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue();
-                        logger.debug("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
-                        if (System.currentTimeMillis() - Long.parseLong(value) > 20 * checkAliveIntervalMillis) {
+                        logger.info("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
+                        if (System.currentTimeMillis() - Long.parseLong(value) > 10 * checkAliveIntervalMillis) {
                             // the cs has down
                             String csIp = key.substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
                             handleShutDownCS(csIp);
@@ -298,7 +298,7 @@ public class SessionLoopImpl implements SessionLoop {
             }
 
             if (willMap.size() == 0) {
-                logger.info("the cs has no will");
+                logger.info("the cs:{} has no will", ip);
                 return;
             }
 

@@ -153,7 +153,7 @@ public class DefaultChannelManager implements ChannelManager {
         CompletableFuture<byte[]> willMessageFuture = willMsgPersistManager.get(willKey);
         willMessageFuture.whenComplete((willMessageByte, throwable) -> {
             String content = new String(willMessageByte);
-            if ("NOT_FOUNT".equals(content)) {
+            if (Constants.NOT_FOUND.equals(content)) {
                 return;
             }
 
@@ -178,7 +178,7 @@ public class DefaultChannelManager implements ChannelManager {
                                             logger.error("fail to delete will message key:{}", willKey);
                                             return;
                                         }
-                                        logger.debug("delete will message key {} successfully", willKey);
+                                        logger.info("connection close and send will, delete will message key {} successfully", willKey);
                                     });
                                 }
                             } catch (Throwable t) {

@@ -33,8 +33,8 @@ import java.util.Date;
 
 public class MqttWillConsumer {
     public static void main(String[] args) throws MqttException, NoSuchAlgorithmException, InvalidKeyException {
-        String brokerUrl = "tcp://11.164.2.4:1883";
-        String firstTopic = "dongyuan-f1";
+        String brokerUrl = "tcp://xxxx:1883";
+        String firstTopic = "xxxx";
         MemoryPersistence memoryPersistence = new MemoryPersistence();
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(recvClientId);
@@ -88,8 +88,8 @@ public class MqttWillConsumer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("passwd");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "passwd").toCharArray());
+        connOpts.setUserName("xxxx");
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
         return connOpts;
     }
 

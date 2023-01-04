@@ -35,12 +35,12 @@ import java.util.Date;
 public class MqttWillProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = "tcp://11.164.2.4:1883";
-        String firstTopic = "dongyuan-f1";
+        String brokerUrl = "tcp://xxxx:1883";
+        String firstTopic = "xxxx";
         String sendClientId = "send01";
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
-        mqttConnectOptions.setWill("dongyuan-f2/willTopic1", "will message: hello".getBytes(), 1, false);
+        mqttConnectOptions.setWill("xxxx/willTopic1", "will message: hello".getBytes(), 1, false);
 
         MqttClient mqttClient = new MqttClient(brokerUrl, sendClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);
@@ -86,8 +86,8 @@ public class MqttWillProducer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("passwd");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "passwd").toCharArray());
+        connOpts.setUserName("xxxx");
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
         return connOpts;
     }
 

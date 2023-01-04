@@ -204,10 +204,6 @@ public class MqttRaftServer {
                 groupNodeOption.setFsm(groupMqttStateMachine);
                 groupNodeOption.setInitialConf(groupConfiguration);
 
-                // to-do: snapshot
-                int doSnapshotInterval = 0;
-                groupNodeOption.setSnapshotIntervalSecs(doSnapshotInterval);
-
                 // create raft group
                 RaftGroupService raftGroupService = new RaftGroupService(groupIdentity, localPeerId, groupNodeOption, rpcServer, true);
 

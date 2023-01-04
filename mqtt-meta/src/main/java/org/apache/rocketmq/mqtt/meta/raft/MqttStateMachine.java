@@ -120,7 +120,6 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     @Override
     public void onSnapshotSave(SnapshotWriter writer, Closure done) {
-        super.onSnapshotSave(writer, done);
         final BiConsumer<Boolean, Throwable> callFinally = (result, t) -> {
             final Status status = result ? Status.OK()
                 : new Status(RaftError.EIO, "Fail to compress snapshot at %s, error is %s",
@@ -132,7 +131,6 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     @Override
     public boolean onSnapshotLoad(SnapshotReader reader) {
-        super.onSnapshotLoad(reader);
         return processor.onSnapshotLoad(reader);
     }
 

@@ -20,7 +20,6 @@ package org.apache.rocketmq.mqtt.meta.raft;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -30,7 +29,6 @@ import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.NOT_FOUND;
 
 @RunWith(MockitoJUnitRunner.class)
 public class WillMsgStateProcessorTest {
-
 
     @Test
     public void putTest() throws RocksDBException {

@@ -72,8 +72,11 @@ public class WillMsgStateProcessor extends StateProcessor {
             this.writeOptions.setSync(sync);
             this.writeOptions.setDisableWAL(!sync && disableWAL);
 
+            final File dbFile = new File(BD_PATH);
+            FileUtils.forceMkdir(dbFile);
+
             openRocksDB();
-        } catch (RocksDBException e) {
+        } catch (Exception e) {
             logger.error("init will processor: rocksdb open error", e);
         } finally {
             writeLock.unlock();

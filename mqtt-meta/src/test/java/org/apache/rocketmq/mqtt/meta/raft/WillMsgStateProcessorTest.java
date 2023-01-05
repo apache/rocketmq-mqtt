@@ -20,6 +20,7 @@ package org.apache.rocketmq.mqtt.meta.raft;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -30,7 +31,12 @@ import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.NOT_FOUND;
 @RunWith(MockitoJUnitRunner.class)
 public class WillMsgStateProcessorTest {
 
-    private WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
+    private WillMsgStateProcessor willMsgStateProcessor;
+
+    @Before
+    public void Before(){
+        willMsgStateProcessor = new WillMsgStateProcessor();
+    }
 
 
     @Test
@@ -40,6 +46,7 @@ public class WillMsgStateProcessorTest {
 
         Response response = willMsgStateProcessor.put(key.getBytes(), value.getBytes());
         Assert.assertTrue(response.getSuccess());
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
@@ -52,6 +59,7 @@ public class WillMsgStateProcessorTest {
 
         Response getResponse = willMsgStateProcessor.get(key.getBytes());
         Assert.assertEquals(value, new String(getResponse.getData().toByteArray()));
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
@@ -67,6 +75,7 @@ public class WillMsgStateProcessorTest {
 
         Response getResponse = willMsgStateProcessor.get(key.getBytes());
         Assert.assertEquals(NOT_FOUND, new String(getResponse.getData().toByteArray()));
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
@@ -84,7 +93,7 @@ public class WillMsgStateProcessorTest {
 
         Response responseCompareAndPut1 = willMsgStateProcessor.compareAndPut(key.getBytes(), "v5".getBytes(), valueUpdate.getBytes());
         Assert.assertFalse(responseCompareAndPut1.getSuccess());
-
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
@@ -106,7 +115,7 @@ public class WillMsgStateProcessorTest {
         Response scanResponse =  willMsgStateProcessor.scan(("k1" + CTRL_0).getBytes(), ("k1" + CTRL_2).getBytes());
         Assert.assertEquals(value, scanResponse.getDataMapMap().get(key));
         Assert.assertEquals(value1, scanResponse.getDataMapMap().get(key1));
-
+        willMsgStateProcessor.closeRocksDB();
     }
 
 }

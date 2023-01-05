@@ -31,16 +31,11 @@ import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.NOT_FOUND;
 @RunWith(MockitoJUnitRunner.class)
 public class WillMsgStateProcessorTest {
 
-    private WillMsgStateProcessor willMsgStateProcessor;
-
-    @Before
-    public void Before(){
-        willMsgStateProcessor = new WillMsgStateProcessor();
-    }
-
 
     @Test
     public void putTest() throws RocksDBException {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
+
         String key = "k1";
         String value = "v1";
 
@@ -51,6 +46,7 @@ public class WillMsgStateProcessorTest {
 
     @Test
     public void getTest() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
 
@@ -64,6 +60,7 @@ public class WillMsgStateProcessorTest {
 
     @Test
     public void deleteTest() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
 
@@ -80,6 +77,7 @@ public class WillMsgStateProcessorTest {
 
     @Test
     public void compareAndPut() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
         String valueUpdate = "v2";
@@ -98,7 +96,7 @@ public class WillMsgStateProcessorTest {
 
     @Test
     public void scan() throws Exception {
-
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         byte CTRL_0 = '\u0000';
         byte CTRL_1 = '\u0001';
         byte CTRL_2 = '\u0002';

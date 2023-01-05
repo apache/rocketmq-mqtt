@@ -325,7 +325,7 @@ public class WillMsgStateProcessor extends StateProcessor {
         }
     }
 
-    private void closeRocksDB() {
+    public void closeRocksDB() {
         if (this.rocksDB != null) {
             this.rocksDB.close();
             this.rocksDB = null;

@@ -20,6 +20,7 @@ package org.apache.rocketmq.mqtt.meta.raft;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -30,20 +31,22 @@ import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.NOT_FOUND;
 @RunWith(MockitoJUnitRunner.class)
 public class WillMsgStateProcessorTest {
 
-    private WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
-
 
     @Test
     public void putTest() throws RocksDBException {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
+
         String key = "k1";
         String value = "v1";
 
         Response response = willMsgStateProcessor.put(key.getBytes(), value.getBytes());
         Assert.assertTrue(response.getSuccess());
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
     public void getTest() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
 
@@ -52,10 +55,12 @@ public class WillMsgStateProcessorTest {
 
         Response getResponse = willMsgStateProcessor.get(key.getBytes());
         Assert.assertEquals(value, new String(getResponse.getData().toByteArray()));
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
     public void deleteTest() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
 
@@ -67,10 +72,12 @@ public class WillMsgStateProcessorTest {
 
         Response getResponse = willMsgStateProcessor.get(key.getBytes());
         Assert.assertEquals(NOT_FOUND, new String(getResponse.getData().toByteArray()));
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
     public void compareAndPut() throws Exception {
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         String key = "k1";
         String value = "v1";
         String valueUpdate = "v2";
@@ -84,12 +91,12 @@ public class WillMsgStateProcessorTest {
 
         Response responseCompareAndPut1 = willMsgStateProcessor.compareAndPut(key.getBytes(), "v5".getBytes(), valueUpdate.getBytes());
         Assert.assertFalse(responseCompareAndPut1.getSuccess());
-
+        willMsgStateProcessor.closeRocksDB();
     }
 
     @Test
     public void scan() throws Exception {
-
+        WillMsgStateProcessor willMsgStateProcessor = new WillMsgStateProcessor();
         byte CTRL_0 = '\u0000';
         byte CTRL_1 = '\u0001';
         byte CTRL_2 = '\u0002';
@@ -106,7 +113,7 @@ public class WillMsgStateProcessorTest {
         Response scanResponse =  willMsgStateProcessor.scan(("k1" + CTRL_0).getBytes(), ("k1" + CTRL_2).getBytes());
         Assert.assertEquals(value, scanResponse.getDataMapMap().get(key));
         Assert.assertEquals(value1, scanResponse.getDataMapMap().get(key1));
-
+        willMsgStateProcessor.closeRocksDB();
     }
 
 }

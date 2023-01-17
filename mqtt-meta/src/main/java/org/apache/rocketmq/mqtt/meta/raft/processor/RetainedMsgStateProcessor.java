@@ -63,6 +63,9 @@ public class RetainedMsgStateProcessor extends StateProcessor {
 
             if (operation.equals("topic")) {    //return retained msg
                 byte[] msgBytes = retainedMsgMap.get(topic);
+                if (msgBytes == null) {
+                    msgBytes = "null".getBytes();
+                }
                 return Response.newBuilder()
                     .setSuccess(true)
                     .setData(ByteString.copyFrom(msgBytes))

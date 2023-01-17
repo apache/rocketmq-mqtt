@@ -16,6 +16,10 @@
         </dependency>
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
+            <artifactId>mqtt-ds</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
             <artifactId>mqtt-exporter</artifactId>
         </dependency>
         <dependency>

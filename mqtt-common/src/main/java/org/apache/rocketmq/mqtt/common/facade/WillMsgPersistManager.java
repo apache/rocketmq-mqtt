@@ -15,15 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.rpc;
+package org.apache.rocketmq.mqtt.common.facade;
 
-public class Constants {
-    public static final String COUNTER = "counter";
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
-    public static final String RETAINEDMSG = "retainedMsg";
+public interface WillMsgPersistManager {
 
-    public static final String WILL_MSG = "willMsg";
-    public static final String NOT_FOUND = "NOT_FOUND";
+    CompletableFuture<Boolean> put(final String key, final String value);
+    CompletableFuture<Boolean> delete(final String key);
 
-    public static final String READ_INDEX_TYPE = "readIndexType";
+    CompletableFuture<byte[]> get(final String key);
+
+    CompletableFuture<Boolean> compareAndPut(final String key, final String expectValue, final String updateValue);
+
+    CompletableFuture<Map<String, String>> scan(final String startKey, final String endKey);
 }

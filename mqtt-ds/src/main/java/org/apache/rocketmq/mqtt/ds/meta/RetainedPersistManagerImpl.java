@@ -26,8 +26,6 @@ import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 
-import org.apache.rocketmq.mqtt.ds.retain.RetainedMsgClient;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

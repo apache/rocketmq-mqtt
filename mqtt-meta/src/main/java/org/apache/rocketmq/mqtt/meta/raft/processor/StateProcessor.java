@@ -37,7 +37,7 @@ public abstract class StateProcessor {
      * @param request
      * @return
      */
-    public abstract Response onReadRequest(ReadRequest request);
+    public abstract Response onReadRequest(ReadRequest request) throws Exception;
 
     /**
      * Process the write request to apply the state machine
@@ -45,7 +45,7 @@ public abstract class StateProcessor {
      * @param log
      * @return
      */
-    public abstract Response onWriteRequest(WriteRequest log);
+    public abstract Response onWriteRequest(WriteRequest log) throws Exception;
 
     /**
      * Save the state machine snapshot

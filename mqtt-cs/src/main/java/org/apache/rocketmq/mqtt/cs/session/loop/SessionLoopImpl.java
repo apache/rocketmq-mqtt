@@ -753,6 +753,9 @@ public class SessionLoopImpl implements SessionLoop {
     private void persistAllOffset(boolean needSleep) {
         try {
             for (Session session : sessionMap.values()) {
+                if (session.isClean()) {
+                    continue;
+                }
                 if (persistOffset(session) && needSleep) {
                     Thread.sleep(5L);
                 }
@@ -764,6 +767,9 @@ public class SessionLoopImpl implements SessionLoop {
 
     private boolean persistOffset(Session session) {
         try {
+            if (session.isClean()) {
+                return true;
+            }
             if (!session.getPersistOffsetFlag()) {
                 return false;
             }

@@ -35,12 +35,11 @@ import java.util.Date;
 public class MqttWillProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = "tcp://xxxx:1883";
-        String firstTopic = "xxxx";
-        String sendClientId = "send01";
-        String recvClientId = "recv01";
+        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String firstTopic = System.getenv("topic");
+        String sendClientId = "send02";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
-        mqttConnectOptions.setWill("xxxx/willTopic1", "will message: hello".getBytes(), 1, false);
+        mqttConnectOptions.setWill(firstTopic + "/willTopic1", "will message: hello".getBytes(), 1, false);
 
         MqttClient mqttClient = new MqttClient(brokerUrl, sendClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);
@@ -86,8 +85,8 @@ public class MqttWillProducer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("xxxx");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
+        connOpts.setUserName(System.getenv("username"));
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).toCharArray());
         return connOpts;
     }
 

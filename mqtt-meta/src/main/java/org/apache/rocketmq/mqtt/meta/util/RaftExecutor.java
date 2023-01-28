@@ -32,11 +32,10 @@ public final class RaftExecutor {
     private static ExecutorService raftSnapshotExecutor;
     
     private RaftExecutor() {
+        init();
     }
     
-    @PostConstruct
     public static void init() {
-
         raftSnapshotExecutor = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("loop_snapshot"));
     }
     

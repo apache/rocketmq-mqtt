@@ -33,10 +33,10 @@ import java.util.Date;
 
 public class MqttWillConsumer {
     public static void main(String[] args) throws MqttException, NoSuchAlgorithmException, InvalidKeyException {
-        String brokerUrl = "tcp://xxxx:1883";
-        String firstTopic = "xxxx";
+        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String firstTopic = System.getenv("topic");
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String recvClientId = "recv01";
+        String recvClientId = "recv02";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(recvClientId);
         MqttClient mqttClient = new MqttClient(brokerUrl, recvClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);
@@ -45,7 +45,7 @@ public class MqttWillConsumer {
             public void connectComplete(boolean reconnect, String serverURI) {
                 System.out.println(recvClientId + " connect success to " + serverURI);
                 try {
-                    final String topicFilter[] = {firstTopic + "/r1", "dongyuan-f2/willTopic1"};
+                    final String topicFilter[] = {firstTopic + "/r1", firstTopic + "/willTopic1"};
                     final int[] qos = {1, 1};
                     mqttClient.subscribe(topicFilter, qos);
                 } catch (Exception e) {
@@ -62,8 +62,7 @@ public class MqttWillConsumer {
             public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
                 try {
                     String payload = new String(mqttMessage.getPayload());
-                    System.out.println(now() + "receive:" + topic + "," + payload
-                            + " ---- rt:");
+                    System.out.println(now() + "receive:" + topic + "," + payload);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -88,8 +87,8 @@ public class MqttWillConsumer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("xxxx");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
+        connOpts.setUserName(System.getenv("username"));
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).toCharArray());
         return connOpts;
     }
 
@@ -97,4 +96,5 @@ public class MqttWillConsumer {
         SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
         return sf.format(new Date()) + "\t";
     }
+
 }

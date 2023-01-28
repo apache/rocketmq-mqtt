@@ -77,4 +77,5 @@ public class CounterSnapshotOperation extends AbstractSnapshotOperation {
         DiskUtils.deleteDirectory(loadPath);
         return s;
     }
+
 }

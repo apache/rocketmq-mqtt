@@ -68,11 +68,16 @@ public class MqttWillProducer {
             e.printStackTrace();
         }
         long interval = 1000;
-        for (int i = 0; i < 1000; i++) {
-            String msg = "r1_" + System.currentTimeMillis() + "_" + i;
+        int c = 10;
+        for (int i = 0; i < c; i++) {
+            String msg = "r3_" + System.currentTimeMillis() + "_" + i;
             MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
             message.setQos(1);
-            String mqttSendTopic = firstTopic + "/r1";
+            String mqttSendTopic = firstTopic + "/r3";
+            if (i >= c - 1) {
+                message.setRetained(true);
+                mqttSendTopic = firstTopic + "/retainTopic1";
+            }
             mqttClient.publish(mqttSendTopic, message);
             System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
             Thread.sleep(interval);

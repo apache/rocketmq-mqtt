@@ -57,7 +57,7 @@ import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_RETAINED_MS
 public class RetainedMsgClient {
 
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgClient.class);
-    private static final String groupId = GROUP_RETAINED_MSG + GROUP_SEQ_NUM_SPLIT + 0;
+    private static final String GROUP_ID = GROUP_RETAINED_MSG + GROUP_SEQ_NUM_SPLIT + 0;
     final Configuration conf = new Configuration();
     static final CliClientServiceImpl CLICLIENTSERVICE = new CliClientServiceImpl();
     static PeerId leader;
@@ -71,15 +71,15 @@ public class RetainedMsgClient {
         if (!conf.parse(serviceConf.getMetaAddr())) {  //from service.conf
             throw new IllegalArgumentException("Fail to parse conf:" + serviceConf.getMetaAddr());
         }
-        RouteTable.getInstance().updateConfiguration(groupId, conf);
+        RouteTable.getInstance().updateConfiguration(GROUP_ID, conf);
 
         CLICLIENTSERVICE.init(new CliOptions());
 
-        if (!RouteTable.getInstance().refreshLeader(CLICLIENTSERVICE, groupId, 3000).isOk()) {
+        if (!RouteTable.getInstance().refreshLeader(CLICLIENTSERVICE, GROUP_ID, 3000).isOk()) {
             throw new IllegalStateException("Refresh leader failed");
         }
 
-        leader = RouteTable.getInstance().selectLeader(groupId);
+        leader = RouteTable.getInstance().selectLeader(GROUP_ID);
         logger.info("--------------------- Leader is " + leader + " ---------------------------");
     }
 
@@ -103,7 +103,7 @@ public class RetainedMsgClient {
 
         logger.debug("SetRetainedMsg option:" + option);
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup(groupId).setData(ByteString.copyFrom(msg.getEncodeBytes())).putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUP_ID).setData(ByteString.copyFrom(msg.getEncodeBytes())).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -140,7 +140,7 @@ public class RetainedMsgClient {
 
         logger.debug("GetRetainedMsgsFromTrie option:" + option);
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(groupId).setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUP_ID).setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -184,7 +184,7 @@ public class RetainedMsgClient {
         HashMap<String, String> option = new HashMap<>();
         option.put("topic", topic);
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(groupId).setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUP_ID).setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 

@@ -179,7 +179,7 @@ public class RetainedMsgStateProcessor extends StateProcessor {
 
     @Override
     public String groupCategory() {
-        return Constants.RETAINEDMSG;
+        return Constants.GROUP_RETAINED_MSG;
     }
 
     public int getMaxRetainedMessageNum() {

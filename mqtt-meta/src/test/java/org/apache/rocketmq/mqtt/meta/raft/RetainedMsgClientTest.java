@@ -61,7 +61,7 @@ public class RetainedMsgClientTest {
     String originTopic = "test-f1/f2/";
 
     String topicFilter = "test-f1/+/";
-    final String groupId = Constants.RETAINEDMSG + "-" + 0;
+    final String groupId = Constants.GROUP_RETAINED_MSG + "-" + 0;
     final String confStr = "127.0.0.1:25001";
     CliClientServiceImpl cliClientService = new CliClientServiceImpl();
     Configuration conf = new Configuration();

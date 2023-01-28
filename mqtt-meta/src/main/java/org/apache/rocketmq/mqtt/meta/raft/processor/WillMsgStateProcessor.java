@@ -50,6 +50,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_WILL_MSG;
+
 public class WillMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(WillMsgStateProcessor.class);
 
@@ -164,7 +166,7 @@ public class WillMsgStateProcessor extends StateProcessor {
 
     @Override
     public String groupCategory() {
-        return Constants.WILL_MSG;
+        return GROUP_WILL_MSG;
     }
 
     public Response put(byte[] key, byte[] value) throws RocksDBException {

@@ -184,7 +184,6 @@ public class SessionLoopImpl implements SessionLoop {
             willMsgPersistManager.put(csKey, String.valueOf(currentTime)).whenComplete((result, throwable) -> {
                 if (result == null || throwable != null) {
                     logger.error("{} fail to put csKey", csKey, throwable);
-                    return;
                 }
             });
 
@@ -244,10 +243,8 @@ public class SessionLoopImpl implements SessionLoop {
                 willMsgPersistManager.compareAndPut(Constants.CS_MASTER, content, ip + Constants.COLON + currentTime).whenComplete((rs, tb) -> {
                     if (!rs || tb != null) {
                         logger.error("{} fail to update master", ip, tb);
-                        return;
                     }
                 });
-
 
                 // master to check all cs state
                 String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;

@@ -20,9 +20,10 @@ package org.apache.rocketmq.mqtt.meta.raft.rpc;
 public class Constants {
     public static final String COUNTER = "counter";
 
-    public static final String RETAINEDMSG = "retainedMsg";
+    public static final String GROUP_RETAINED_MSG = "retainedMsg";
+    public static final String GROUP_WILL_MSG = "willMsg";
+    public static final String GROUP_SEQ_NUM_SPLIT = "-";
 
-    public static final String WILL_MSG = "willMsg";
     public static final String NOT_FOUND = "NOT_FOUND";
 
     public static final String READ_INDEX_TYPE = "readIndexType";

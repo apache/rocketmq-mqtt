@@ -49,17 +49,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_SEQ_NUM_SPLIT;
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_RETAINED_MSG;
+
 
 @Service
 public class RetainedMsgClient {
 
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgClient.class);
-    private static final String GROUP_SEQ_NUM_SPLIT = "-";
-    final String groupId = Constants.RETAINEDMSG + GROUP_SEQ_NUM_SPLIT + 0;
+    private static final String groupId = GROUP_RETAINED_MSG + GROUP_SEQ_NUM_SPLIT + 0;
     final Configuration conf = new Configuration();
     static final CliClientServiceImpl CLICLIENTSERVICE = new CliClientServiceImpl();
-
-    static final String GROUPNAME = "retainedMsg";
     static PeerId leader;
 
     @Resource
@@ -103,7 +103,7 @@ public class RetainedMsgClient {
 
         logger.debug("SetRetainedMsg option:" + option);
 
-        final WriteRequest request = WriteRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setData(ByteString.copyFrom(msg.getEncodeBytes())).putAllExtData(option).build();
+        final WriteRequest request = WriteRequest.newBuilder().setGroup(groupId).setData(ByteString.copyFrom(msg.getEncodeBytes())).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -140,7 +140,7 @@ public class RetainedMsgClient {
 
         logger.debug("GetRetainedMsgsFromTrie option:" + option);
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(groupId).setOperation("trie").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
             @Override
@@ -184,7 +184,7 @@ public class RetainedMsgClient {
         HashMap<String, String> option = new HashMap<>();
         option.put("topic", topic);
 
-        final ReadRequest request = ReadRequest.newBuilder().setGroup(GROUPNAME + GROUP_SEQ_NUM_SPLIT + "0").setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
+        final ReadRequest request = ReadRequest.newBuilder().setGroup(groupId).setOperation("topic").setType(Constants.READ_INDEX_TYPE).putAllExtData(option).build();
 
         CLICLIENTSERVICE.getRpcClient().invokeAsync(leader.getEndpoint(), request, new InvokeCallback() {
 

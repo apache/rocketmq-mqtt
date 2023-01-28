@@ -33,13 +33,15 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_SEQ_NUM_SPLIT;
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_WILL_MSG;
+
 
 @Service
 public class WillMsgClient {
 
     private static Logger logger = LoggerFactory.getLogger(WillMsgClient.class);
-    private final static String GROUP_SEQ_NUM_SPLIT = "-";
-    private final static String RAFT_GROUP_ID = Constants.WILL_MSG + GROUP_SEQ_NUM_SPLIT + 0;
+    private final static String RAFT_GROUP_ID = GROUP_WILL_MSG + GROUP_SEQ_NUM_SPLIT + 0;
     private MetaRpcClient metaRpcClient;
 
     @Resource

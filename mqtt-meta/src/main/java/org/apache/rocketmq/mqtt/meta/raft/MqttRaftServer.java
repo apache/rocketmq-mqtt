@@ -76,11 +76,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static org.apache.rocketmq.mqtt.meta.raft.rpc.Constants.GROUP_SEQ_NUM_SPLIT;
+
 @Service
 public class MqttRaftServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
 
-    private static final String GROUP_SEQ_NUM_SPLIT = "-";
     @Resource
     private MetaConf metaConf;
 

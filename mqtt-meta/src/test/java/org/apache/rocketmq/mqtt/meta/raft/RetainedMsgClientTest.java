@@ -37,7 +37,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
-import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
+import org.apache.rocketmq.mqtt.common.meta.Constants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,7 +61,7 @@ public class RetainedMsgClientTest {
     String originTopic = "test-f1/f2/";
 
     String topicFilter = "test-f1/+/";
-    final String groupId = Constants.GROUP_RETAINED_MSG + "-" + 0;
+    final String groupId = Constants.CATEGORY_RETAINED_MSG + "-" + 0;
     final String confStr = "127.0.0.1:25001";
     CliClientServiceImpl cliClientService = new CliClientServiceImpl();
     Configuration conf = new Configuration();

@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.util;
 
+import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.meta.config.MetaConf;
 import org.junit.Assert;
 import org.junit.Test;

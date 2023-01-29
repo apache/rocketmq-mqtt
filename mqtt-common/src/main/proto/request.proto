@@ -27,6 +27,7 @@ message WriteRequest {
   string type = 4;
   string operation = 5;
   map<string, string> extData = 6;
+  string category = 7;
 }
 
 message ReadRequest {
@@ -35,6 +36,7 @@ message ReadRequest {
   string type = 3;
   string operation = 4;
   map<string, string> extData = 5;
+  string category = 6;
 }
 
 message Response {

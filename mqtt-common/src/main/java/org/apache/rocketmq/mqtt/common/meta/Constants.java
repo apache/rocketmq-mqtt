@@ -15,14 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.rpc;
+package org.apache.rocketmq.mqtt.common.meta;
 
 public class Constants {
-    public static final String COUNTER = "counter";
 
-    public static final String GROUP_RETAINED_MSG = "retainedMsg";
-    public static final String GROUP_WILL_MSG = "willMsg";
-    public static final String GROUP_SEQ_NUM_SPLIT = "-";
+    public static final String CATEGORY_RETAINED_MSG = "retainedMsg";
+    public static final String CATEGORY_WILL_MSG = "willMsg";
 
     public static final String NOT_FOUND = "NOT_FOUND";
 

@@ -60,8 +60,8 @@
             <artifactId>jraft-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.rocketmq</groupId>
-            <artifactId>mqtt-meta</artifactId>
+            <groupId>com.alipay.sofa</groupId>
+            <artifactId>rpc-grpc-impl</artifactId>
         </dependency>
     </dependencies>
 

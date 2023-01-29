@@ -32,7 +32,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class MqttWillProducer {
+public class MqttWillRetainProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
         String brokerUrl = "tcp://" + System.getenv("host") + ":1883";

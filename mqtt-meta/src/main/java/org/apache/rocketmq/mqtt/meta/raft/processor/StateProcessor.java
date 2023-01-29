@@ -17,20 +17,23 @@
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
-import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
-import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
+import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
+import org.rocksdb.RocksDBException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-
-import java.util.function.BiConsumer;
+import java.util.concurrent.locks.Lock;
 
 /**
  * A concrete processing class for a business state machine
  */
 public abstract class StateProcessor {
-
+    protected static Logger logger = LoggerFactory.getLogger(StateProcessor.class);
     /**
      * Process the read request to apply the state machine
      *
@@ -47,24 +50,6 @@ public abstract class StateProcessor {
      */
     public abstract Response onWriteRequest(WriteRequest log) throws Exception;
 
-    /**
-     * Save the state machine snapshot
-     *
-     * @param writer
-     * @param callFinally
-     */
-    public abstract void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally);
-
-    /**
-     * Load the state machine snapshot
-     *
-     * @param reader
-     * @return
-     */
-    public abstract boolean onSnapshotLoad(SnapshotReader reader);
-
-    public void onError(Throwable error) {
-    }
 
     /**
      * Raft Grouping category. The grouping category and sequence number identify the unique RAFT group
@@ -72,5 +57,59 @@ public abstract class StateProcessor {
      * @return
      */
     public abstract String groupCategory();
+
+    public Response get(RocksDBEngine rocksDBEngine, byte[] key) throws Exception {
+        final Lock readLock = rocksDBEngine.getReadWriteLock().readLock();
+        readLock.lock();
+        try {
+            byte[] value = rocksDBEngine.getRdb().get(key);
+            if (value == null) {
+                value = Constants.NOT_FOUND.getBytes();
+            }
+            return Response.newBuilder()
+                    .setSuccess(true)
+                    .setData(ByteString.copyFrom(value))
+                    .build();
+        } catch (final Exception e) {
+            logger.error("Fail to get, k {}", key, e);
+            throw e;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    public Response put(RocksDBEngine rocksDBEngine, byte[] key, byte[] value) throws RocksDBException {
+        final Lock writeLock = rocksDBEngine.getReadWriteLock().writeLock();
+        writeLock.lock();
+        try {
+            rocksDBEngine.getRdb().put(rocksDBEngine.getWriteOptions(), key, value);
+
+            return Response.newBuilder()
+                    .setSuccess(true)
+                    .build();
+        } catch (final Exception e) {
+            logger.error("Fail to put, k {}, v {}", key, value, e);
+            throw e;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    public Response delete(RocksDBEngine rocksDBEngine, byte[] key) throws Exception {
+        final Lock writeLock = rocksDBEngine.getReadWriteLock().writeLock();
+        writeLock.lock();
+        try {
+            rocksDBEngine.getRdb().delete(rocksDBEngine.getWriteOptions(), key);
+
+            return Response.newBuilder()
+                    .setSuccess(true)
+                    .build();
+        } catch (final Exception e) {
+            logger.error("Fail to delete, k {}", key, e);
+            throw e;
+        } finally {
+            writeLock.unlock();
+        }
+    }
 
 }

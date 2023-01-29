@@ -30,39 +30,22 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
-
+import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 
 public class MqttStateMachine extends StateMachineAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
-
+    protected Node node;
+    protected RocksDBEngine rocksDBEngine;
     protected final MqttRaftServer server;
 
-    protected final StateProcessor processor;
-
-    private final AtomicBoolean isLeader = new AtomicBoolean(false);
-
-    private final String groupId;
-
-    private Node node;
-
-    private volatile long term = -1;
-
-    private volatile String leaderIp = "unknown";
-
-
-    public MqttStateMachine(MqttRaftServer server, StateProcessor processor, String groupId) {
+    public MqttStateMachine(MqttRaftServer server) {
         this.server = server;
-        this.processor = processor;
-        this.groupId = groupId;
-
     }
 
     @Override
@@ -86,6 +69,8 @@ public class MqttStateMachine extends StateMachineAdapter {
                     LOGGER.debug("get message:{} and apply to state machine", message);
 
                     if (message instanceof WriteRequest) {
+                        WriteRequest writeRequest = (WriteRequest) message;
+                        StateProcessor processor = server.getProcessor(writeRequest.getCategory());
                         Response response = processor.onWriteRequest((WriteRequest) message);
                         if (Objects.nonNull(closure)) {
                             closure.setResponse(response);
@@ -93,6 +78,8 @@ public class MqttStateMachine extends StateMachineAdapter {
                     }
 
                     if (message instanceof ReadRequest) {
+                        ReadRequest request = (ReadRequest) message;
+                        StateProcessor processor = server.getProcessor(request.getCategory());
                         Response response = processor.onReadRequest((ReadRequest) message);
                         if (Objects.nonNull(closure)) {
                             closure.setResponse(response);
@@ -112,7 +99,7 @@ public class MqttStateMachine extends StateMachineAdapter {
                 iterator.next();
             }
         } catch (Throwable t) {
-            LOGGER.error("processor : {}, stateMachine meet critical error: {}.", processor, t);
+            LOGGER.error("stateMachine meet critical error", t);
             iterator.setErrorAndRollback(index - applied,
                 new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }
@@ -120,18 +107,12 @@ public class MqttStateMachine extends StateMachineAdapter {
 
     @Override
     public void onSnapshotSave(SnapshotWriter writer, Closure done) {
-        final BiConsumer<Boolean, Throwable> callFinally = (result, t) -> {
-            final Status status = result ? Status.OK()
-                : new Status(RaftError.EIO, "Fail to compress snapshot at %s, error is %s",
-                writer.getPath(), t == null ? "" : t.getMessage());
-            done.run(status);
-        };
-        processor.onSnapshotSave(writer, callFinally);
+        rocksDBEngine.getRocksDBSnapshot().onSnapshotSave(writer, done);
     }
 
     @Override
     public boolean onSnapshotLoad(SnapshotReader reader) {
-        return processor.onSnapshotLoad(reader);
+        return rocksDBEngine.getRocksDBSnapshot().onSnapshotLoad(reader);
     }
 
     public Message parseMessage(byte[] bytes) throws Exception {
@@ -150,30 +131,19 @@ public class MqttStateMachine extends StateMachineAdapter {
         throw new Exception("parse message from bytes error");
     }
 
-    @Override
-    public void onLeaderStart(final long term) {
-        super.onLeaderStart(term);
-        this.term = term;
-        this.isLeader.set(true);
-        this.leaderIp = node.getNodeId().getPeerId().getEndpoint().toString();
-    }
-
-    @Override
-    public void onLeaderStop(final Status status) {
-        this.term = -1;
-        this.isLeader.set(false);
-        super.onLeaderStop(status);
-    }
-
     public void setNode(Node node) {
         this.node = node;
     }
 
-    public StateProcessor getProcessor() {
-        return processor;
-    }
-
     public Node getNode() {
         return node;
+    }
+
+    public void setRocksDBEngine(RocksDBEngine rocksDBEngine) {
+        this.rocksDBEngine = rocksDBEngine;
+    }
+
+    public RocksDBEngine getRocksDBEngine() {
+        return rocksDBEngine;
     }
 }

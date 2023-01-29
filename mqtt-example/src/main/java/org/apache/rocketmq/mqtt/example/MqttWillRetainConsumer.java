@@ -31,7 +31,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class MqttWillConsumer {
+public class MqttWillRetainConsumer {
     public static void main(String[] args) throws MqttException, NoSuchAlgorithmException, InvalidKeyException {
         String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
         String firstTopic = System.getenv("topic");

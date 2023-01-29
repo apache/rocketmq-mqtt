@@ -20,11 +20,10 @@
 package org.apache.rocketmq.mqtt.ds.test.meta;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.common.model.Constants;
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.meta.WillMsgClient;
 import org.apache.rocketmq.mqtt.ds.meta.WillMsgPersistManagerImpl;
-import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -36,9 +35,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 @Ignore
 public class WillMsgPersistManagerImplTest {
     public WillMsgPersistManagerImpl willMsgPersistManager;
@@ -48,11 +44,7 @@ public class WillMsgPersistManagerImplTest {
     @Before
     public void Before() throws IOException, IllegalAccessException, InterruptedException, TimeoutException {
         willMsgClient = new WillMsgClient();
-        ServiceConf serviceConf = mock(ServiceConf.class);
-        when(serviceConf.getMetaAddr()).thenReturn("");
-        FieldUtils.writeDeclaredField(willMsgClient, "serviceConf", serviceConf, true);
 
-        willMsgClient.init();
         willMsgPersistManager = new WillMsgPersistManagerImpl();
         FieldUtils.writeDeclaredField(willMsgPersistManager, "willMsgClient", willMsgClient, true);
     }

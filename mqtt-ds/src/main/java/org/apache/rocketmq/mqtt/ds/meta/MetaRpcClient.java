@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.ds.meta;
 
+import com.alipay.sofa.jraft.JRaftUtils;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.conf.Configuration;
 import com.alipay.sofa.jraft.entity.PeerId;
@@ -25,45 +26,50 @@ import com.alipay.sofa.jraft.rpc.impl.GrpcRaftRpcFactory;
 import com.alipay.sofa.jraft.rpc.impl.MarshallerRegistry;
 import com.alipay.sofa.jraft.rpc.impl.cli.CliClientServiceImpl;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.meta.RaftUtil;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RAFT_GROUP_NUM;
+
+@Component
 public class MetaRpcClient {
     private static Logger logger = LoggerFactory.getLogger(MetaRpcClient.class);
-    private Configuration conf = new Configuration();
-    private CliClientServiceImpl cliClientService = new CliClientServiceImpl();
-    private String raftGroupId;
+    private RouteTable rt;
+    private Configuration conf;
+    private CliClientServiceImpl cliClientService;
     private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
+    public String[] raftGroups;
 
-    public MetaRpcClient(String metaAddress, String raftGroupId) throws InterruptedException, TimeoutException {
-        this.raftGroupId = raftGroupId;
+    @Resource
+    private ServiceConf serviceConf;
 
+    @PostConstruct
+    public void init() throws InterruptedException, TimeoutException {
         initRpcServer();
-        if (!conf.parse(metaAddress)) {
-            throw new IllegalArgumentException("Fail to parse conf:" + metaAddress + "for raftGroupId:" + raftGroupId);
-        }
-        RouteTable.getInstance().updateConfiguration(raftGroupId, conf);
+        cliClientService = new CliClientServiceImpl();
         cliClientService.init(new CliOptions());
-
+        rt = RouteTable.getInstance();
+        conf = JRaftUtils.getConfiguration(serviceConf.getMetaAddr());
+        raftGroups = RaftUtil.LIST_RAFT_GROUPS();
+        for (String groupId : raftGroups) {
+            rt.updateConfiguration(groupId, conf);
+        }
         refreshLeader();
-        final PeerId leader = RouteTable.getInstance().selectLeader(raftGroupId);
-        System.out.println("Leader is " + leader);
-
-        raftClientExecutor.scheduleAtFixedRate(()-> {
-            try {
-                refreshLeader();
-            } catch (Exception e) {
-                logger.error("raftGroupId: {} refresh leader error", raftGroupId, e);
-            }
-        }, 0, 3000, TimeUnit.MILLISECONDS);
+        raftClientExecutor.scheduleAtFixedRate(() -> refreshLeader(), 3, 3, TimeUnit.SECONDS);
     }
 
     public void initRpcServer() {
@@ -77,22 +83,36 @@ public class MetaRpcClient {
         registry.registerResponseInstance(ReadRequest.class.getName(), Response.getDefaultInstance());
     }
 
-    public void updateRaftGroupIdConfiguration(Configuration conf) {
-        this.conf = conf;
-        RouteTable.getInstance().updateConfiguration(raftGroupId, this.conf);
-    }
-
-    public void refreshLeader() throws InterruptedException, TimeoutException {
-        if (!RouteTable.getInstance().refreshLeader(cliClientService, raftGroupId, 3000).isOk()) {
-            throw new IllegalStateException("Refresh leader failed");
+    private void refreshLeader() {
+        for (String groupId : raftGroups) {
+            try {
+                rt.refreshLeader(cliClientService, groupId, 1000);
+            } catch (Exception e) {
+                logger.error("refreshLeader failed {}", groupId, e);
+            }
         }
     }
 
-    public PeerId getLeader() {
+    public PeerId getLeader(String raftGroupId) {
         return RouteTable.getInstance().selectLeader(raftGroupId);
     }
 
     public CliClientServiceImpl getCliClientService() {
         return cliClientService;
+    }
+
+    public String whichGroup(String key) {
+        if (StringUtils.isBlank(key)) {
+            return null;
+        }
+        int index = key.hashCode() % RAFT_GROUP_NUM;
+        if (index < 0) {
+            index = 0;
+        }
+        return raftGroups[index];
+    }
+
+    public String[] getRaftGroups() {
+        return raftGroups;
     }
 }

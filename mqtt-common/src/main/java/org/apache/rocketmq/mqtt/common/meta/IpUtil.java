@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.util;
+package org.apache.rocketmq.mqtt.common.meta;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;

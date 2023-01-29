@@ -147,4 +147,5 @@ public class ServiceConf {
     public void setSecretKey(String secretKey) {
         this.secretKey = secretKey;
     }
+
 }

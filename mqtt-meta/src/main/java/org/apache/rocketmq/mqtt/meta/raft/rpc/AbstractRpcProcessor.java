@@ -27,7 +27,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.meta.raft.FailoverClosure;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
-import org.apache.rocketmq.mqtt.meta.raft.RaftGroupHolder;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,14 +49,14 @@ public abstract class AbstractRpcProcessor {
      */
     protected void handleRequest(final MqttRaftServer server, final String group, final RpcContext rpcCtx, Message message) {
         try {
-            final RaftGroupHolder raftGroupHolder = server.getRaftGroupHolder(group);
-            if (Objects.isNull(raftGroupHolder)) {
+            final Node node = server.getNode(group);
+            if (Objects.isNull(node)) {
                 rpcCtx.sendResponse(Response.newBuilder().setSuccess(false)
                         .setErrMsg("Could not find the corresponding Raft Group : " + group).build());
                 return;
             }
-            if (raftGroupHolder.getNode().isLeader()) {
-                server.applyOperation(raftGroupHolder.getNode(), message, getFailoverClosure(rpcCtx));
+            if (node.isLeader()) {
+                server.applyOperation(node, message, getFailoverClosure(rpcCtx));
             } else {
                 rpcCtx.sendResponse(
                         Response.newBuilder().setSuccess(false).setErrMsg("Could not find leader : " + group).build());
@@ -107,16 +106,19 @@ public abstract class AbstractRpcProcessor {
      */
     public void handleReadIndex(final MqttRaftServer server, final String group, final RpcContext rpcCtx, ReadRequest request) {
         try {
-            final RaftGroupHolder raftGroupHolder = server.getRaftGroupHolder(group);
-            if (Objects.isNull(raftGroupHolder)) {
+            final Node node = server.getNode(group);
+            if (Objects.isNull(node)) {
                 rpcCtx.sendResponse(Response.newBuilder().setSuccess(false)
                         .setErrMsg("Could not find the corresponding Raft Group : " + group).build());
                 return;
             }
 
-            final Node node = raftGroupHolder.getNode();
-            final StateProcessor processor = raftGroupHolder.getMachine().getProcessor();
-
+            final StateProcessor processor = server.getProcessor(request.getCategory());
+            if (Objects.isNull(processor)) {
+                rpcCtx.sendResponse(Response.newBuilder().setSuccess(false)
+                        .setErrMsg("Could not find the StateProcessor: " + group).build());
+                return;
+            }
             try {
                 node.readIndex(BytesUtil.EMPTY_BYTES, new ReadIndexClosure() {
                     @Override
@@ -148,10 +150,10 @@ public abstract class AbstractRpcProcessor {
     }
 
     public void readFromLeader(final MqttRaftServer server, final String group, final RpcContext rpcCtx, ReadRequest request) {
-        final RaftGroupHolder raftGroupHolder;
+        final Node node;
         try {
-            raftGroupHolder = server.getRaftGroupHolder(group);
-            if (Objects.isNull(raftGroupHolder)) {
+            node = server.getNode(group);
+            if (Objects.isNull(node)) {
                 throw new Exception("can not get raft group");
             }
         } catch (Exception e) {
@@ -160,10 +162,8 @@ public abstract class AbstractRpcProcessor {
             return;
         }
 
-        final Node node = raftGroupHolder.getNode();
-
         if (node.isLeader()) {
-            server.applyOperation(raftGroupHolder.getNode(), request, getFailoverClosure(rpcCtx));
+            server.applyOperation(node, request, getFailoverClosure(rpcCtx));
         } else {
             server.invokeToLeader(group, request, 5000, getFailoverClosure(rpcCtx));
         }

@@ -19,7 +19,6 @@ package org.apache.rocketmq.mqtt.meta.util;
 
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 
-import javax.annotation.PostConstruct;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 

@@ -39,6 +39,7 @@ import java.util.concurrent.locks.Lock;
  */
 public abstract class StateProcessor {
     protected static Logger logger = LoggerFactory.getLogger(StateProcessor.class);
+
     /**
      * Process the read request to apply the state machine
      *
@@ -75,6 +76,20 @@ public abstract class StateProcessor {
                     .setSuccess(true)
                     .setData(ByteString.copyFrom(value))
                     .build();
+        } catch (final Exception e) {
+            logger.error("Fail to get, k {}", key, e);
+            throw e;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    public byte[] getRdb(RocksDBEngine rocksDBEngine, byte[] key) throws RocksDBException {
+        final Lock readLock = rocksDBEngine.getReadWriteLock().readLock();
+        readLock.lock();
+        try {
+            byte[] value = rocksDBEngine.getRdb().get(key);
+            return value;
         } catch (final Exception e) {
             logger.error("Fail to get, k {}", key, e);
             throw e;

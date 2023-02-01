@@ -76,7 +76,7 @@ public class MqttWillRetainProducer {
             String mqttSendTopic = firstTopic + "/r3";
             if (i >= c - 1) {
                 message.setRetained(true);
-                mqttSendTopic = firstTopic + "/retainTopic/1";
+                mqttSendTopic = firstTopic + "/retainTopic/"+i;
             }
             mqttClient.publish(mqttSendTopic, message);
             System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);

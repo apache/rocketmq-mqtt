@@ -68,9 +68,9 @@ public class RetainedMsgStateProcessor extends StateProcessor {
                 String wrapTrieFirstTopic = wrapTrieFirstTopic(firstTopic);
                 if (!retainedMsgTopicTrie.containsKey(wrapTrieFirstTopic)) {
                     Trie<String, String> newTrie = new Trie<>();
-                    Response value = get(sm.getRocksDBEngine(), wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8));
-                    if (value != null && value.getData() != null) {
-                        newTrie = JSON.parseObject(value.getData().toStringUtf8(), Trie.class);
+                    byte[] value = getRdb(sm.getRocksDBEngine(), wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8));
+                    if (value != null) {
+                        newTrie = JSON.parseObject(new String(value, StandardCharsets.UTF_8), Trie.class);
                     }
                     retainedMsgTopicTrie.put(wrapTrieFirstTopic, newTrie);
 
@@ -85,9 +85,9 @@ public class RetainedMsgStateProcessor extends StateProcessor {
                 ArrayList<ByteString> msgResults = new ArrayList<>();
 
                 for (String tmpTopic : matchTopics) {
-                    Response value = get(sm.getRocksDBEngine(), tmpTopic.getBytes(StandardCharsets.UTF_8));
-                    if (value != null && value.getData() != null) {
-                        msgResults.add(ByteString.copyFrom(value.getData().toByteArray()));
+                    byte[] value = getRdb(sm.getRocksDBEngine(), tmpTopic.getBytes(StandardCharsets.UTF_8));
+                    if (value != null) {
+                        msgResults.add(ByteString.copyFrom(value));
                     }
                 }
                 return Response.newBuilder()

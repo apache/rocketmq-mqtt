@@ -94,7 +94,7 @@ public class MetaRpcClient {
     }
 
     public PeerId getLeader(String raftGroupId) {
-        return RouteTable.getInstance().selectLeader(raftGroupId);
+        return rt.selectLeader(raftGroupId);
     }
 
     public CliClientServiceImpl getCliClientService() {

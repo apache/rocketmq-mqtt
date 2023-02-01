@@ -68,7 +68,9 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -81,6 +83,8 @@ public class MqttRaftServer {
 
     private static ExecutorService raftExecutor;
     private static ExecutorService requestExecutor;
+    private static ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
     private PeerId localPeerId;
     private RpcServer rpcServer;
     private CliClientServiceImpl cliClientService;
@@ -88,7 +92,7 @@ public class MqttRaftServer {
     private Map<String, StateProcessor> stateProcessors = new ConcurrentHashMap<>();
     private Map<String, MqttStateMachine> bizStateMachineMap = new ConcurrentHashMap<>();
     public String[] raftGroups;
-
+    private RouteTable rt;
 
     @PostConstruct
     void init() throws IOException, RocksDBException {
@@ -107,6 +111,7 @@ public class MqttRaftServer {
                 new LinkedBlockingQueue<>(10000),
                 new ThreadFactoryImpl("requestExecutor_"));
 
+        rt = RouteTable.getInstance();
         localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
         rpcServer = createRpcServer(this, localPeerId);
         NodeManager.getInstance().addAddress(localPeerId.getEndpoint());
@@ -125,13 +130,23 @@ public class MqttRaftServer {
             sm.setRocksDBEngine(rocksDBEngine);
             createRaftNode(group, sm);
         }
-
+        scheduler.scheduleAtFixedRate(() -> refreshLeader(), 3, 3, TimeUnit.SECONDS);
         CliOptions cliOptions = new CliOptions();
         this.cliService = RaftServiceFactory.createAndInitCliService(cliOptions);
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
         registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedMessageNum()));  //add retained msg processor
         registerStateProcessor(new WillMsgStateProcessor(this));
+    }
+
+    private void refreshLeader() {
+        for (String groupId : raftGroups) {
+            try {
+                rt.refreshLeader(cliClientService, groupId, 1000);
+            } catch (Exception e) {
+                LOGGER.error("refreshLeader failed {}", groupId, e);
+            }
+        }
     }
 
     public Node createRaftNode(String groupId, MqttStateMachine sm) throws IOException {
@@ -151,6 +166,7 @@ public class MqttRaftServer {
         if (!initConf.parse(initConfStr)) {
             throw new IllegalArgumentException("Fail to parse initConf:" + initConfStr);
         }
+        rt.updateConfiguration(groupId, initConfStr);
         nodeOptions.setInitialConf(initConf);
         nodeOptions.setFsm(sm);
         nodeOptions.setLogUri(dataPath + File.separator + "log");
@@ -160,7 +176,7 @@ public class MqttRaftServer {
         Node node = RaftServiceFactory.createAndInitRaftNode(groupId, localPeerId, nodeOptions);
         sm.setNode(node);
         registerBizStateMachine(groupId, sm);
-        LOGGER.warn("createdRaftNode {}" + groupId);
+        LOGGER.warn("createdRaftNode {}", groupId);
         return node;
     }
 
@@ -221,7 +237,7 @@ public class MqttRaftServer {
     }
 
     protected PeerId getLeader(final String raftGroupId) {
-        return RouteTable.getInstance().selectLeader(raftGroupId);
+        return rt.selectLeader(raftGroupId);
     }
 
     public void invokeToLeader(final String group, final Message request, final int timeoutMillis,

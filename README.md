@@ -78,6 +78,7 @@ sh mqadmin updateKvConfig  -s LMQ -k {topic} -v {topic/+}  -n {namesrv}
 6. Start Process
 ```shell
 cd bin
+sh meta.sh start
 sh mqtt.sh start
 ```
 ### Example

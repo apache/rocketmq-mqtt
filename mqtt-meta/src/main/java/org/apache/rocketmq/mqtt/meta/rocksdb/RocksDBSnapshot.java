@@ -78,7 +78,7 @@ public class RocksDBSnapshot {
         }
     }
 
-    public void writeSnapshot(final String snapshotPath) {
+    private void writeSnapshot(final String snapshotPath) {
         Lock lock = rocksDBEngine.getReadWriteLock().writeLock();
         lock.lock();
         try (final Checkpoint checkpoint = Checkpoint.create(rocksDBEngine.getRdb())) {
@@ -98,7 +98,7 @@ public class RocksDBSnapshot {
         }
     }
 
-    public void compressSnapshot(final SnapshotWriter writer, final LocalFileMetaOutter.LocalFileMeta.Builder metaBuilder, final Closure done) {
+    private void compressSnapshot(final SnapshotWriter writer, final LocalFileMetaOutter.LocalFileMeta.Builder metaBuilder, final Closure done) {
         final String writerPath = writer.getPath();
         final String outputFile = Paths.get(writerPath, SNAPSHOT_ARCHIVE).toString();
         try {
@@ -116,7 +116,7 @@ public class RocksDBSnapshot {
         }
     }
 
-    public void decompressSnapshot(final String readerPath, final LocalFileMetaOutter.LocalFileMeta meta) throws Throwable {
+    private void decompressSnapshot(final String readerPath, final LocalFileMetaOutter.LocalFileMeta meta) throws Throwable {
         final String sourceFile = Paths.get(readerPath, SNAPSHOT_ARCHIVE).toString();
         final Checksum checksum = new CRC64();
         ZipStrategyManager.getDefault().deCompress(sourceFile, readerPath, checksum);
@@ -125,7 +125,7 @@ public class RocksDBSnapshot {
         }
     }
 
-    public void readSnapshot(final String snapshotPath) {
+    private void readSnapshot(final String snapshotPath) {
         Lock lock = rocksDBEngine.getReadWriteLock().readLock();
         lock.lock();
         try {
@@ -149,7 +149,7 @@ public class RocksDBSnapshot {
         }
     }
 
-    public LocalFileMetaOutter.LocalFileMeta.Builder writeMetadata(final LocalFileMetaOutter.LocalFileMeta metadata) {
+    private LocalFileMetaOutter.LocalFileMeta.Builder writeMetadata(final LocalFileMetaOutter.LocalFileMeta metadata) {
         if (metadata == null) {
             return LocalFileMetaOutter.LocalFileMeta.newBuilder();
         }

@@ -118,16 +118,15 @@ public class MqttStateMachine extends StateMachineAdapter {
     public Message parseMessage(byte[] bytes) throws Exception {
         Message result;
         try {
-            result = ReadRequest.parseFrom(bytes);
-            return result;
-        } catch (Throwable ignore) {
-        }
-        try {
             result = WriteRequest.parseFrom(bytes);
             return result;
         } catch (Throwable ignore) {
         }
-
+        try {
+            result = ReadRequest.parseFrom(bytes);
+            return result;
+        } catch (Throwable ignore) {
+        }
         throw new Exception("parse message from bytes error");
     }
 

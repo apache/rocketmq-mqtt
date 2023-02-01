@@ -100,8 +100,7 @@ public class MqttStateMachine extends StateMachineAdapter {
             }
         } catch (Throwable t) {
             LOGGER.error("stateMachine meet critical error", t);
-            iterator.setErrorAndRollback(index - applied,
-                new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
+            //iterator.setErrorAndRollback(index - applied, new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }
     }
 

@@ -68,7 +68,7 @@ public class MqttWillRetainProducer {
             e.printStackTrace();
         }
         long interval = 1000;
-        int c = 10;
+        int c = 3;
         for (int i = 0; i < c; i++) {
             String msg = "r3_" + System.currentTimeMillis() + "_" + i;
             MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
@@ -76,7 +76,7 @@ public class MqttWillRetainProducer {
             String mqttSendTopic = firstTopic + "/r3";
             if (i >= c - 1) {
                 message.setRetained(true);
-                mqttSendTopic = firstTopic + "/retainTopic1";
+                mqttSendTopic = firstTopic + "/retainTopic/1";
             }
             mqttClient.publish(mqttSendTopic, message);
             System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);

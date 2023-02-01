@@ -111,6 +111,9 @@ public class MqttRaftServer {
                 new LinkedBlockingQueue<>(10000),
                 new ThreadFactoryImpl("requestExecutor_"));
 
+        registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedTopicNum()));  //add retained msg processor
+        registerStateProcessor(new WillMsgStateProcessor(this));
+
         rt = RouteTable.getInstance();
         localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
         rpcServer = createRpcServer(this, localPeerId);
@@ -134,9 +137,6 @@ public class MqttRaftServer {
         CliOptions cliOptions = new CliOptions();
         this.cliService = RaftServiceFactory.createAndInitCliService(cliOptions);
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
-
-        registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedMessageNum()));  //add retained msg processor
-        registerStateProcessor(new WillMsgStateProcessor(this));
     }
 
     private void refreshLeader() {

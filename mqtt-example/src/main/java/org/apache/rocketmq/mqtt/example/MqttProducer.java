@@ -35,10 +35,9 @@ import java.util.Date;
 public class MqttProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = "tcp://xxxx:1883";
-        String firstTopic = "xxxx";
+        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String firstTopic = System.getenv("topic");
         String sendClientId = "send01";
-        String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
         MqttClient mqttClient = new MqttClient(brokerUrl, sendClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);
@@ -100,8 +99,8 @@ public class MqttProducer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("xxxx");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
+        connOpts.setUserName(System.getenv("username"));
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).toCharArray());
         return connOpts;
     }
 

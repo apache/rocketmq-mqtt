@@ -21,44 +21,38 @@ import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
-import org.apache.rocketmq.mqtt.meta.raft.rpc.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeoutException;
+
+import static org.apache.rocketmq.mqtt.common.meta.Constants.CATEGORY_WILL_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.Constants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.WILL_RAFT_GROUP_INDEX;
 
 
 @Service
 public class WillMsgClient {
 
     private static Logger logger = LoggerFactory.getLogger(WillMsgClient.class);
-    private final static String GROUP_SEQ_NUM_SPLIT = "-";
-    private final static String RAFT_GROUP_ID = Constants.WILL_MSG + GROUP_SEQ_NUM_SPLIT + 0;
-    private MetaRpcClient metaRpcClient;
 
     @Resource
-    private ServiceConf serviceConf;
-
-    @PostConstruct
-    public void init() throws InterruptedException, TimeoutException {
-        metaRpcClient = new MetaRpcClient(serviceConf.getMetaAddr(), RAFT_GROUP_ID);
-    }
+    private MetaRpcClient metaRpcClient;
 
     public void put(final String key, final String value, CompletableFuture<Boolean> future) throws Exception {
+        String groupId = whichGroup();
         final WriteRequest request = WriteRequest.newBuilder().
-                setGroup(RAFT_GROUP_ID).
+                setGroup(groupId).
                 setKey(key).
                 setData(ByteString.copyFrom(value.getBytes())).
                 setOperation("put").
+                setCategory(CATEGORY_WILL_MSG).
                 build();
 
-        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
+        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader(groupId).getEndpoint(), request, (result, err) -> {
             if (err == null) {
                 Response rsp = (Response) result;
                 if (!rsp.getSuccess()) {
@@ -76,13 +70,15 @@ public class WillMsgClient {
     }
 
     public void delete(final String key, CompletableFuture<Boolean> future) throws Exception {
+        String groupId = whichGroup();
         final WriteRequest request = WriteRequest.newBuilder().
-                setGroup(RAFT_GROUP_ID).
+                setGroup(groupId).
                 setKey(key).
                 setOperation("delete").
+                setCategory(CATEGORY_WILL_MSG).
                 build();
 
-        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
+        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader(groupId).getEndpoint(), request, (result, err) -> {
             if (err == null) {
                 Response rsp = (Response) result;
                 if (!rsp.getSuccess()) {
@@ -100,14 +96,16 @@ public class WillMsgClient {
     }
 
     public void get(final String key, CompletableFuture<byte[]> future) throws Exception {
+        String groupId = whichGroup();
         final ReadRequest request = ReadRequest.newBuilder().
-                setGroup(RAFT_GROUP_ID).
+                setGroup(groupId).
                 setKey(key).
                 setOperation("get").
-                setType(Constants.READ_INDEX_TYPE).
+                setType(READ_INDEX_TYPE).
+                setCategory(CATEGORY_WILL_MSG).
                 build();
 
-        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
+        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader(groupId).getEndpoint(), request, (result, err) -> {
             if (err == null) {
                 Response rsp = (Response) result;
                 if (!rsp.getSuccess()) {
@@ -123,16 +121,18 @@ public class WillMsgClient {
         }, 5000);
     }
 
-    public void compareAndPut(final String key, final String expectValue, final String updateValue, CompletableFuture<Boolean> future) throws Exception  {
+    public void compareAndPut(final String key, final String expectValue, final String updateValue, CompletableFuture<Boolean> future) throws Exception {
+        String groupId = whichGroup();
         final WriteRequest request = WriteRequest.newBuilder().
-                setGroup(RAFT_GROUP_ID).
+                setGroup(groupId).
                 setKey(key).
                 setData(ByteString.copyFrom(updateValue.getBytes())).
                 setOperation("compareAndPut").
                 putExtData("expectValue", expectValue).
+                setCategory(CATEGORY_WILL_MSG).
                 build();
 
-        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
+        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader(groupId).getEndpoint(), request, (result, err) -> {
             if (err == null) {
                 Response rsp = (Response) result;
                 if (!rsp.getSuccess()) {
@@ -150,15 +150,17 @@ public class WillMsgClient {
     }
 
     public void scan(final String startKey, final String endKey, CompletableFuture<Map<String, String>> future) throws Exception {
+        String groupId = whichGroup();
         final ReadRequest request = ReadRequest.newBuilder().
-                setGroup(RAFT_GROUP_ID).
+                setGroup(groupId).
                 setOperation("scan").
                 putExtData("startKey", startKey).
                 putExtData("endKey", endKey).
-                setType(Constants.READ_INDEX_TYPE).
+                setType(READ_INDEX_TYPE).
+                setCategory(CATEGORY_WILL_MSG).
                 build();
 
-        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader().getEndpoint(), request, (result, err) -> {
+        metaRpcClient.getCliClientService().getRpcClient().invokeAsync(metaRpcClient.getLeader(groupId).getEndpoint(), request, (result, err) -> {
             if (err == null) {
                 Response rsp = (Response) result;
                 if (!rsp.getSuccess()) {
@@ -174,6 +176,10 @@ public class WillMsgClient {
                 future.completeExceptionally(err);
             }
         }, 5000);
+    }
+
+    private String whichGroup() {
+        return metaRpcClient.getRaftGroups()[WILL_RAFT_GROUP_INDEX];
     }
 
 }

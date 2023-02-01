@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.util;
+package org.apache.rocketmq.mqtt.common.meta;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -28,17 +28,17 @@ import java.util.Enumeration;
 import java.util.Set;
 
 public class IpUtil {
+    private static String candidatesHost;
+
     public static String getLocalAddressCompatible() {
         try {
-            String candidatesHost = getLocalAddress();
             if (candidatesHost != null) {
                 return candidatesHost;
             }
-
+            return getLocalAddress();
         } catch (Exception e) {
             throw new RuntimeException("InetAddress java.net.InetAddress.getLocalHost() throws UnknownHostException", e);
         }
-        return null;
     }
 
     private static String getLocalAddress() throws Exception {

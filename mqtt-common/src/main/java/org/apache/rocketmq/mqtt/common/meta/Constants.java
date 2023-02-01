@@ -15,28 +15,14 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.meta.raft.snapshot;
+package org.apache.rocketmq.mqtt.common.meta;
 
-import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
-import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
+public class Constants {
 
-import java.util.function.BiConsumer;
+    public static final String CATEGORY_RETAINED_MSG = "retainedMsg";
+    public static final String CATEGORY_WILL_MSG = "willMsg";
 
-public interface SnapshotOperation {
+    public static final String NOT_FOUND = "NOT_FOUND";
 
-    /**
-     * do snapshot save operation.
-     *
-     * @param writer
-     * @param callFinally
-     */
-    void onSnapshotSave(SnapshotWriter writer, BiConsumer<Boolean, Throwable> callFinally, String value);
-
-    /**
-     * do snapshot load operation.
-     *
-     * @param reader
-     * @return operation label
-     */
-    String onSnapshotLoad(SnapshotReader reader);
+    public static final String READ_INDEX_TYPE = "readIndexType";
 }

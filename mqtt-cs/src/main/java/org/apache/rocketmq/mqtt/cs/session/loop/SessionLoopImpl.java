@@ -28,6 +28,7 @@ import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
@@ -47,7 +48,6 @@ import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
-import org.apache.rocketmq.mqtt.meta.util.IpUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -184,7 +184,6 @@ public class SessionLoopImpl implements SessionLoop {
             willMsgPersistManager.put(csKey, String.valueOf(currentTime)).whenComplete((result, throwable) -> {
                 if (result == null || throwable != null) {
                     logger.error("{} fail to put csKey", csKey, throwable);
-                    return;
                 }
             });
 
@@ -244,10 +243,8 @@ public class SessionLoopImpl implements SessionLoop {
                 willMsgPersistManager.compareAndPut(Constants.CS_MASTER, content, ip + Constants.COLON + currentTime).whenComplete((rs, tb) -> {
                     if (!rs || tb != null) {
                         logger.error("{} fail to update master", ip, tb);
-                        return;
                     }
                 });
-
 
                 // master to check all cs state
                 String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
@@ -753,6 +750,9 @@ public class SessionLoopImpl implements SessionLoop {
     private void persistAllOffset(boolean needSleep) {
         try {
             for (Session session : sessionMap.values()) {
+                if (session.isClean()) {
+                    continue;
+                }
                 if (persistOffset(session) && needSleep) {
                     Thread.sleep(5L);
                 }
@@ -764,6 +764,9 @@ public class SessionLoopImpl implements SessionLoop {
 
     private boolean persistOffset(Session session) {
         try {
+            if (session.isClean()) {
+                return true;
+            }
             if (!session.getPersistOffsetFlag()) {
                 return false;
             }

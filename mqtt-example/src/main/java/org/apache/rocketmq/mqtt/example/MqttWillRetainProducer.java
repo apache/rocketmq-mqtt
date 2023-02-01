@@ -32,15 +32,14 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class MqttWillProducer {
+public class MqttWillRetainProducer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = "tcp://xxxx:1883";
-        String firstTopic = "xxxx";
-        String sendClientId = "send01";
-        String recvClientId = "recv01";
+        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String firstTopic = System.getenv("topic");
+        String sendClientId = "send02";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(sendClientId);
-        mqttConnectOptions.setWill("xxxx/willTopic1", "will message: hello".getBytes(), 1, false);
+        mqttConnectOptions.setWill(firstTopic + "/willTopic1", "will message: hello".getBytes(), 1, false);
 
         MqttClient mqttClient = new MqttClient(brokerUrl, sendClientId, memoryPersistence);
         mqttClient.setTimeToWait(5000L);
@@ -69,11 +68,16 @@ public class MqttWillProducer {
             e.printStackTrace();
         }
         long interval = 1000;
-        for (int i = 0; i < 1000; i++) {
-            String msg = "r1_" + System.currentTimeMillis() + "_" + i;
+        int c = 10;
+        for (int i = 0; i < c; i++) {
+            String msg = "r3_" + System.currentTimeMillis() + "_" + i;
             MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
             message.setQos(1);
-            String mqttSendTopic = firstTopic + "/r1";
+            String mqttSendTopic = firstTopic + "/r3";
+            if (i >= c - 1) {
+                message.setRetained(true);
+                mqttSendTopic = firstTopic + "/retainTopic1";
+            }
             mqttClient.publish(mqttSendTopic, message);
             System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
             Thread.sleep(interval);
@@ -86,8 +90,8 @@ public class MqttWillProducer {
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
-        connOpts.setUserName("xxxx");
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, "xxxx").toCharArray());
+        connOpts.setUserName(System.getenv("username"));
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).toCharArray());
         return connOpts;
     }
 

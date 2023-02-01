@@ -39,8 +39,12 @@ import java.util.concurrent.CompletableFuture;
 public class RetainedPersistManagerImpl implements RetainedPersistManager {
 
     private static Logger logger = LoggerFactory.getLogger(RetainedPersistManagerImpl.class);
+
     @Resource
     private MetaPersistManager metaPersistManager;
+
+    @Resource
+    private RetainedMsgClient retainedMsgClient;
 
     public void init() {
     }
@@ -56,7 +60,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         logger.debug("Start store retain msg...");
 
         try {
-            RetainedMsgClient.setRetainedMsg(topic, message, result);
+            retainedMsgClient.setRetainedMsg(topic, message, result);
         } catch (RemotingException | InterruptedException e) {
             logger.error("", e);
             result.completeExceptionally(e);
@@ -69,7 +73,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         CompletableFuture<Message> future = new CompletableFuture<>();
         logger.debug("topic:" + preciseTopic);
         try {
-            RetainedMsgClient.GetRetainedMsg(preciseTopic, future);
+            retainedMsgClient.GetRetainedMsg(preciseTopic, future);
         } catch (RemotingException | InterruptedException e) {
             logger.error("", e);
             future.completeExceptionally(e);
@@ -84,7 +88,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
 
         CompletableFuture<ArrayList<Message>> future = new CompletableFuture<>();
         try {
-            RetainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter, future);
+            retainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter, future);
         } catch (RemotingException | InterruptedException e) {
             logger.error("", e);
             future.completeExceptionally(e);

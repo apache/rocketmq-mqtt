@@ -19,7 +19,6 @@ package org.apache.rocketmq.mqtt.meta.util;
 
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 
-import javax.annotation.PostConstruct;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
@@ -32,11 +31,10 @@ public final class RaftExecutor {
     private static ExecutorService raftSnapshotExecutor;
     
     private RaftExecutor() {
+        init();
     }
     
-    @PostConstruct
     public static void init() {
-
         raftSnapshotExecutor = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("loop_snapshot"));
     }
     

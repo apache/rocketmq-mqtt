@@ -40,7 +40,7 @@ public class MetaConf {
     private int maxRetainedMessageNum;
     private int electionTimeoutMs = 1000;
     private int snapshotIntervalSecs = 1000;
-    private int raftGroupNum = 4;
+    private String raftServiceName = System.getenv("RaftServiceName");
 
     public MetaConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -128,19 +128,19 @@ public class MetaConf {
         this.snapshotIntervalSecs = snapshotIntervalSecs;
     }
 
-    public int getRaftGroupNum() {
-        return raftGroupNum;
-    }
-
-    public void setRaftGroupNum(int raftGroupNum) {
-        this.raftGroupNum = raftGroupNum;
-    }
-
     public int getMaxRetainedMessageNum() {
         return maxRetainedMessageNum;
     }
 
     public void setMaxRetainedMessageNum(int maxRetainedMessageNum) {
         this.maxRetainedMessageNum = maxRetainedMessageNum;
+    }
+
+    public String getRaftServiceName() {
+        return raftServiceName;
+    }
+
+    public void setRaftServiceName(String raftServiceName) {
+        this.raftServiceName = raftServiceName;
     }
 }

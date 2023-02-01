@@ -18,10 +18,8 @@
 package org.apache.rocketmq.mqtt.meta.raft;
 
 import com.alipay.sofa.jraft.CliService;
-import com.alipay.sofa.jraft.JRaftUtils;
 import com.alipay.sofa.jraft.Node;
 import com.alipay.sofa.jraft.NodeManager;
-import com.alipay.sofa.jraft.RaftGroupService;
 import com.alipay.sofa.jraft.RaftServiceFactory;
 import com.alipay.sofa.jraft.RouteTable;
 import com.alipay.sofa.jraft.Status;
@@ -32,7 +30,6 @@ import com.alipay.sofa.jraft.entity.Task;
 import com.alipay.sofa.jraft.error.RaftError;
 import com.alipay.sofa.jraft.option.CliOptions;
 import com.alipay.sofa.jraft.option.NodeOptions;
-import com.alipay.sofa.jraft.option.RaftOptions;
 import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.alipay.sofa.jraft.rpc.RaftRpcServerFactory;
 import com.alipay.sofa.jraft.rpc.RpcServer;
@@ -43,17 +40,20 @@ import com.alipay.sofa.jraft.util.Endpoint;
 import com.alipay.sofa.jraft.util.RpcFactoryHelper;
 import com.google.protobuf.Message;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.meta.RaftUtil;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.config.MetaConf;
-import org.apache.rocketmq.mqtt.meta.raft.processor.CounterStateProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcessor;
+import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.rpc.MqttReadRpcProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.rpc.MqttWriteRpcProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcessor;
-import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
+import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
+import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -61,46 +61,37 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.LinkedBlockingQueue;
 
 @Service
 public class MqttRaftServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttRaftServer.class);
 
-    private static final String GROUP_SEQ_NUM_SPLIT = "-";
     @Resource
     private MetaConf metaConf;
 
     private static ExecutorService raftExecutor;
     private static ExecutorService requestExecutor;
-
-
     private PeerId localPeerId;
-    private NodeOptions nodeOptions;
-    private Configuration initConf;
     private RpcServer rpcServer;
-
     private CliClientServiceImpl cliClientService;
-
     private CliService cliService;
-    private Map<String, List<RaftGroupHolder>> multiRaftGroup = new ConcurrentHashMap<>();
-    private Collection<StateProcessor> stateProcessors = Collections.synchronizedSet(new HashSet<>());
+    private Map<String, StateProcessor> stateProcessors = new ConcurrentHashMap<>();
+    private Map<String, MqttStateMachine> bizStateMachineMap = new ConcurrentHashMap<>();
+    public String[] raftGroups;
+
 
     @PostConstruct
-    void init() {
+    void init() throws IOException, RocksDBException {
         raftExecutor = new ThreadPoolExecutor(
                 8,
                 16,
@@ -117,42 +108,75 @@ public class MqttRaftServer {
                 new ThreadFactoryImpl("requestExecutor_"));
 
         localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
-        nodeOptions = new NodeOptions();
-
-        nodeOptions.setSharedElectionTimer(true);
-        nodeOptions.setSharedVoteTimer(true);
-        nodeOptions.setSharedStepDownTimer(true);
-        nodeOptions.setSharedSnapshotTimer(true);
-        nodeOptions.setElectionTimeoutMs(metaConf.getElectionTimeoutMs());
-        nodeOptions.setEnableMetrics(true);
-        nodeOptions.setSnapshotIntervalSecs(metaConf.getSnapshotIntervalSecs());
-
-        // Jraft implements parameter configuration internally. If you need to optimize, refer to https://www.sofastack.tech/projects/sofa-jraft/jraft-user-guide/
-        RaftOptions raftOptions = new RaftOptions();
-        nodeOptions.setRaftOptions(raftOptions);
-
-        initConf = JRaftUtils.getConfiguration(metaConf.getMembersAddress());
-        nodeOptions.setInitialConf(initConf);
-
-        for (PeerId peerId : initConf.getPeers()) {
-            NodeManager.getInstance().addAddress(peerId.getEndpoint());
-        }
-
         rpcServer = createRpcServer(this, localPeerId);
-        if (!this.rpcServer.init(null)) {
+        NodeManager.getInstance().addAddress(localPeerId.getEndpoint());
+        if (!rpcServer.init(null)) {
             LOGGER.error("Fail to init [BaseRpcServer].");
             throw new RuntimeException("Fail to init [BaseRpcServer].");
+        }
+
+        raftGroups = RaftUtil.LIST_RAFT_GROUPS();
+        for (String group : raftGroups) {
+            String rdbPath = RaftUtil.RAFT_BASE_DIR(group) + File.separator + "rdb";
+            FileUtils.forceMkdir(new File(rdbPath));
+            RocksDBEngine rocksDBEngine = new RocksDBEngine(rdbPath);
+            rocksDBEngine.init();
+            MqttStateMachine sm = new MqttStateMachine(this);
+            sm.setRocksDBEngine(rocksDBEngine);
+            createRaftNode(group, sm);
         }
 
         CliOptions cliOptions = new CliOptions();
         this.cliService = RaftServiceFactory.createAndInitCliService(cliOptions);
         this.cliClientService = (CliClientServiceImpl) ((CliServiceImpl) this.cliService).getCliClientService();
 
-        registerStateProcessor(new CounterStateProcessor());
-        registerStateProcessor(new RetainedMsgStateProcessor(metaConf.getMaxRetainedMessageNum()));  //add retained msg processor
-        registerStateProcessor(new WillMsgStateProcessor());
+        registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedMessageNum()));  //add retained msg processor
+        registerStateProcessor(new WillMsgStateProcessor(this));
+    }
 
-        start();
+    public Node createRaftNode(String groupId, MqttStateMachine sm) throws IOException {
+        if (StringUtils.isBlank(groupId) || sm == null) {
+            throw new IllegalArgumentException("groupId or sm is null");
+        }
+        String dataPath = RaftUtil.RAFT_BASE_DIR(groupId);
+        FileUtils.forceMkdir(new File(dataPath));
+
+        final NodeOptions nodeOptions = new NodeOptions();
+        nodeOptions.setElectionTimeoutMs(metaConf.getElectionTimeoutMs());
+        nodeOptions.setDisableCli(false);
+        nodeOptions.setSnapshotIntervalSecs(metaConf.getSnapshotIntervalSecs());
+
+        final Configuration initConf = new Configuration();
+        String initConfStr = metaConf.getMembersAddress();
+        if (!initConf.parse(initConfStr)) {
+            throw new IllegalArgumentException("Fail to parse initConf:" + initConfStr);
+        }
+        nodeOptions.setInitialConf(initConf);
+        nodeOptions.setFsm(sm);
+        nodeOptions.setLogUri(dataPath + File.separator + "log");
+        nodeOptions.setRaftMetaUri(dataPath + File.separator + "raft_meta");
+        nodeOptions.setSnapshotUri(dataPath + File.separator + "snapshot");
+
+        Node node = RaftServiceFactory.createAndInitRaftNode(groupId, localPeerId, nodeOptions);
+        sm.setNode(node);
+        registerBizStateMachine(groupId, sm);
+        LOGGER.warn("createdRaftNode {}" + groupId);
+        return node;
+    }
+
+    private void registerBizStateMachine(String groupId, MqttStateMachine sm) {
+        MqttStateMachine prv = bizStateMachineMap.putIfAbsent(groupId, sm);
+        if (prv != null) {
+            throw new RuntimeException("dup register BizStateMachine:" + groupId);
+        }
+    }
+
+    public Node getNode(String groupId) {
+        return bizStateMachineMap.get(groupId).getNode();
+    }
+
+    public MqttStateMachine getMqttStateMachine(String groupId) {
+        return bizStateMachineMap.get(groupId);
     }
 
     public RpcServer createRpcServer(MqttRaftServer server, PeerId peerId) {
@@ -175,86 +199,11 @@ public class MqttRaftServer {
     }
 
     public void registerStateProcessor(StateProcessor processor) {
-        stateProcessors.add(processor);
+        stateProcessors.put(processor.groupCategory(), processor);
     }
 
-    public void start() {
-
-        int eachProcessRaftGroupNum = metaConf.getRaftGroupNum();
-        for (StateProcessor processor : stateProcessors) {
-
-            List<RaftGroupHolder> raftGroupHolderList = multiRaftGroup.get(processor.groupCategory());
-            if (raftGroupHolderList == null) {
-                raftGroupHolderList = new ArrayList<>();
-                List<RaftGroupHolder> raftGroupHolderListOld = multiRaftGroup.putIfAbsent(processor.groupCategory(), raftGroupHolderList);
-                if (raftGroupHolderListOld != null) {
-                    raftGroupHolderList = raftGroupHolderListOld;
-                }
-            }
-
-            for (int i = 0; i < eachProcessRaftGroupNum; ++i) {
-                String groupIdentity = wrapGroupName(processor.groupCategory(), i);
-
-                Configuration groupConfiguration = initConf.copy();
-                // LogUri RaftMetaUri SnapshotUri will not be copy, so need to be set
-                NodeOptions groupNodeOption = nodeOptions.copy();
-                initStoreUri(groupIdentity, groupNodeOption);
-
-                MqttStateMachine groupMqttStateMachine = new MqttStateMachine(this, processor, groupIdentity);
-                groupNodeOption.setFsm(groupMqttStateMachine);
-                groupNodeOption.setInitialConf(groupConfiguration);
-
-                // create raft group
-                RaftGroupService raftGroupService = new RaftGroupService(groupIdentity, localPeerId, groupNodeOption, rpcServer, true);
-
-                // start node
-                Node node = raftGroupService.start(false);
-                groupMqttStateMachine.setNode(node);
-                RouteTable.getInstance().updateConfiguration(groupIdentity, groupConfiguration);
-
-                // to-do : a new node start, it can be added to this group, without restart running server. maybe need refresh route tables
-                // add to multiRaftGroup
-                raftGroupHolderList.add(new RaftGroupHolder(raftGroupService, groupMqttStateMachine, node));
-
-                LOGGER.info("create raft group, groupIdentity: {}", groupIdentity);
-            }
-        }
-    }
-
-    private void initStoreUri(String groupIdentity, NodeOptions nodeOptions) {
-        String dataPath = metaConf.getRaftDataPath();
-
-        String logUri = dataPath + File.separator + groupIdentity + File.separator + "log";
-        String raftMetaUri = dataPath + File.separator + groupIdentity + File.separator + "raft_meta";
-        String snapshotUri = dataPath + File.separator + groupIdentity + File.separator + "snapshot";
-
-        try {
-            FileUtils.forceMkdir(new File(logUri));
-            FileUtils.forceMkdir(new File(raftMetaUri));
-            FileUtils.forceMkdir(new File(snapshotUri));
-        } catch (Exception e) {
-            LOGGER.error("create dir for raft store uri error, e:{}", e.toString());
-            throw new RuntimeException(e);
-        }
-
-        nodeOptions.setLogUri(logUri);
-        nodeOptions.setRaftMetaUri(raftMetaUri);
-        nodeOptions.setSnapshotUri(snapshotUri);
-    }
-
-    private String wrapGroupName(String category, int seq) {
-        return category + GROUP_SEQ_NUM_SPLIT + seq;
-    }
-
-    public RaftGroupHolder getRaftGroupHolder(String groupId) throws Exception {
-
-        String[] groupParam = groupId.split(GROUP_SEQ_NUM_SPLIT);
-
-        if (groupParam.length != 2) {
-            throw new Exception("Fail to get RaftGroupHolder");
-        }
-
-        return multiRaftGroup.get(groupParam[0]).get(Integer.parseInt(groupParam[1]));
+    public StateProcessor getProcessor(String category) {
+        return stateProcessors.get(category);
     }
 
     public void applyOperation(Node node, Message data, FailoverClosure closure) {
@@ -307,4 +256,5 @@ public class MqttRaftServer {
             closure.run(new Status(RaftError.UNKNOWN, e.toString()));
         }
     }
+
 }

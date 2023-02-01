@@ -134,8 +134,8 @@ public class RetainedMsgStateProcessor extends StateProcessor {
         return true;
     }
 
-    private String wrapTrieFirstTopic(String firstTopic){
-        return "$"+firstTopic+"$";
+    private String wrapTrieFirstTopic(String firstTopic) {
+        return "$" + firstTopic + "$";
     }
 
     @Override

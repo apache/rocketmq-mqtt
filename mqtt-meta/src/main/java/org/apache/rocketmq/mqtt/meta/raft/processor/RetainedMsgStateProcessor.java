@@ -41,11 +41,11 @@ public class RetainedMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcessor.class);
     private final ConcurrentHashMap<String, Trie<String, String>> retainedMsgTopicTrie = new ConcurrentHashMap<>();  //key:firstTopic value:retained topic Trie
     private MqttRaftServer server;
-    private int maxRetainedMessageNum;
+    private int maxRetainedTopicNum;
 
-    public RetainedMsgStateProcessor(MqttRaftServer server, int maxRetainedMessageNum) {
+    public RetainedMsgStateProcessor(MqttRaftServer server, int maxRetainedTopicNum) {
         this.server = server;
-        this.maxRetainedMessageNum = maxRetainedMessageNum;
+        this.maxRetainedTopicNum = maxRetainedTopicNum;
     }
 
     @Override
@@ -65,28 +65,29 @@ public class RetainedMsgStateProcessor extends StateProcessor {
             if (operation.equals("topic")) {    //return retained msg
                 return get(sm.getRocksDBEngine(), topic.getBytes(StandardCharsets.UTF_8));
             } else { //return retain msgs of matched Topic
-                if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
+                String wrapTrieFirstTopic = wrapTrieFirstTopic(firstTopic);
+                if (!retainedMsgTopicTrie.containsKey(wrapTrieFirstTopic)) {
                     Trie<String, String> newTrie = new Trie<>();
-                    Response value = get(sm.getRocksDBEngine(), firstTopic.getBytes(StandardCharsets.UTF_8));
-                    if (value != null && value.getData() != null) {
-                        newTrie = JSON.parseObject(value.getData().toStringUtf8(), Trie.class);
+                    byte[] value = getRdb(sm.getRocksDBEngine(), wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8));
+                    if (value != null) {
+                        newTrie = JSON.parseObject(new String(value, StandardCharsets.UTF_8), Trie.class);
                     }
-                    retainedMsgTopicTrie.put(firstTopic, newTrie);
+                    retainedMsgTopicTrie.put(wrapTrieFirstTopic, newTrie);
 
                     return Response.newBuilder()
                             .setSuccess(true)
                             .setData(ByteString.copyFrom(JSON.toJSONBytes(new ArrayList<byte[]>())))
                             .build();
                 }
-                Trie<String, String> tmpTrie = retainedMsgTopicTrie.get(firstTopic);
+                Trie<String, String> tmpTrie = retainedMsgTopicTrie.get(wrapTrieFirstTopic);
                 Set<String> matchTopics = tmpTrie.getAllPath(topic);
 
                 ArrayList<ByteString> msgResults = new ArrayList<>();
 
                 for (String tmpTopic : matchTopics) {
-                    Response value = get(sm.getRocksDBEngine(), tmpTopic.getBytes(StandardCharsets.UTF_8));
-                    if (value != null && value.getData() != null) {
-                        msgResults.add(ByteString.copyFrom(value.getData().toByteArray()));
+                    byte[] value = getRdb(sm.getRocksDBEngine(), tmpTopic.getBytes(StandardCharsets.UTF_8));
+                    if (value != null) {
+                        msgResults.add(ByteString.copyFrom(value));
                     }
                 }
                 return Response.newBuilder()
@@ -104,35 +105,37 @@ public class RetainedMsgStateProcessor extends StateProcessor {
     }
 
     boolean setRetainedMsg(RocksDBEngine rocksDBEngine, String firstTopic, String topic, boolean isEmpty, byte[] msg) throws Exception {
-
+        String wrapTrieFirstTopic = wrapTrieFirstTopic(firstTopic);
         // if the trie of firstTopic doesn't exist
-        if (!retainedMsgTopicTrie.containsKey(firstTopic)) {
-            retainedMsgTopicTrie.put(TopicUtils.normalizeTopic(firstTopic), new Trie<String, String>());
+        if (!retainedMsgTopicTrie.containsKey(wrapTrieFirstTopic)) {
+            retainedMsgTopicTrie.put(wrapTrieFirstTopic, new Trie<String, String>());
         }
-
         if (isEmpty) {
             //delete from trie
             logger.info("Delete the topic {} retained message", topic);
             delete(rocksDBEngine, topic.getBytes(StandardCharsets.UTF_8));
-            Trie<String, String> trie = retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic));
+            Trie<String, String> trie = retainedMsgTopicTrie.get(wrapTrieFirstTopic);
             if (trie != null) {
                 trie.deleteTrieNode(topic, "");
             }
-            put(rocksDBEngine, firstTopic.getBytes(StandardCharsets.UTF_8), JSON.toJSONBytes(trie));
+            put(rocksDBEngine, wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8), JSON.toJSONBytes(trie));
         } else {
             //Add to trie
-            Trie<String, String> trie = retainedMsgTopicTrie.get(TopicUtils.normalizeTopic(firstTopic));
-            logger.info("maxRetainedMessageNum:{}", maxRetainedMessageNum);
-            if (trie.getNodePath().size() < maxRetainedMessageNum) {
+            Trie<String, String> trie = retainedMsgTopicTrie.get(wrapTrieFirstTopic);
+            if (trie.getNodePath().size() < maxRetainedTopicNum) {
                 put(rocksDBEngine, topic.getBytes(StandardCharsets.UTF_8), msg);
                 trie.addNode(topic, "", "");
-                put(rocksDBEngine, firstTopic.getBytes(StandardCharsets.UTF_8), JSON.toJSONBytes(trie));
+                put(rocksDBEngine, wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8), JSON.toJSONBytes(trie));
                 return true;
             } else {
                 return false;
             }
         }
         return true;
+    }
+
+    private String wrapTrieFirstTopic(String firstTopic) {
+        return "$" + firstTopic + "$";
     }
 
     @Override

@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
+import com.alipay.sofa.jraft.util.BytesUtil;
 import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -24,9 +25,13 @@ import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.meta.Constants;
 import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.RocksIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
 /**
@@ -34,6 +39,7 @@ import java.util.concurrent.locks.Lock;
  */
 public abstract class StateProcessor {
     protected static Logger logger = LoggerFactory.getLogger(StateProcessor.class);
+
     /**
      * Process the read request to apply the state machine
      *
@@ -78,12 +84,25 @@ public abstract class StateProcessor {
         }
     }
 
+    public byte[] getRdb(RocksDBEngine rocksDBEngine, byte[] key) throws RocksDBException {
+        final Lock readLock = rocksDBEngine.getReadWriteLock().readLock();
+        readLock.lock();
+        try {
+            byte[] value = rocksDBEngine.getRdb().get(key);
+            return value;
+        } catch (final Exception e) {
+            logger.error("Fail to get, k {}", key, e);
+            throw e;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
     public Response put(RocksDBEngine rocksDBEngine, byte[] key, byte[] value) throws RocksDBException {
         final Lock writeLock = rocksDBEngine.getReadWriteLock().writeLock();
         writeLock.lock();
         try {
             rocksDBEngine.getRdb().put(rocksDBEngine.getWriteOptions(), key, value);
-
             return Response.newBuilder()
                     .setSuccess(true)
                     .build();
@@ -100,7 +119,6 @@ public abstract class StateProcessor {
         writeLock.lock();
         try {
             rocksDBEngine.getRdb().delete(rocksDBEngine.getWriteOptions(), key);
-
             return Response.newBuilder()
                     .setSuccess(true)
                     .build();
@@ -109,6 +127,60 @@ public abstract class StateProcessor {
             throw e;
         } finally {
             writeLock.unlock();
+        }
+    }
+
+    public Response compareAndPut(RocksDBEngine rocksDBEngine, byte[] key, byte[] expectValue, byte[] updateValue) throws Exception {
+        final Lock writeLock = rocksDBEngine.getReadWriteLock().writeLock();
+        writeLock.lock();
+        try {
+            final byte[] actual = rocksDBEngine.getRdb().get(key);
+            if (Arrays.equals(expectValue, actual)) {
+                rocksDBEngine.getRdb().put(rocksDBEngine.getWriteOptions(), key, updateValue);
+                return Response.newBuilder()
+                        .setSuccess(true)
+                        .build();
+            } else {
+                return Response.newBuilder()
+                        .setSuccess(false)
+                        .build();
+            }
+        } catch (final Exception e) {
+            logger.error("Fail to delete, k {}", key, e);
+            throw e;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    public Response scan(RocksDBEngine rocksDBEngine, byte[] startKey, byte[] endKey) throws Exception {
+        Map<String, String> result = new HashMap<>();
+        final Lock readLock = rocksDBEngine.getReadWriteLock().readLock();
+        readLock.lock();
+        try {
+            final RocksIterator it = rocksDBEngine.getRdb().newIterator();
+            if (startKey == null) {
+                it.seekToFirst();
+            } else {
+                it.seek(startKey);
+            }
+            while (it.isValid()) {
+                final byte[] key = it.key();
+                if (endKey != null && BytesUtil.compare(key, endKey) >= 0) {
+                    break;
+                }
+                result.put(new String(key), new String(it.value()));
+                it.next();
+            }
+            return Response.newBuilder()
+                    .setSuccess(true)
+                    .putAllDataMap(result)
+                    .build();
+        } catch (final Exception e) {
+            logger.error("Fail to delete, startKey {}, endKey {}", startKey, endKey, e);
+            throw e;
+        } finally {
+            readLock.unlock();
         }
     }
 

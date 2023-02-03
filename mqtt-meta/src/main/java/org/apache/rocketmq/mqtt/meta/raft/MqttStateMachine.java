@@ -100,8 +100,7 @@ public class MqttStateMachine extends StateMachineAdapter {
             }
         } catch (Throwable t) {
             LOGGER.error("stateMachine meet critical error", t);
-            iterator.setErrorAndRollback(index - applied,
-                new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
+            //iterator.setErrorAndRollback(index - applied, new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
         }
     }
 
@@ -118,16 +117,15 @@ public class MqttStateMachine extends StateMachineAdapter {
     public Message parseMessage(byte[] bytes) throws Exception {
         Message result;
         try {
-            result = ReadRequest.parseFrom(bytes);
-            return result;
-        } catch (Throwable ignore) {
-        }
-        try {
             result = WriteRequest.parseFrom(bytes);
             return result;
         } catch (Throwable ignore) {
         }
-
+        try {
+            result = ReadRequest.parseFrom(bytes);
+            return result;
+        } catch (Throwable ignore) {
+        }
         throw new Exception("parse message from bytes error");
     }
 

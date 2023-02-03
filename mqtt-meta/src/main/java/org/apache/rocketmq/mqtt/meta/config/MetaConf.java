@@ -37,9 +37,9 @@ public class MetaConf {
     private int metaPort = 25000;
     private String selfAddress;
     private String membersAddress;
-    private int maxRetainedMessageNum;
+    private int maxRetainedTopicNum =  10000;
     private int electionTimeoutMs = 1000;
-    private int snapshotIntervalSecs = 1000;
+    private int snapshotIntervalSecs = 60 * 1000;
     private String raftServiceName = System.getenv("RaftServiceName");
 
     public MetaConf() throws IOException {
@@ -128,12 +128,12 @@ public class MetaConf {
         this.snapshotIntervalSecs = snapshotIntervalSecs;
     }
 
-    public int getMaxRetainedMessageNum() {
-        return maxRetainedMessageNum;
+    public int getMaxRetainedTopicNum() {
+        return maxRetainedTopicNum;
     }
 
-    public void setMaxRetainedMessageNum(int maxRetainedMessageNum) {
-        this.maxRetainedMessageNum = maxRetainedMessageNum;
+    public void setMaxRetainedTopicNum(int maxRetainedTopicNum) {
+        this.maxRetainedTopicNum = maxRetainedTopicNum;
     }
 
     public String getRaftServiceName() {

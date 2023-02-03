@@ -67,21 +67,26 @@ public class MqttWillRetainProducer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        long interval = 1000;
-        int c = 10;
-        for (int i = 0; i < c; i++) {
-            String msg = "r3_" + System.currentTimeMillis() + "_" + i;
-            MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
-            message.setQos(1);
-            String mqttSendTopic = firstTopic + "/r3";
-            if (i >= c - 1) {
-                message.setRetained(true);
-                mqttSendTopic = firstTopic + "/retainTopic1";
-            }
-            mqttClient.publish(mqttSendTopic, message);
-            System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
-            Thread.sleep(interval);
-        }
+        String msg = "r_" + System.currentTimeMillis();
+        MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
+        message.setQos(1);
+        message.setRetained(true);
+        String mqttSendTopic = firstTopic + "/retainTopicR";
+        mqttClient.publish(mqttSendTopic, message);
+        System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
+        Thread.sleep(1000);
+        message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
+        message.setQos(1);
+        message.setRetained(true);
+        mqttSendTopic = firstTopic + "/retainTopic/wc";
+        mqttClient.publish(mqttSendTopic, message);
+        System.out.println(now() + "send: " + mqttSendTopic + ", " + msg);
+
+        message = new MqttMessage();
+        message.setQos(1);
+        message.setRetained(true);
+        mqttSendTopic = firstTopic + "/retainTopic/2";
+        mqttClient.publish(mqttSendTopic, message);
     }
 
     private static MqttConnectOptions buildMqttConnectOptions(String clientId) throws NoSuchAlgorithmException, InvalidKeyException {

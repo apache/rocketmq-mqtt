@@ -19,9 +19,6 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
 import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import io.netty.handler.codec.mqtt.MqttUnsubscribePayload;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
@@ -31,6 +28,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +37,6 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.HashSet;
 import java.util.Set;
-
-import static io.netty.handler.codec.mqtt.MqttMessageType.UNSUBACK;
-import static io.netty.handler.codec.mqtt.MqttQoS.AT_MOST_ONCE;
 
 @Component
 public class MqttUnSubscribeHandler implements MqttPacketHandler<MqttUnsubscribeMessage> {
@@ -76,19 +71,12 @@ public class MqttUnSubscribeHandler implements MqttPacketHandler<MqttUnsubscribe
                 }
                 sessionLoop.removeSubscription(ChannelInfo.getId(ctx.channel()), subscriptions);
             }
-            channel.writeAndFlush(getResponse(mqttMessage));
+            int messageId = mqttMessage.variableHeader().messageId();
+            channel.writeAndFlush(MqttMessageFactory.buildUnsubAckMessage(messageId));
         } catch (Exception e) {
             logger.error("UnSubscribe:{}", clientId, e);
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "UnSubscribeException");
         }
-    }
-
-    private MqttUnsubAckMessage getResponse(MqttUnsubscribeMessage mqttUnsubscribeMessage) {
-        MqttFixedHeader fixedHeader = new MqttFixedHeader(UNSUBACK, false, AT_MOST_ONCE, false, 0);
-        MqttMessageIdVariableHeader variableHeader = MqttMessageIdVariableHeader
-                .from(mqttUnsubscribeMessage.variableHeader().messageId());
-        MqttUnsubAckMessage mqttUnsubAckMessage = new MqttUnsubAckMessage(fixedHeader, variableHeader);
-        return mqttUnsubAckMessage;
     }
 
 }

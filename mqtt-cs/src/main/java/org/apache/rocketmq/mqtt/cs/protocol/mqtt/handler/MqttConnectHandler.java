@@ -21,19 +21,18 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttConnAckMessage;
-import io.netty.handler.codec.mqtt.MqttConnAckVariableHeader;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
+import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,12 +68,19 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage, HookResult upstreamHookResult) {
+        final MqttConnectVariableHeader variableHeader = connectMessage.variableHeader();
+        final MqttConnectPayload payload = connectMessage.payload();
+
         Channel channel = ctx.channel();
+        ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
+        ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
+        ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
+
         String remark = upstreamHookResult.getRemark();
         if (!upstreamHookResult.isSuccess()) {
             byte connAckCode = (byte) upstreamHookResult.getSubCode();
             MqttConnectReturnCode mqttConnectReturnCode = MqttConnectReturnCode.valueOf(connAckCode);
-            channel.writeAndFlush(getMqttConnAckMessage(mqttConnectReturnCode));
+            channel.writeAndFlush(MqttMessageFactory.buildConnAckMessage(mqttConnectReturnCode));
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
             return;
         }
@@ -90,7 +96,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
         }, 1, TimeUnit.SECONDS);
 
         try {
-            MqttConnAckMessage mqttConnAckMessage = getMqttConnAckMessage(MqttConnectReturnCode.CONNECTION_ACCEPTED);
+            MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.buildConnAckMessage(MqttConnectReturnCode.CONNECTION_ACCEPTED);
             future.thenAccept(aVoid -> {
                 if (!channel.isActive()) {
                     return;
@@ -99,20 +105,24 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                 channel.writeAndFlush(mqttConnAckMessage);
             });
             sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
+
+            // save will message
+            WillMessage willMessage = null;
+            if (variableHeader.isWillFlag()) {
+                if (payload.willTopic() == null || payload.willMessageInBytes() == null) {
+                    logger.error("Will message and will topic can not be empty");
+                    channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
+                    return;
+                }
+
+                willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                sessionLoop.addWillMessage(channel, willMessage);
+            }
+
         } catch (Exception e) {
-            logger.error("Connect:{}", connectMessage.payload().clientIdentifier(), e);
+            logger.error("Connect:{}", payload.clientIdentifier(), e);
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "ConnectException");
         }
-    }
-
-    private MqttConnAckMessage getMqttConnAckMessage(MqttConnectReturnCode returnCode) {
-        MqttConnAckVariableHeader mqttConnAckVariableHeader =
-                new MqttConnAckVariableHeader(returnCode, false);
-        MqttFixedHeader mqttFixedHeader =
-                new MqttFixedHeader(MqttMessageType.CONNACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
-        MqttConnAckMessage mqttConnAckMessage =
-                new MqttConnAckMessage(mqttFixedHeader, mqttConnAckVariableHeader);
-        return mqttConnAckMessage;
     }
 
 }

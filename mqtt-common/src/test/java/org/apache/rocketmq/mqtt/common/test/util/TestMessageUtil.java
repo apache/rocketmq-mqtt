@@ -25,6 +25,7 @@ import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.junit.Assert;
@@ -35,6 +36,10 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.apache.rocketmq.mqtt.common.util.MessageUtil.EMPTYSTRING;
+import static org.apache.rocketmq.mqtt.common.util.MessageUtil.dealEmptyMessage;
+import static org.apache.rocketmq.mqtt.common.util.MessageUtil.removeRetainedFlag;
 
 public class TestMessageUtil {
 
@@ -57,7 +62,7 @@ public class TestMessageUtil {
         ByteBuf payload = ALLOCATOR.buffer();
         payload.writeBytes(body);
         mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(qos), false, 0),
-                new MqttPublishVariableHeader(topicName, mqttId), payload);
+            new MqttPublishVariableHeader(topicName, mqttId), payload);
 
         message = new Message();
         message.setFirstTopic(topicName);
@@ -69,7 +74,7 @@ public class TestMessageUtil {
 
     @Test
     public void TestToMqttMessage() {
-        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId).toString());
+        Assert.assertEquals(mqttPublishMessage.toString(), MessageUtil.toMqttMessage(topicName, messageBody.getBytes(), qos, mqttId, false).toString());
     }
 
     @Test
@@ -83,5 +88,35 @@ public class TestMessageUtil {
         List<Message> decodeMsgList = MessageUtil.decode(ByteBuffer.wrap(bytes));
         Assert.assertEquals(1, decodeMsgList.size());
         Assert.assertEquals(message, decodeMsgList.get(0));
+    }
+
+    @Test
+    public void TestRemoveRetainedFlag() {
+        ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
+        byte[] body = messageBody.getBytes(StandardCharsets.UTF_8);
+        ByteBuf payload = ALLOCATOR.buffer();
+        payload.writeBytes(body);
+        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(qos), true, 0),
+            new MqttPublishVariableHeader(topicName, mqttId), payload);
+        MqttPublishMessage cleanRetainMqttPublishMessage = removeRetainedFlag(mqttPublishMessage);
+        Assert.assertEquals(true, mqttPublishMessage.fixedHeader().isRetain());
+        Assert.assertEquals(false, cleanRetainMqttPublishMessage.fixedHeader().isRetain());
+    }
+
+    @Test
+    public void TestDealEmptyMessage() {
+        messageBody = "";
+        ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
+        byte[] body = messageBody.getBytes(CharsetUtil.UTF_8);
+        ByteBuf payload = ALLOCATOR.buffer();
+        payload.writeBytes(body);
+        mqttPublishMessage = new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.valueOf(qos), true, 0),
+            new MqttPublishVariableHeader(topicName, mqttId), payload);
+
+        MqttPublishMessage newEmptyMessage = dealEmptyMessage(mqttPublishMessage);
+        int readableBytes = newEmptyMessage.payload().readableBytes();
+        byte[] newBody = new byte[readableBytes];
+        newEmptyMessage.payload().readBytes(newBody);
+        Assert.assertArrayEquals(EMPTYSTRING.getBytes(), newBody);
     }
 }

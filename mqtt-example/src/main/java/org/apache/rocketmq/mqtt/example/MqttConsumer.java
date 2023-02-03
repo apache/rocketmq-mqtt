@@ -33,9 +33,9 @@ import java.util.Date;
 
 public class MqttConsumer {
     public static void main(String[] args) throws MqttException, NoSuchAlgorithmException, InvalidKeyException {
-        String brokerUrl = System.getenv("brokerUrl");
+        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String firstTopic = System.getenv("topic");
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String firstTopic = System.getenv("firstTopic");
         String recvClientId = "recv01";
         MqttConnectOptions mqttConnectOptions = buildMqttConnectOptions(recvClientId);
         MqttClient mqttClient = new MqttClient(brokerUrl, recvClientId, memoryPersistence);
@@ -63,8 +63,7 @@ public class MqttConsumer {
                 try {
                     String payload = new String(mqttMessage.getPayload());
                     String[] ss = payload.split("_");
-                    System.out.println(now() + "receive:" + topic + "," + payload
-                            + " ---- rt:" + (System.currentTimeMillis() - Long.parseLong(ss[1])));
+                    System.out.println(now() + "receive:" + topic + "," + payload);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -90,7 +89,7 @@ public class MqttConsumer {
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);
         connOpts.setUserName(System.getenv("username"));
-        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("secretKey")).toCharArray());
+        connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).toCharArray());
         return connOpts;
     }
 

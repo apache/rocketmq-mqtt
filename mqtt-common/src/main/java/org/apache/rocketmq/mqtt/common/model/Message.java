@@ -17,7 +17,9 @@
 
 package org.apache.rocketmq.mqtt.common.model;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 
 import java.util.HashMap;
@@ -32,6 +34,8 @@ public class Message {
     private long offset;
     private long nextOffset;
     private int retry;
+    private boolean retained;
+    private boolean isEmpty;
     private byte[] payload;
     private long bornTimestamp;
     private long storeTimestamp;
@@ -51,13 +55,14 @@ public class Message {
     public static String extPropertyMqttRealTopic = "mqttRealTopic";
     public static String extPropertyQoS = "qosLevel";
     public static String extPropertyCleanSessionFlag = "cleanSessionFlag";
+
     public static String extPropertyNamespaceId = "namespace";
     public static String extPropertyClientId = "clientId";
 
 
     public Message copy() {
         Message message = new Message();
-        message.setMsgId(msgId);
+        message.setMsgId(this.msgId);
         message.setFirstTopic(this.firstTopic);
         message.setOriginTopic(this.getOriginTopic());
         message.setOffset(this.getOffset());
@@ -66,7 +71,26 @@ public class Message {
         message.setPayload(this.getPayload());
         message.setBornTimestamp(this.bornTimestamp);
         message.setStoreTimestamp(this.storeTimestamp);
+        message.setRetained(this.retained);
+        message.setEmpty(this.isEmpty());
         message.getUserProperties().putAll(this.userProperties);
+        return message;
+    }
+
+    public static Message copyFromStoreMessage(StoreMessage storeMessage) {
+        Message message = new Message();
+        message.setMsgId(storeMessage.getMsgId());
+        message.setFirstTopic(storeMessage.getFirstTopic());
+        message.setOriginTopic(storeMessage.getOriginTopic());
+        message.setOffset(storeMessage.getOffset());
+        message.setNextOffset(storeMessage.getNextOffset());
+        message.setRetry(storeMessage.getRetry());
+        message.setPayload(storeMessage.getPayload().toByteArray());
+        message.setBornTimestamp(storeMessage.getBornTimestamp());
+        message.setStoreTimestamp(storeMessage.getStoreTimestamp());
+        message.setRetained(storeMessage.getRetained());
+        message.setEmpty(storeMessage.getIsEmpty());
+        message.getUserProperties().putAll(storeMessage.getUserPropertiesMap());
         return message;
     }
 
@@ -200,7 +224,7 @@ public class Message {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        Message message = (Message)o;
+        Message message = (Message) o;
         return offset == message.offset;
     }
 
@@ -209,4 +233,39 @@ public class Message {
         return Objects.hash(offset);
     }
 
+
+    public boolean isRetained() {
+        return retained;
+    }
+
+    public void setRetained(boolean retained) {
+        this.retained = retained;
+    }
+
+    public boolean isEmpty() {
+        return isEmpty;
+    }
+
+    public void setEmpty(boolean empty) {
+        isEmpty = empty;
+    }
+
+    public byte[] getEncodeBytes() {
+
+        return StoreMessage.newBuilder()
+            .setMsgId(this.getMsgId())
+            .setFirstTopic(this.getFirstTopic())
+            .setOriginTopic(this.getOriginTopic())
+            .setOffset(this.getOffset())
+            .setNextOffset(this.getNextOffset())
+            .setRetry(this.getRetry())
+            .setRetained(this.isRetained())
+            .setIsEmpty(this.isEmpty())
+            .setPayload(ByteString.copyFrom(this.getPayload()))
+            .setBornTimestamp(this.getBornTimestamp())
+            .setStoreTimestamp(this.getStoreTimestamp())
+            .setAck(this.getAck())
+            .putAllUserProperties(this.getUserProperties())
+            .build().toByteString().toByteArray();
+    }
 }

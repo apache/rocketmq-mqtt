@@ -28,7 +28,7 @@ public class TestHostInfo {
 
     @Test
     public void test() throws UnknownHostException {
-        HostInfo HOST_INFO = HostInfo.getInstall();
-        Assert.assertEquals(InetAddress.getLocalHost().getHostAddress(), HOST_INFO.getAddress());
+        HostInfo hostINFO = HostInfo.getInstall();
+        Assert.assertEquals(InetAddress.getLocalHost().getHostAddress(), hostINFO.getAddress());
     }
 }

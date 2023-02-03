@@ -41,13 +41,20 @@ cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 
 
-**Config Key** | **Instruction**
------ | ----  
-username   |  used for auth
-secretKey   | used for auth
-NAMESRV_ADDR   | specify namesrv address
-eventNotifyRetryTopic   | notify event retry topic
-clientRetryTopic   | client retry topic
+| **Config Key**        | **Instruction**          |
+|-----------------------|--------------------------|
+| username              | used for auth            |
+| secretKey             | used for auth            |
+| NAMESRV_ADDR          | specify namesrv address  |
+| eventNotifyRetryTopic | notify event retry topic |
+| clientRetryTopic      | client retry topic       |
+
+And some configuration items in the **meta.conf** configuration file
+
+| **Config Key** | **Instruction**                                                                 |
+|----------------|---------------------------------------------------------------------------------|
+| selfAddress    | meta cur node ip:port, e.g. 192.168.0.1:8080                                    |
+| membersAddress | meta all nodes ip:port, e.g. 192.168.0.1:8080,192.168.0.2:8080,192.168.0.3:8080 |
 
 4. CreateTopic
 
@@ -71,13 +78,14 @@ sh mqadmin updateKvConfig  -s LMQ -k {topic} -v {topic/+}  -n {namesrv}
 6. Start Process
 ```shell
 cd bin
+sh meta.sh start
 sh mqtt.sh start
 ```
 ### Example
 The mqtt-example module has written basic usage example code, which can be used for reference
 
 ## Protocol Version
-The currently supported protocol version is [MQTT 3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf), but the will and retain features are not supported yet
+The currently supported protocol version is [MQTT 3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf).
 
 ## Authentication
 At present, an implementation based on the HmacSHA1 signature algorithm is provided by default, Refer to **AuthManagerSample**. Users can customize other implementations to meet the needs of businesses to flexibly verify resources and identities.

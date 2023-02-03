@@ -32,6 +32,14 @@ public interface SubscriptionPersistManager {
     CompletableFuture<Set<Subscription>> loadSubscriptions(String clientId);
 
     /**
+     * loadSubscribers
+     *
+     * @param topic
+     * @return
+     */
+    CompletableFuture<Set<String>> loadSubscribers(String topic);
+
+    /**
      * saveSubscriptions
      *
      * @param clientId
@@ -40,10 +48,26 @@ public interface SubscriptionPersistManager {
     void saveSubscriptions(String clientId, Set<Subscription> subscriptions);
 
     /**
+     * saveSubscribers
+     *
+     * @param topic
+     * @param clientIds
+     */
+    void saveSubscribers(String topic, Set<String> clientIds);
+
+    /**
      * removeSubscriptions
      *
      * @param clientId
      * @param subscriptions
      */
     void removeSubscriptions(String clientId, Set<Subscription> subscriptions);
+
+    /**
+     * removeSubscriptions
+     *
+     * @param topic
+     * @param clientIds
+     */
+    void removeSubscribers(String topic, Set<String> clientIds);
 }

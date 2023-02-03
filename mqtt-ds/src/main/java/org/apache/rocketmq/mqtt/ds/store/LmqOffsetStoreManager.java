@@ -80,7 +80,7 @@ public class LmqOffsetStoreManager implements LmqOffsetStore {
                     String brokerAddress = tmpBrokerAddressMap.get(queue.getBrokerName());
                     QueueOffset queueOffset = each.getValue();
                     UpdateConsumerOffsetRequestHeader updateHeader = new UpdateConsumerOffsetRequestHeader();
-                    updateHeader.setTopic(StringUtils.replace(queue.getQueueName(), "/","%"));
+                    updateHeader.setTopic(MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%"));
                     updateHeader.setConsumerGroup(MixAll.LMQ_PREFIX + clientId);
                     updateHeader.setQueueId((int) queue.getQueueId());
                     updateHeader.setCommitOffset(queueOffset.getOffset());
@@ -111,7 +111,7 @@ public class LmqOffsetStoreManager implements LmqOffsetStore {
                 map.put(queue, queueOffset);
                 try {
                     QueryConsumerOffsetRequestHeader queryHeader = new QueryConsumerOffsetRequestHeader();
-                    queryHeader.setTopic(StringUtils.replace(queue.getQueueName(), "/","%"));
+                    queryHeader.setTopic(MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%"));
                     queryHeader.setConsumerGroup(MixAll.LMQ_PREFIX + clientId);
                     queryHeader.setQueueId((int) queue.getQueueId());
                     long offset = defaultMQPullConsumer

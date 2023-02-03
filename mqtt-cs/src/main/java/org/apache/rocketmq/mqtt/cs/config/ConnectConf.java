@@ -30,7 +30,7 @@ import java.util.Properties;
 public class ConnectConf {
     private static final String CONF_FILE_NAME = "connect.conf";
     private File confFile;
-    private int nettySelectThreadNum = 1;
+    private int nettySelectorThreadNum = 1;
     private int nettyWorkerThreadNum = Runtime.getRuntime().availableProcessors() * 2;
     private int mqttPort = 1883;
     private int mqttTlsPort = 8883;
@@ -66,12 +66,12 @@ public class ConnectConf {
         return confFile;
     }
 
-    public int getNettySelectThreadNum() {
-        return nettySelectThreadNum;
+    public int getNettySelectorThreadNum() {
+        return nettySelectorThreadNum;
     }
 
-    public void setNettySelectThreadNum(int nettySelectThreadNum) {
-        this.nettySelectThreadNum = nettySelectThreadNum;
+    public void setNettySelectorThreadNum(int nettySelectorThreadNum) {
+        this.nettySelectorThreadNum = nettySelectorThreadNum;
     }
 
     public int getNettyWorkerThreadNum() {

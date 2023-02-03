@@ -21,8 +21,8 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.CompletableFuture;
+
 
 public abstract class AbstractUpstreamHook implements UpstreamHook {
     public static Logger logger = LoggerFactory.getLogger(AbstractUpstreamHook.class);
@@ -63,6 +63,6 @@ public abstract class AbstractUpstreamHook implements UpstreamHook {
 
     public abstract void register();
 
-    public abstract CompletableFuture<HookResult> processMqttMessage(MqttMessageUpContext context, MqttMessage message);
+    public abstract CompletableFuture<HookResult> processMqttMessage(MqttMessageUpContext context, MqttMessage message) ;
 
 }

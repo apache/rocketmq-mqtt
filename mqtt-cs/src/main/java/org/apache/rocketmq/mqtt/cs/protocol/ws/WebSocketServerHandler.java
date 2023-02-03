@@ -61,12 +61,12 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
             return;
         }
         String upgrade = req.headers().get("Upgrade");
-        if (upgrade == null || (!"websocket".equals(upgrade.toLowerCase()))) {
+        if (upgrade == null || !"websocket".equals(upgrade.toLowerCase())) {
             return;
         }
         WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory("ws://localhost:8888/mqtt",
-                "*",
-                false);
+            "*",
+            false);
         handshaker = wsFactory.newHandshaker(req);
         if (handshaker == null) {
             WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
@@ -89,11 +89,11 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         }
         if (frame instanceof BinaryWebSocketFrame) {
             throw new UnsupportedOperationException(
-                    String.format("%s frame types not supported", frame.getClass().getName()));
+                String.format("%s frame types not supported", frame.getClass().getName()));
         }
         String request = ((TextWebSocketFrame) frame).text();
         ctx.channel().write(
-                new TextWebSocketFrame(request + " , welcome netty websocket: " + new java.util.Date().toString()));
+            new TextWebSocketFrame(request + " , welcome netty websocket: " + new java.util.Date().toString()));
     }
 
     public static void sendHttpResponse(ChannelHandlerContext ctx, FullHttpRequest req, FullHttpResponse res) {

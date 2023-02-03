@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.netty.channel.Channel;
 import org.apache.commons.lang3.StringUtils;
@@ -24,10 +25,14 @@ import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
+import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
+import org.apache.rocketmq.mqtt.common.meta.IpUtil;
+import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -35,8 +40,10 @@ import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
+import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -86,11 +93,21 @@ public class SessionLoopImpl implements SessionLoop {
     @Resource
     private QueueFresh queueFresh;
 
+    @Resource
+    private WillMsgPersistManager willMsgPersistManager;
+
+    @Resource
+    private MqttMsgId mqttMsgId;
+
+    @Resource
+    private PublishProcessor publishProcessor;
+
     private ChannelManager channelManager;
     private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
     private ScheduledThreadPoolExecutor persistOffsetScheduler;
     private SubscriptionPersistManager subscriptionPersistManager;
+
 
     /**
      * channelId->session
@@ -392,6 +409,32 @@ public class SessionLoopImpl implements SessionLoop {
                 }
             }
         }
+    }
+
+    @Override
+    public void addWillMessage(Channel channel, WillMessage willMessage) {
+        Session session = getSession(ChannelInfo.getId(channel));
+        String clientId = ChannelInfo.getClientId(channel);
+        String ip = IpUtil.getLocalAddressCompatible();
+
+        if (session == null) {
+            return;
+        }
+        if (willMessage == null) {
+            return;
+        }
+
+        String message = JSON.toJSONString(willMessage);
+        String willKey = ip + Constants.CTRL_1 + clientId;
+
+        // key: ip + clientId; value: WillMessage
+        willMsgPersistManager.put(willKey, message).whenComplete((result, throwable) -> {
+            if (!result || throwable != null) {
+                logger.error("fail to put will message key {} value {}", willKey, willMessage);
+                return;
+            }
+            logger.debug("put will message key {} value {} successfully", willKey, message);
+        });
     }
 
     private String eventQueueKey(Session session, Queue queue) {

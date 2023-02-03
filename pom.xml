@@ -17,7 +17,7 @@
         <url>git@github.com:apache/rocketmq-mqtt.git</url>
         <connection>scm:git:git@github.com:apache/rocketmq-mqtt.git</connection>
         <developerConnection>scm:git:git@github.com:apache/rocketmq-mqtt.git</developerConnection>
-      <tag>rocketmq-mqtt-1.0.0</tag>
+        <tag>rocketmq-mqtt-1.0.1</tag>
   </scm>
 
     <modules>

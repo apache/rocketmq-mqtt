@@ -26,6 +26,7 @@ public class MetaConstants {
     public static final String NOT_FOUND = "NOT_FOUND";
 
     public static final String READ_INDEX_TYPE = "readIndexType";
+    public static final String ANY_READ_TYPE = "anyRead";
 
     public static final String OP_KV_GET = "get";
     public static final String OP_KV_GET_HASH = "getHash";

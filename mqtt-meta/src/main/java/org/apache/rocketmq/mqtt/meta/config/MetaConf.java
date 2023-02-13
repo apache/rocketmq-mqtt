@@ -23,11 +23,14 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import org.apache.rocketmq.common.MixAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MetaConf {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetaConf.class);
     private static final String CONF_FILE_NAME = "meta.conf";
     private File confFile;
     private String allNodeAddress;
@@ -35,19 +38,23 @@ public class MetaConf {
     private String selfAddress;
     private int raftNodePort = 8081;
     private String membersAddress;
-    private int maxRetainedTopicNum =  10000;
+    private int maxRetainedTopicNum = 10000;
     private int electionTimeoutMs = 1000;
     private int snapshotIntervalSecs = 60 * 1000;
     private String raftServiceName = System.getenv("RaftServiceName");
 
     public MetaConf() throws IOException {
-        ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
-        InputStream in = classPathResource.getInputStream();
-        Properties properties = new Properties();
-        properties.load(in);
-        in.close();
-        MixAll.properties2Object(properties, this);
-        this.confFile = new File(classPathResource.getURL().getFile());
+        try {
+            ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
+            InputStream in = classPathResource.getInputStream();
+            Properties properties = new Properties();
+            properties.load(in);
+            in.close();
+            MixAll.properties2Object(properties, this);
+            this.confFile = new File(classPathResource.getURL().getFile());
+        } catch (Exception e) {
+            LOGGER.error("", e);
+        }
     }
 
     public File getConfFile() {

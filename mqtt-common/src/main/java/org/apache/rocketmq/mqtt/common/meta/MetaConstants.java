@@ -17,12 +17,21 @@
 
 package org.apache.rocketmq.mqtt.common.meta;
 
-public class Constants {
+public class MetaConstants {
 
     public static final String CATEGORY_RETAINED_MSG = "retainedMsg";
     public static final String CATEGORY_WILL_MSG = "willMsg";
+    public static final String CATEGORY_HASH_KV = "hashKv";
 
     public static final String NOT_FOUND = "NOT_FOUND";
 
     public static final String READ_INDEX_TYPE = "readIndexType";
+
+    public static final String OP_KV_GET = "get";
+    public static final String OP_KV_GET_HASH = "getHash";
+    public static final String OP_HASH_KV_FIELD = "field";
+    public static final String OP_KV_PUT = "put";
+    public static final String OP_KV_PUT_HASH = "putHash";
+    public static final String OP_KV_DEL = "del";
+    public static final String OP_KV_DEL_HASH = "delHash";
 }

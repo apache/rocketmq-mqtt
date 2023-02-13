@@ -29,8 +29,8 @@ import javax.annotation.Resource;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.apache.rocketmq.mqtt.common.meta.Constants.CATEGORY_WILL_MSG;
-import static org.apache.rocketmq.mqtt.common.meta.Constants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_WILL_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.READ_INDEX_TYPE;
 import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.WILL_RAFT_GROUP_INDEX;
 
 

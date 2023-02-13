@@ -19,7 +19,7 @@ package org.apache.rocketmq.mqtt.meta.raft.rpc;
 
 import com.alipay.sofa.jraft.rpc.RpcContext;
 import com.alipay.sofa.jraft.rpc.RpcProcessor;
-import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
@@ -35,7 +35,7 @@ public class MqttReadRpcProcessor extends AbstractRpcProcessor implements RpcPro
 
     @Override
     public void handleRequest(RpcContext rpcCtx, ReadRequest request) {
-        if (Constants.READ_INDEX_TYPE.equals(request.getType())) {
+        if (MetaConstants.READ_INDEX_TYPE.equals(request.getType())) {
             handleReadIndex(server, request.getGroup(), rpcCtx, request);
         } else {
             handleRequest(server, request.getGroup(), rpcCtx, request);

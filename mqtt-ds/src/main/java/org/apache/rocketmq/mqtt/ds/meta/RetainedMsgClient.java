@@ -38,9 +38,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import static org.apache.rocketmq.mqtt.common.meta.Constants.CATEGORY_RETAINED_MSG;
-import static org.apache.rocketmq.mqtt.common.meta.Constants.NOT_FOUND;
-import static org.apache.rocketmq.mqtt.common.meta.Constants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_RETAINED_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.NOT_FOUND;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.READ_INDEX_TYPE;
 import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RETAIN_RAFT_GROUP_INDEX;
 
 

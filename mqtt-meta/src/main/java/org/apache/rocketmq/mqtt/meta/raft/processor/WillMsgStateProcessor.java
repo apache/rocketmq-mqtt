@@ -17,7 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
-import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
@@ -26,7 +26,7 @@ import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.rocketmq.mqtt.common.meta.Constants.CATEGORY_WILL_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_WILL_MSG;
 
 public class WillMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(WillMsgStateProcessor.class);
@@ -83,7 +83,7 @@ public class WillMsgStateProcessor extends StateProcessor {
                 return delete(sm.getRocksDBEngine(), key.getBytes());
             } else if ("compareAndPut".equals(operation)) {
                 String expectValue = log.getExtDataMap().get("expectValue");
-                if (Constants.NOT_FOUND.equals(expectValue)) {
+                if (MetaConstants.NOT_FOUND.equals(expectValue)) {
                     return compareAndPut(sm.getRocksDBEngine(), key.getBytes(), null, value);
                 }
                 return compareAndPut(sm.getRocksDBEngine(), key.getBytes(), log.getExtDataMap().get("expectValue").getBytes(), value);

@@ -22,7 +22,7 @@ import com.google.protobuf.ByteString;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
@@ -70,7 +70,7 @@ public abstract class StateProcessor {
         try {
             byte[] value = rocksDBEngine.getRdb().get(key);
             if (value == null) {
-                value = Constants.NOT_FOUND.getBytes();
+                value = MetaConstants.NOT_FOUND.getBytes();
             }
             return Response.newBuilder()
                     .setSuccess(true)

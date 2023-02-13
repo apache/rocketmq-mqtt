@@ -26,7 +26,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
-import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,7 +175,7 @@ public class RetainedMsgStateProcessor extends StateProcessor {
 
     @Override
     public String groupCategory() {
-        return Constants.CATEGORY_RETAINED_MSG;
+        return MetaConstants.CATEGORY_RETAINED_MSG;
     }
 
 }

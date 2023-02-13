@@ -33,7 +33,7 @@ import org.rocksdb.RocksDBException;
 import java.io.File;
 import java.io.IOException;
 
-import static org.apache.rocketmq.mqtt.common.meta.Constants.NOT_FOUND;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.NOT_FOUND;
 
 @RunWith(MockitoJUnitRunner.class)
 public class WillMsgStateProcessorTest {

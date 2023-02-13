@@ -47,6 +47,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.meta.config.MetaConf;
+import org.apache.rocketmq.mqtt.meta.raft.processor.HashKvStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
@@ -113,6 +114,7 @@ public class MqttRaftServer {
 
         registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedTopicNum()));  //add retained msg processor
         registerStateProcessor(new WillMsgStateProcessor(this));
+        registerStateProcessor(new HashKvStateProcessor(this));
 
         rt = RouteTable.getInstance();
         localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());

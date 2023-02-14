@@ -73,7 +73,10 @@ public class HashKvStateProcessor extends StateProcessor {
                         new String(value, StandardCharsets.UTF_8),
                         new TypeReference<Map<String, String>>() {
                         });
-                String field = request.getExtDataMap().get(OP_HASH_KV_FIELD);
+                String field = null;
+                if (request.getExtDataMap() != null) {
+                    field = request.getExtDataMap().get(OP_HASH_KV_FIELD);
+                }
                 Map<String, String> result = new HashMap<>();
                 if (StringUtils.isNotBlank(field)) {
                     result.put(field, map.get(field));
@@ -112,10 +115,7 @@ public class HashKvStateProcessor extends StateProcessor {
             } else if (OP_KV_DEL.equals(operation)) {
                 return delete(sm.getRocksDBEngine(), keyBytes);
             } else if (OP_KV_PUT_HASH.equals(operation)) {
-                Map<String, String> map = JSONObject.parseObject(
-                        new String(value, StandardCharsets.UTF_8),
-                        new TypeReference<Map<String, String>>() {
-                        });
+                Map<String, String> map = log.getExtDataMap();
                 byte[] oldValue = getRdb(sm.getRocksDBEngine(), keyBytes);
                 if (oldValue != null && oldValue.length > 1) {
                     Map<String, String> oldMap = JSONObject.parseObject(

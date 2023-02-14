@@ -20,7 +20,6 @@ package org.apache.rocketmq.mqtt.meta.raft.processor;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
-import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -31,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_HASH_KV;
@@ -63,13 +63,6 @@ public class HashKvStateProcessor extends StateProcessor {
             if (OP_KV_GET.equals(operation)) {
                 return get(sm.getRocksDBEngine(), key.getBytes(StandardCharsets.UTF_8));
             } else if (OP_KV_GET_HASH.equals(operation)) {
-                String field = request.getExtDataMap().get(OP_HASH_KV_FIELD);
-                if (StringUtils.isBlank(field)) {
-                    return Response.newBuilder()
-                            .setSuccess(false)
-                            .setErrMsg("No Found Field")
-                            .build();
-                }
                 byte[] value = getRdb(sm.getRocksDBEngine(), key.getBytes(StandardCharsets.UTF_8));
                 if (value == null) {
                     return Response.newBuilder()
@@ -80,14 +73,16 @@ public class HashKvStateProcessor extends StateProcessor {
                         new String(value, StandardCharsets.UTF_8),
                         new TypeReference<Map<String, String>>() {
                         });
-                if (null == map.get(field)) {
-                    return Response.newBuilder()
-                            .setSuccess(true)
-                            .build();
+                String field = request.getExtDataMap().get(OP_HASH_KV_FIELD);
+                Map<String, String> result = new HashMap<>();
+                if (StringUtils.isNotBlank(field)) {
+                    result.put(field, map.get(field));
+                } else {
+                    result.putAll(map);
                 }
                 return Response.newBuilder()
                         .setSuccess(true)
-                        .setData(ByteString.copyFrom(map.get(field).getBytes(StandardCharsets.UTF_8)))
+                        .putAllDataMap(result)
                         .build();
             }
         } catch (Exception e) {
@@ -132,22 +127,34 @@ public class HashKvStateProcessor extends StateProcessor {
                 }
                 return put(sm.getRocksDBEngine(), keyBytes, JSON.toJSONBytes(map));
             } else if (OP_KV_DEL_HASH.equals(operation)) {
+                String field = log.getExtDataMap().get(OP_HASH_KV_FIELD);
+                if (StringUtils.isBlank(field)) {
+                    return Response.newBuilder()
+                            .setSuccess(false)
+                            .setErrMsg("No Found Field")
+                            .build();
+                }
                 byte[] oldValue = getRdb(sm.getRocksDBEngine(), keyBytes);
                 if (oldValue == null || oldValue.length < 1) {
                     return Response.newBuilder()
                             .setSuccess(true)
                             .build();
                 }
-                Map<String, String> map = JSONObject.parseObject(
-                        new String(value, StandardCharsets.UTF_8),
-                        new TypeReference<Map<String, String>>() {
-                        });
                 Map<String, String> oldMap = JSONObject.parseObject(
                         new String(oldValue, StandardCharsets.UTF_8),
                         new TypeReference<Map<String, String>>() {
                         });
-                map.forEach((k, v) -> oldMap.remove(k, v));
-                return put(sm.getRocksDBEngine(), keyBytes, JSON.toJSONBytes(oldMap));
+                if (!oldMap.containsKey(field)) {
+                    return Response.newBuilder()
+                            .setSuccess(true)
+                            .build();
+                }
+                oldMap.remove(field);
+                if (oldMap.isEmpty()) {
+                    return delete(sm.getRocksDBEngine(), keyBytes);
+                } else {
+                    return put(sm.getRocksDBEngine(), keyBytes, JSON.toJSONBytes(oldMap));
+                }
             }
         } catch (Exception e) {
             LOGGER.error("Fail to process will WriteRequest, k {}", log.getKey(), e);

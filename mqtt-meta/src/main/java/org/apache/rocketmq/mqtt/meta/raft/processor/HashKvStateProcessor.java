@@ -20,7 +20,9 @@ package org.apache.rocketmq.mqtt.meta.raft.processor;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
@@ -61,7 +63,16 @@ public class HashKvStateProcessor extends StateProcessor {
             String operation = request.getOperation();
             String key = request.getKey();
             if (OP_KV_GET.equals(operation)) {
-                return get(sm.getRocksDBEngine(), key.getBytes(StandardCharsets.UTF_8));
+                byte[] value = getRdb(sm.getRocksDBEngine(), key.getBytes(StandardCharsets.UTF_8));
+                if (value == null) {
+                    return Response.newBuilder()
+                            .setSuccess(true)
+                            .build();
+                }
+                return Response.newBuilder()
+                        .setSuccess(true)
+                        .setData(ByteString.copyFrom(value))
+                        .build();
             } else if (OP_KV_GET_HASH.equals(operation)) {
                 byte[] value = getRdb(sm.getRocksDBEngine(), key.getBytes(StandardCharsets.UTF_8));
                 if (value == null) {

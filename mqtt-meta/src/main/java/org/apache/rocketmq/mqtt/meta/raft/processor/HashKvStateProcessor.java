@@ -22,7 +22,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import com.google.protobuf.ByteString;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;

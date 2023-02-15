@@ -115,7 +115,8 @@ public class HashKvStateProcessor extends StateProcessor {
             } else if (OP_KV_DEL.equals(operation)) {
                 return delete(sm.getRocksDBEngine(), keyBytes);
             } else if (OP_KV_PUT_HASH.equals(operation)) {
-                Map<String, String> map = log.getExtDataMap();
+                Map<String, String> map = new HashMap<>();
+                map.putAll(log.getExtDataMap());
                 byte[] oldValue = getRdb(sm.getRocksDBEngine(), keyBytes);
                 if (oldValue != null && oldValue.length > 1) {
                     Map<String, String> oldMap = JSONObject.parseObject(

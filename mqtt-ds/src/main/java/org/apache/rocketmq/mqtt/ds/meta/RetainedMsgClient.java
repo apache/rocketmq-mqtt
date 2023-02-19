@@ -26,7 +26,6 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
-import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -47,9 +46,6 @@ import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RETAIN_RAFT_GROUP_IN
 @Service
 public class RetainedMsgClient {
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgClient.class);
-
-    @Resource
-    private ServiceConf serviceConf;
 
     @Resource
     private MetaRpcClient metaRpcClient;

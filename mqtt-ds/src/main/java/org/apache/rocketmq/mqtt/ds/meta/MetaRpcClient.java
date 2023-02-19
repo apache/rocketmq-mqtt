@@ -48,10 +48,10 @@ import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RAFT_GROUP_NUM;
 public class MetaRpcClient {
     private static Logger logger = LoggerFactory.getLogger(MetaRpcClient.class);
     private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
-    protected RouteTable rt;
-    protected Configuration conf;
-    protected CliClientServiceImpl cliClientService;
-    protected String[] raftGroups;
+    private RouteTable rt;
+    private Configuration conf;
+    private CliClientServiceImpl cliClientService;
+    private String[] raftGroups;
 
     private ServiceConf serviceConf;
 

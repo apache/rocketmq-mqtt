@@ -22,6 +22,7 @@ import org.apache.rocketmq.common.MixAll;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +45,8 @@ public class ServiceConf {
 
     private String metaAddr;
 
-    public ServiceConf() throws IOException {
+    @PostConstruct
+    public void init() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
         Properties properties = new Properties();

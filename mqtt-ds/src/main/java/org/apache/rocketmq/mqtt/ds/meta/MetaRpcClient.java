@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,14 +47,17 @@ import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RAFT_GROUP_NUM;
 @Component
 public class MetaRpcClient {
     private static Logger logger = LoggerFactory.getLogger(MetaRpcClient.class);
+    private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
     protected RouteTable rt;
     protected Configuration conf;
-    private CliClientServiceImpl cliClientService;
-    private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
+    protected CliClientServiceImpl cliClientService;
     protected String[] raftGroups;
 
-    @Resource
     private ServiceConf serviceConf;
+
+    public void setServiceConf(ServiceConf serviceConf) {
+        this.serviceConf = serviceConf;
+    }
 
     @PostConstruct
     public void init() throws InterruptedException, TimeoutException {

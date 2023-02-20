@@ -22,16 +22,16 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
-import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.facade.WillMsgSender;
 import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
-import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -60,7 +60,7 @@ public class WillLoop {
     private MqttMsgId mqttMsgId;
 
     @Resource
-    private PublishProcessor publishProcessor;
+    private WillMsgSender willMsgSender;
 
     @PostConstruct
     public void init() {
@@ -205,42 +205,14 @@ public class WillLoop {
                 logger.info("master handle will {} {}", entry.getKey(), entry.getValue());
                 String willKey = entry.getKey();
                 String clientId = entry.getKey().substring((ip + Constants.CTRL_1).length());
-
                 WillMessage willMessage = JSON.parseObject(entry.getValue(), WillMessage.class);
-                int mqttId = mqttMsgId.nextId(clientId);
-                MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(),
-                        willMessage.getQos(), mqttId, willMessage.isRetain());
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        CompletableFuture<HookResult> upstreamHookResult = publishProcessor.process(new MqttMessageUpContext(), mqttMessage);
-                        upstreamHookResult.whenComplete((hookResult, tb) -> {
-                            try {
-                                if (!hookResult.isSuccess()) {
-                                    executor.submit(this);
-                                } else {
-                                    willMsgPersistManager.delete(willKey).whenComplete((resultDel, tbDel) -> {
-                                        if (!resultDel || tbDel != null) {
-                                            logger.error("fail to delete will message key:{}", willKey);
-                                            return;
-                                        }
-                                        logger.info("delete will message key {} successfully", willKey);
-                                    });
-                                }
-                            } catch (Throwable t) {
-                                logger.error("", t);
-                            }
-                        });
-                    }
-                };
-                executor.submit(runnable);
+                sendWillMessage(willKey, clientId, willMessage);
             }
         });
     }
 
     public void closeConnect(Channel channel, String clientId, String reason) {
         String ip = IpUtil.getLocalAddressCompatible();
-
         String willKey = ip + Constants.CTRL_1 + clientId;
         CompletableFuture<byte[]> willMessageFuture = willMsgPersistManager.get(willKey);
         willMessageFuture.whenComplete((willMessageByte, throwable) -> {
@@ -251,37 +223,39 @@ public class WillLoop {
 
             if (!"disconnect".equals(reason)) {
                 WillMessage willMessage = JSON.parseObject(content, WillMessage.class);
-
-                int mqttId = mqttMsgId.nextId(clientId);
-                MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(),
-                        willMessage.getQos(), mqttId, willMessage.isRetain());
-
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run() {
-                        CompletableFuture<HookResult> upstreamHookResult = publishProcessor.process(buildMqttMessageUpContext(channel), mqttMessage);
-                        upstreamHookResult.whenComplete((hookResult, tb) -> {
-                            try {
-                                if (!hookResult.isSuccess()) {
-                                    executor.submit(this);
-                                } else {
-                                    willMsgPersistManager.delete(willKey).whenComplete((resultDel, tbDel) -> {
-                                        if (!resultDel || tbDel != null) {
-                                            logger.error("fail to delete will message key:{}", willKey);
-                                            return;
-                                        }
-                                        logger.info("connection close and send will, delete will message key {} successfully", willKey);
-                                    });
-                                }
-                            } catch (Throwable t) {
-                                logger.error("", t);
-                            }
-                        });
-                    }
-                };
-                executor.submit(runnable);
+                sendWillMessage(willKey, clientId, willMessage);
             }
         });
+    }
+
+    private void sendWillMessage(String willKey, String clientId, WillMessage willMessage) {
+        int mqttId = mqttMsgId.nextId(clientId);
+        MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(),
+                willMessage.getQos(), mqttId, willMessage.isRetain());
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                CompletableFuture<StoreResult> r = willMsgSender.sendWillMsg(new MqttMessageUpContext(), mqttMessage);
+                r.whenComplete((hookResult, tb) -> {
+                    try {
+                        if (tb != null) {
+                            logger.error("sendWillMsg failed {},{}", clientId, willKey, tb);
+                        } else {
+                            willMsgPersistManager.delete(willKey).whenComplete((resultDel, tbDel) -> {
+                                if (!resultDel || tbDel != null) {
+                                    logger.error("fail to delete will message key:{}", willKey);
+                                    return;
+                                }
+                                logger.info("delete will message key {} successfully", willKey);
+                            });
+                        }
+                    } catch (Throwable t) {
+                        logger.error("", t);
+                    }
+                });
+            }
+        };
+        executor.submit(runnable);
     }
 
     public void addWillMessage(Channel channel, WillMessage willMessage) {

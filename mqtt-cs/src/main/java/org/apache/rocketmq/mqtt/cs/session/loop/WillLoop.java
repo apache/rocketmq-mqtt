@@ -284,6 +284,25 @@ public class WillLoop {
         });
     }
 
+    public void addWillMessage(Channel channel, WillMessage willMessage) {
+        String clientId = ChannelInfo.getClientId(channel);
+        String ip = IpUtil.getLocalAddressCompatible();
+        if (willMessage == null) {
+            return;
+        }
+        String message = JSON.toJSONString(willMessage);
+        String willKey = ip + Constants.CTRL_1 + clientId;
+
+        // key: ip + clientId; value: WillMessage
+        willMsgPersistManager.put(willKey, message).whenComplete((result, throwable) -> {
+            if (!result || throwable != null) {
+                logger.error("fail to put will message key {} value {}", willKey, willMessage);
+                return;
+            }
+            logger.debug("put will message key {} value {} successfully", willKey, message);
+        });
+    }
+
     private MqttMessageUpContext buildMqttMessageUpContext(Channel channel) {
         MqttMessageUpContext context = new MqttMessageUpContext();
         context.setClientId(ChannelInfo.getClientId(channel));

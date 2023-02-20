@@ -20,19 +20,14 @@ package org.apache.rocketmq.mqtt.ds.meta;
 
 
 import com.alipay.sofa.jraft.error.RemotingException;
-
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
-
-
 import java.util.concurrent.CompletableFuture;
 
 
@@ -81,11 +76,8 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         return future;
     }
 
-    public CompletableFuture<ArrayList<Message>> getMsgsFromTrie(Subscription subscription) {
-        String firstTopic = subscription.toFirstTopic();
-        String originTopicFilter = subscription.getTopicFilter();
+    public CompletableFuture<ArrayList<Message>> getMsgsFromTrie(String firstTopic,String originTopicFilter) {
         logger.debug("firstTopic={} originTopicFilter={}", firstTopic, originTopicFilter);
-
         CompletableFuture<ArrayList<Message>> future = new CompletableFuture<>();
         try {
             retainedMsgClient.GetRetainedMsgsFromTrie(firstTopic, originTopicFilter, future);

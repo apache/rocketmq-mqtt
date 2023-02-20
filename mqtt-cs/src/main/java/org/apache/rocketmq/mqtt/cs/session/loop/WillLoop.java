@@ -18,6 +18,7 @@
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
 import com.alibaba.fastjson.JSON;
+import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
@@ -26,7 +27,9 @@ import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
+import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.slf4j.Logger;
@@ -235,4 +238,58 @@ public class WillLoop {
         });
     }
 
+    public void closeConnect(Channel channel, String clientId, String reason) {
+        String ip = IpUtil.getLocalAddressCompatible();
+
+        String willKey = ip + Constants.CTRL_1 + clientId;
+        CompletableFuture<byte[]> willMessageFuture = willMsgPersistManager.get(willKey);
+        willMessageFuture.whenComplete((willMessageByte, throwable) -> {
+            String content = new String(willMessageByte);
+            if (Constants.NOT_FOUND.equals(content)) {
+                return;
+            }
+
+            if (!"disconnect".equals(reason)) {
+                WillMessage willMessage = JSON.parseObject(content, WillMessage.class);
+
+                int mqttId = mqttMsgId.nextId(clientId);
+                MqttPublishMessage mqttMessage = MessageUtil.toMqttMessage(willMessage.getWillTopic(), willMessage.getBody(),
+                        willMessage.getQos(), mqttId, willMessage.isRetain());
+
+                Runnable runnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        CompletableFuture<HookResult> upstreamHookResult = publishProcessor.process(buildMqttMessageUpContext(channel), mqttMessage);
+                        upstreamHookResult.whenComplete((hookResult, tb) -> {
+                            try {
+                                if (!hookResult.isSuccess()) {
+                                    executor.submit(this);
+                                } else {
+                                    willMsgPersistManager.delete(willKey).whenComplete((resultDel, tbDel) -> {
+                                        if (!resultDel || tbDel != null) {
+                                            logger.error("fail to delete will message key:{}", willKey);
+                                            return;
+                                        }
+                                        logger.info("connection close and send will, delete will message key {} successfully", willKey);
+                                    });
+                                }
+                            } catch (Throwable t) {
+                                logger.error("", t);
+                            }
+                        });
+                    }
+                };
+                executor.submit(runnable);
+            }
+        });
+    }
+
+    private MqttMessageUpContext buildMqttMessageUpContext(Channel channel) {
+        MqttMessageUpContext context = new MqttMessageUpContext();
+        context.setClientId(ChannelInfo.getClientId(channel));
+        context.setChannelId(ChannelInfo.getId(channel));
+        context.setNode(HostInfo.getInstall().getAddress());
+        context.setNamespace(ChannelInfo.getNamespace(channel));
+        return context;
+    }
 }

@@ -111,7 +111,9 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
 
 
     @Override
-    public CompletableFuture<StoreResult> sendWillMsg(MqttMessageUpContext ctx, MqttPublishMessage message) {
+    public CompletableFuture<StoreResult> sendWillMsg(String clientId, MqttPublishMessage message) {
+        MqttMessageUpContext ctx = new MqttMessageUpContext();
+        ctx.setClientId(clientId);
         return put(ctx, message);
     }
 }

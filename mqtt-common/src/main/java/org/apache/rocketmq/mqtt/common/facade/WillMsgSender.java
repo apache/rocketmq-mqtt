@@ -18,11 +18,10 @@
 package org.apache.rocketmq.mqtt.common.facade;
 
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
-import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 
 import java.util.concurrent.CompletableFuture;
 
 public interface WillMsgSender {
-    CompletableFuture<StoreResult> sendWillMsg(MqttMessageUpContext ctx, MqttPublishMessage message);
+    CompletableFuture<StoreResult> sendWillMsg(String clientId, MqttPublishMessage message);
 }

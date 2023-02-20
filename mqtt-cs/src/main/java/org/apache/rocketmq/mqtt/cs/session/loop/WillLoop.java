@@ -25,10 +25,8 @@ import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.WillMsgSender;
 import org.apache.rocketmq.mqtt.common.meta.IpUtil;
 import org.apache.rocketmq.mqtt.common.model.Constants;
-import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
-import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
@@ -235,7 +233,7 @@ public class WillLoop {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                CompletableFuture<StoreResult> r = willMsgSender.sendWillMsg(new MqttMessageUpContext(), mqttMessage);
+                CompletableFuture<StoreResult> r = willMsgSender.sendWillMsg(clientId, mqttMessage);
                 r.whenComplete((hookResult, tb) -> {
                     try {
                         if (tb != null) {
@@ -277,12 +275,4 @@ public class WillLoop {
         });
     }
 
-    private MqttMessageUpContext buildMqttMessageUpContext(Channel channel) {
-        MqttMessageUpContext context = new MqttMessageUpContext();
-        context.setClientId(ChannelInfo.getClientId(channel));
-        context.setChannelId(ChannelInfo.getId(channel));
-        context.setNode(HostInfo.getInstall().getAddress());
-        context.setNamespace(ChannelInfo.getNamespace(channel));
-        return context;
-    }
 }

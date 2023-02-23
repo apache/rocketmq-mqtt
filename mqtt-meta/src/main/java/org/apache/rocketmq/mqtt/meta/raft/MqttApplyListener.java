@@ -18,12 +18,15 @@
 package org.apache.rocketmq.mqtt.meta.raft;
 
 import com.google.protobuf.Message;
+import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 
 public interface MqttApplyListener {
 
     /**
-     *  never to block
+     * never to block
+     *
      * @param message
+     * @param rocksDBEngine
      */
-    void onApply(Message message);
+    void onApply(Message message, RocksDBEngine rocksDBEngine);
 }

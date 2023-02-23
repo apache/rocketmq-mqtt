@@ -87,7 +87,7 @@ public class MqttStateMachine extends StateMachineAdapter {
                     }
                     MqttApplyListener applyListener = server.getMqttApplyListener();
                     if (applyListener != null) {
-                        applyListener.onApply(message);
+                        applyListener.onApply(message, rocksDBEngine);
                     }
                 } catch (Throwable e) {
                     index++;

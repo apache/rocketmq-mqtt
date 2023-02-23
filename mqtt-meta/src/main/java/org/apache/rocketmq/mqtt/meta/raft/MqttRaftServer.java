@@ -97,6 +97,15 @@ public class MqttRaftServer {
     private RouteTable rt;
     private HostInfo hostInfo = HostInfo.getInstall();
 
+    private MqttApplyListener mqttApplyListener;
+
+    public MqttApplyListener getMqttApplyListener() {
+        return mqttApplyListener;
+    }
+
+    public void setMqttApplyListener(MqttApplyListener mqttApplyListener) {
+        this.mqttApplyListener = mqttApplyListener;
+    }
 
     @PostConstruct
     void init() throws IOException, RocksDBException {

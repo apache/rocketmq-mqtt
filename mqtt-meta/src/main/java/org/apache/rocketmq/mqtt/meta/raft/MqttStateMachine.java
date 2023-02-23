@@ -85,6 +85,10 @@ public class MqttStateMachine extends StateMachineAdapter {
                             closure.setResponse(response);
                         }
                     }
+                    MqttApplyListener applyListener = server.getMqttApplyListener();
+                    if (applyListener != null) {
+                        applyListener.onApply(message);
+                    }
                 } catch (Throwable e) {
                     index++;
                     status.setError(RaftError.UNKNOWN, e.toString());

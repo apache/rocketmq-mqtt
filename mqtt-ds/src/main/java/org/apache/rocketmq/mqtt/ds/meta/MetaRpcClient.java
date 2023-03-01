@@ -68,8 +68,7 @@ public class MetaRpcClient {
         for (String groupId : raftGroups) {
             rt.updateConfiguration(groupId, conf);
         }
-        refreshLeader();
-        raftClientExecutor.scheduleAtFixedRate(() -> refreshLeader(), 3, 3, TimeUnit.SECONDS);
+        raftClientExecutor.scheduleAtFixedRate(() -> refreshLeader(), 1, 3, TimeUnit.SECONDS);
     }
 
     public void initRpcServer() {

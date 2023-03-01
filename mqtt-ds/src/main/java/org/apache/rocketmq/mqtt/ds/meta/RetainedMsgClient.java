@@ -21,11 +21,14 @@ import com.alipay.sofa.jraft.error.RemotingException;
 import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,7 +146,7 @@ public class RetainedMsgClient {
                         try {
                             Message message = Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray()));
                             if (System.currentTimeMillis() - message.getBornTimestamp() > serviceConf.getRetainMsgExpire()) {
-                                message.setPayload(null);
+                                message.setPayload(Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8).array());
                                 message.setEmpty(true);
                                 try {
                                     _setRetainedMsg(topic, message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());
@@ -204,7 +207,7 @@ public class RetainedMsgClient {
                     try {
                         message = Message.copyFromStoreMessage(StoreMessage.parseFrom(rsp.getData().toByteArray()));
                         if (System.currentTimeMillis() - message.getBornTimestamp() > serviceConf.getRetainMsgExpire()) {
-                            message.setPayload(null);
+                            message.setPayload(Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8).array());
                             message.setEmpty(true);
                             try {
                                 _setRetainedMsg(topic, message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());

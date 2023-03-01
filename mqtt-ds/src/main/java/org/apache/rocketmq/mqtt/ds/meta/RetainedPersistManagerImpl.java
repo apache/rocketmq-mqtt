@@ -41,6 +41,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
     @Resource
     private RetainedMsgClient retainedMsgClient;
 
+
     public void init() {
     }
 
@@ -76,7 +77,7 @@ public class RetainedPersistManagerImpl implements RetainedPersistManager {
         return future;
     }
 
-    public CompletableFuture<ArrayList<Message>> getMsgsFromTrie(String firstTopic,String originTopicFilter) {
+    public CompletableFuture<ArrayList<Message>> getMsgsFromTrie(String firstTopic, String originTopicFilter) {
         logger.debug("firstTopic={} originTopicFilter={}", firstTopic, originTopicFilter);
         CompletableFuture<ArrayList<Message>> future = new CompletableFuture<>();
         try {

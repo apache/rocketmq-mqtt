@@ -27,6 +27,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_WILL_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_END_KEY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_GET;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_START_KEY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_COMPARE_AND_PUT;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_DELETE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_EXPECT_VALUE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_PUT;
 
 public class WillMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(WillMsgStateProcessor.class);
@@ -46,11 +54,11 @@ public class WillMsgStateProcessor extends StateProcessor {
             }
             String operation = request.getOperation();
             String key = request.getKey();
-            if ("get".equals(operation)) {
+            if (WILL_REQ_READ_GET.equals(operation)) {
                 return get(sm.getRocksDBEngine(), key.getBytes());
-            } else if ("scan".equals(operation)) {
-                String startKey = request.getExtDataMap().get("startKey");
-                String endKey = request.getExtDataMap().get("endKey");
+            } else if (WILL_REQ_READ_SCAN.equals(operation)) {
+                String startKey = request.getExtDataMap().get(WILL_REQ_READ_START_KEY);
+                String endKey = request.getExtDataMap().get(WILL_REQ_READ_END_KEY);
                 return scan(sm.getRocksDBEngine(), startKey.getBytes(), endKey.getBytes());
             }
         } catch (Exception e) {
@@ -77,12 +85,12 @@ public class WillMsgStateProcessor extends StateProcessor {
             String key = log.getKey();
             byte[] value = log.getData().toByteArray();
 
-            if ("put".equals(operation)) {
+            if (WILL_REQ_WRITE_PUT.equals(operation)) {
                 return put(sm.getRocksDBEngine(), key.getBytes(), value);
-            } else if ("delete".equals(operation)) {
+            } else if (WILL_REQ_WRITE_DELETE.equals(operation)) {
                 return delete(sm.getRocksDBEngine(), key.getBytes());
-            } else if ("compareAndPut".equals(operation)) {
-                String expectValue = log.getExtDataMap().get("expectValue");
+            } else if (WILL_REQ_WRITE_COMPARE_AND_PUT.equals(operation)) {
+                String expectValue = log.getExtDataMap().get(WILL_REQ_WRITE_EXPECT_VALUE);
                 if (MetaConstants.NOT_FOUND.equals(expectValue)) {
                     return compareAndPut(sm.getRocksDBEngine(), key.getBytes(), null, value);
                 }

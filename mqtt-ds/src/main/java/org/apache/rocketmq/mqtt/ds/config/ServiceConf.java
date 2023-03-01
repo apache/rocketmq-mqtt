@@ -44,6 +44,7 @@ public class ServiceConf {
     private String secretKey;
 
     private String metaAddr;
+    private long retainMsgExpire = 3 * 24 * 60 * 60 * 1000L;
 
     @PostConstruct
     public void init() throws IOException {
@@ -150,4 +151,11 @@ public class ServiceConf {
         this.secretKey = secretKey;
     }
 
+    public long getRetainMsgExpire() {
+        return retainMsgExpire;
+    }
+
+    public void setRetainMsgExpire(long retainMsgExpire) {
+        this.retainMsgExpire = retainMsgExpire;
+    }
 }

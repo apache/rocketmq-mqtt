@@ -31,6 +31,14 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_WILL_MSG;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_END_KEY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_GET;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_START_KEY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_COMPARE_AND_PUT;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_DELETE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_EXPECT_VALUE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_PUT;
 import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.WILL_RAFT_GROUP_INDEX;
 
 
@@ -48,7 +56,7 @@ public class WillMsgClient {
                 setGroup(groupId).
                 setKey(key).
                 setData(ByteString.copyFrom(value.getBytes())).
-                setOperation("put").
+                setOperation(WILL_REQ_WRITE_PUT).
                 setCategory(CATEGORY_WILL_MSG).
                 build();
 
@@ -74,7 +82,7 @@ public class WillMsgClient {
         final WriteRequest request = WriteRequest.newBuilder().
                 setGroup(groupId).
                 setKey(key).
-                setOperation("delete").
+                setOperation(WILL_REQ_WRITE_DELETE).
                 setCategory(CATEGORY_WILL_MSG).
                 build();
 
@@ -100,7 +108,7 @@ public class WillMsgClient {
         final ReadRequest request = ReadRequest.newBuilder().
                 setGroup(groupId).
                 setKey(key).
-                setOperation("get").
+                setOperation(WILL_REQ_READ_GET).
                 setType(READ_INDEX_TYPE).
                 setCategory(CATEGORY_WILL_MSG).
                 build();
@@ -127,8 +135,8 @@ public class WillMsgClient {
                 setGroup(groupId).
                 setKey(key).
                 setData(ByteString.copyFrom(updateValue.getBytes())).
-                setOperation("compareAndPut").
-                putExtData("expectValue", expectValue).
+                setOperation(WILL_REQ_WRITE_COMPARE_AND_PUT).
+                putExtData(WILL_REQ_WRITE_EXPECT_VALUE, expectValue).
                 setCategory(CATEGORY_WILL_MSG).
                 build();
 
@@ -153,9 +161,9 @@ public class WillMsgClient {
         String groupId = whichGroup();
         final ReadRequest request = ReadRequest.newBuilder().
                 setGroup(groupId).
-                setOperation("scan").
-                putExtData("startKey", startKey).
-                putExtData("endKey", endKey).
+                setOperation(WILL_REQ_READ_SCAN).
+                putExtData(WILL_REQ_READ_START_KEY, startKey).
+                putExtData(WILL_REQ_READ_END_KEY, endKey).
                 setType(READ_INDEX_TYPE).
                 setCategory(CATEGORY_WILL_MSG).
                 build();

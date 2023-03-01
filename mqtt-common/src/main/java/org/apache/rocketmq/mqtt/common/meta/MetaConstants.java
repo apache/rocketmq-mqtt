@@ -35,4 +35,27 @@ public class MetaConstants {
     public static final String OP_KV_PUT_HASH = "putHash";
     public static final String OP_KV_DEL = "del";
     public static final String OP_KV_DEL_HASH = "delHash";
+
+    public static final String RETAIN_REQ_READ_PARAM_TOPIC = "topic";
+    public static final String RETAIN_REQ_READ_PARAM_FIRST_TOPIC = "firstTopic";
+    public static final String RETAIN_REQ_READ_PARAM_OPERATION_TRIE = "trie";
+    public static final String RETAIN_REQ_READ_PARAM_OPERATION_TOPIC = "topic";
+
+    public static final String RETAIN_REQ_WRITE_PARAM_FIRST_TOPIC = "firstTopic";
+    public static final String RETAIN_REQ_WRITE_PARAM_TOPIC = "topic";
+    public static final String RETAIN_REQ_WRITE_PARAM_IS_EMPTY = "isEmpty";
+    public static final String RETAIN_REQ_WRITE_PARAM_EXPIRE = "expire";
+
+    public static final String WILL_REQ_READ_GET = "get";
+    public static final String WILL_REQ_READ_SCAN = "scan";
+    public static final String WILL_REQ_READ_START_KEY = "startKey";
+    public static final String WILL_REQ_READ_END_KEY = "endKey";
+
+    public static final String WILL_REQ_WRITE_PUT = "put";
+    public static final String WILL_REQ_WRITE_DELETE = "delete";
+
+    public static final String WILL_REQ_WRITE_COMPARE_AND_PUT = "compareAndPut";
+    public static final String WILL_REQ_WRITE_EXPECT_VALUE = "expectValue";
+
+
 }

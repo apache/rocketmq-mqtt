@@ -107,6 +107,10 @@ public class MqttRaftServer {
         this.mqttApplyListener = mqttApplyListener;
     }
 
+    public MetaConf getMetaConf() {
+        return metaConf;
+    }
+
     @PostConstruct
     void init() throws IOException, RocksDBException {
         raftExecutor = new ThreadPoolExecutor(
@@ -124,7 +128,7 @@ public class MqttRaftServer {
                 new LinkedBlockingQueue<>(10000),
                 new ThreadFactoryImpl("requestExecutor_"));
 
-        registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedTopicNum()));  //add retained msg processor
+        registerStateProcessor(new RetainedMsgStateProcessor(this));  //add retained msg processor
         registerStateProcessor(new WillMsgStateProcessor(this));
         registerStateProcessor(new HashKvStateProcessor(this));
 

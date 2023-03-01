@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,11 +54,8 @@ public class MetaRpcClient {
     private CliClientServiceImpl cliClientService;
     private String[] raftGroups;
 
+    @Resource
     private ServiceConf serviceConf;
-
-    public void setServiceConf(ServiceConf serviceConf) {
-        this.serviceConf = serviceConf;
-    }
 
     @PostConstruct
     public void init() throws InterruptedException, TimeoutException {

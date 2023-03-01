@@ -29,6 +29,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
+import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,7 +150,7 @@ public class RetainedMsgClient {
                                 message.setPayload(Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8).array());
                                 message.setEmpty(true);
                                 try {
-                                    _setRetainedMsg(topic, message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());
+                                    _setRetainedMsg(TopicUtils.normalizeTopic(message.getOriginTopic()), message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());
                                 } catch (Exception e) {
                                     logger.error("", e);
                                 }

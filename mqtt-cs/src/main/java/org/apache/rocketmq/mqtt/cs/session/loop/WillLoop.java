@@ -81,8 +81,8 @@ public class WillLoop {
                 return;
             }
             String ip = IpUtil.getLocalAddressCompatible();
-            String csKey = Constants.CS_ALIVE + Constants.CTRL_1 + ip;
-            String masterKey = Constants.CS_MASTER;
+            String csKey = wrapAliveCsKeyPrefix() + Constants.CTRL_1 + ip;
+            String masterKey = wrapMasterKey();
             long currentTime = System.currentTimeMillis();
 
             willMsgPersistManager.put(csKey, String.valueOf(currentTime)).whenComplete((result, throwable) -> {
@@ -108,6 +108,14 @@ public class WillLoop {
         }
     }
 
+    protected String wrapMasterKey() {
+        return Constants.CS_MASTER;
+    }
+
+    protected String wrapAliveCsKeyPrefix() {
+        return Constants.CS_ALIVE;
+    }
+
     private boolean masterHasDown(String masterValue) {
         String[] ipTime = masterValue.split(Constants.COLON);
         if (ipTime.length < 2) {
@@ -129,7 +137,7 @@ public class WillLoop {
                 return;
             }
 
-            willMsgPersistManager.get(Constants.CS_MASTER).whenComplete((result, throwable) -> {
+            willMsgPersistManager.get(wrapMasterKey()).whenComplete((result, throwable) -> {
                 if (result == null || throwable != null) {
                     logger.error("fail to get CS_MASTER", throwable);
                     return;
@@ -147,15 +155,15 @@ public class WillLoop {
                 }
                 // master keep alive
                 long currentTime = System.currentTimeMillis();
-                willMsgPersistManager.compareAndPut(Constants.CS_MASTER, content, ip + Constants.COLON + currentTime).whenComplete((rs, tb) -> {
+                willMsgPersistManager.compareAndPut(wrapMasterKey(), content, ip + Constants.COLON + currentTime).whenComplete((rs, tb) -> {
                     if (!rs || tb != null) {
                         logger.error("{} fail to update master", ip, tb);
                     }
                 });
 
                 // master to check all cs state
-                String startCSKey = Constants.CS_ALIVE + Constants.CTRL_0;
-                String endCSKey = Constants.CS_ALIVE + Constants.CTRL_2;
+                String startCSKey = wrapAliveCsKeyPrefix() + Constants.CTRL_0;
+                String endCSKey = wrapAliveCsKeyPrefix() + Constants.CTRL_2;
                 willMsgPersistManager.scan(startCSKey, endCSKey).whenComplete((rs, tb) -> {
                     if (rs == null || tb != null) {
                         logger.error("{} master fail to scan cs", ip, tb);
@@ -170,10 +178,10 @@ public class WillLoop {
                     for (Map.Entry<String, String> entry : rs.entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue();
-                        logger.info("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
+                        logger.debug("master:{} scan cs:{}, heart:{} {}", ip, key, value, new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Long.parseLong(value)));
                         if (System.currentTimeMillis() - Long.parseLong(value) > 10 * checkAliveIntervalMillis) {
                             // the cs has down
-                            String csIp = key.substring((Constants.CS_ALIVE + Constants.CTRL_1).length());
+                            String csIp = key.substring((wrapAliveCsKeyPrefix() + Constants.CTRL_1).length());
                             handleShutDownCS(csIp);
 
                             willMsgPersistManager.delete(key).whenComplete((resultDel, tbDel) -> {

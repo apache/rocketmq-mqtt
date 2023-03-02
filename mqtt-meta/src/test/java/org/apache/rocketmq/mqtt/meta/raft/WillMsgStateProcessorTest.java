@@ -128,7 +128,7 @@ public class WillMsgStateProcessorTest {
         Response response1 = willMsgStateProcessor.put(rocksDBEngine, key1.getBytes(), value1.getBytes());
         Assert.assertTrue(response1.getSuccess());
 
-        Response scanResponse = willMsgStateProcessor.scan(rocksDBEngine, ("k1" + CTRL_0).getBytes(), ("k1" + CTRL_2).getBytes());
+        Response scanResponse = willMsgStateProcessor.scan(rocksDBEngine, ("k1" + CTRL_0).getBytes(), ("k1" + CTRL_2).getBytes(), 100);
         Assert.assertEquals(value, scanResponse.getDataMapMap().get(key));
         Assert.assertEquals(value1, scanResponse.getDataMapMap().get(key1));
     }

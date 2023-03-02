@@ -155,7 +155,7 @@ public class MqttRaftServer {
             FileUtils.forceMkdir(new File(rdbPath));
             RocksDBEngine rocksDBEngine = new RocksDBEngine(rdbPath);
             rocksDBEngine.init();
-            MqttStateMachine sm = new MqttStateMachine(this);
+            MqttStateMachine sm = new MqttStateMachine(this, group);
             sm.setRocksDBEngine(rocksDBEngine);
             createRaftNode(group, sm);
         }

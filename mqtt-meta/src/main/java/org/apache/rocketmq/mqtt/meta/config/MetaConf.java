@@ -43,6 +43,8 @@ public class MetaConf {
     private int snapshotIntervalSecs = 60 * 1000;
     private String raftServiceName = System.getenv("RaftServiceName");
 
+    private int scanNum = 10000;
+
     public MetaConf() throws IOException {
         try {
             ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -131,5 +133,13 @@ public class MetaConf {
 
     public void setRaftNodePort(int raftNodePort) {
         this.raftNodePort = raftNodePort;
+    }
+
+    public int getScanNum() {
+        return scanNum;
+    }
+
+    public void setScanNum(int scanNum) {
+        this.scanNum = scanNum;
     }
 }

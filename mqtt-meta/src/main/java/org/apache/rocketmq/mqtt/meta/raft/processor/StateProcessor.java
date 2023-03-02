@@ -153,7 +153,7 @@ public abstract class StateProcessor {
         }
     }
 
-    public Response scan(RocksDBEngine rocksDBEngine, byte[] startKey, byte[] endKey) throws Exception {
+    public Response scan(RocksDBEngine rocksDBEngine, byte[] startKey, byte[] endKey, long scanNum) throws Exception {
         Map<String, String> result = new HashMap<>();
         final Lock readLock = rocksDBEngine.getReadWriteLock().readLock();
         readLock.lock();
@@ -170,6 +170,9 @@ public abstract class StateProcessor {
                     break;
                 }
                 result.put(new String(key), new String(it.value()));
+                if (result.size() >= scanNum) {
+                    break;
+                }
                 it.next();
             }
             return Response.newBuilder()

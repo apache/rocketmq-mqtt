@@ -29,6 +29,7 @@ import com.google.protobuf.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.slf4j.Logger;
@@ -43,68 +44,58 @@ public class MqttStateMachine extends StateMachineAdapter {
     protected Node node;
     protected RocksDBEngine rocksDBEngine;
     protected final MqttRaftServer server;
+    private String group;
 
-    public MqttStateMachine(MqttRaftServer server) {
+    public MqttStateMachine(MqttRaftServer server, String group) {
         this.server = server;
+        this.group = group;
     }
 
     @Override
     public void onApply(Iterator iterator) {
-        int index = 0;
-        int applied = 0;
         Message message;
         MqttClosure closure = null;
-        try {
-            while (iterator.hasNext()) {
-                Status status = Status.OK();
-                try {
-                    if (iterator.done() != null) {
-                        closure = (MqttClosure) iterator.done();
-                        message = closure.getMessage();
-                    } else {
-                        final ByteBuffer data = iterator.getData();
-                        message = parseMessage(data.array());
+        while (iterator.hasNext()) {
+            long start = System.currentTimeMillis();
+            Status status = Status.OK();
+            try {
+                if (iterator.done() != null) {
+                    closure = (MqttClosure) iterator.done();
+                    message = closure.getMessage();
+                } else {
+                    final ByteBuffer data = iterator.getData();
+                    message = parseMessage(data.array());
+                }
+                if (message instanceof WriteRequest) {
+                    WriteRequest writeRequest = (WriteRequest) message;
+                    StateProcessor processor = server.getProcessor(writeRequest.getCategory());
+                    Response response = processor.onWriteRequest((WriteRequest) message);
+                    if (Objects.nonNull(closure)) {
+                        closure.setResponse(response);
                     }
-
-                    LOGGER.debug("get message:{} and apply to state machine", message);
-
-                    if (message instanceof WriteRequest) {
-                        WriteRequest writeRequest = (WriteRequest) message;
-                        StateProcessor processor = server.getProcessor(writeRequest.getCategory());
-                        Response response = processor.onWriteRequest((WriteRequest) message);
-                        if (Objects.nonNull(closure)) {
-                            closure.setResponse(response);
-                        }
-                    }
-
-                    if (message instanceof ReadRequest) {
-                        ReadRequest request = (ReadRequest) message;
-                        StateProcessor processor = server.getProcessor(request.getCategory());
-                        Response response = processor.onReadRequest((ReadRequest) message);
-                        if (Objects.nonNull(closure)) {
-                            closure.setResponse(response);
-                        }
-                    }
-                    MqttApplyListener applyListener = server.getMqttApplyListener();
-                    if (applyListener != null) {
-                        applyListener.onApply(message, rocksDBEngine);
-                    }
-                } catch (Throwable e) {
-                    index++;
-                    status.setError(RaftError.UNKNOWN, e.toString());
-                    Optional.ofNullable(closure).ifPresent(closure1 -> closure1.setThrowable(e));
-                    throw e;
-                } finally {
-                    Optional.ofNullable(closure).ifPresent(closure1 -> closure1.run(status));
                 }
 
-                applied++;
-                index++;
-                iterator.next();
+                if (message instanceof ReadRequest) {
+                    ReadRequest request = (ReadRequest) message;
+                    StateProcessor processor = server.getProcessor(request.getCategory());
+                    Response response = processor.onReadRequest((ReadRequest) message);
+                    if (Objects.nonNull(closure)) {
+                        closure.setResponse(response);
+                    }
+                }
+                MqttApplyListener applyListener = server.getMqttApplyListener();
+                if (applyListener != null) {
+                    applyListener.onApply(message, rocksDBEngine);
+                }
+            } catch (Throwable e) {
+                LOGGER.error("stateMachine meet critical error", e);
+                status.setError(RaftError.UNKNOWN, e.toString());
+                Optional.ofNullable(closure).ifPresent(closure1 -> closure1.setThrowable(e));
+            } finally {
+                Optional.ofNullable(closure).ifPresent(closure1 -> closure1.run(status));
+                StatUtil.addInvoke(StatUtil.buildKey(group, "apply"), System.currentTimeMillis() - start);
             }
-        } catch (Throwable t) {
-            LOGGER.error("stateMachine meet critical error", t);
-            //iterator.setErrorAndRollback(index - applied, new Status(RaftError.ESTATEMACHINE, "StateMachine meet critical error: %s.", t.toString()));
+            iterator.next();
         }
     }
 

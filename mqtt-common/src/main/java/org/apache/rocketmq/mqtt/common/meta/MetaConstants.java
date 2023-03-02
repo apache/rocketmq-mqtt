@@ -48,6 +48,7 @@ public class MetaConstants {
 
     public static final String WILL_REQ_READ_GET = "get";
     public static final String WILL_REQ_READ_SCAN = "scan";
+    public static final String WILL_REQ_READ_SCAN_NUM = "scanNum";
     public static final String WILL_REQ_READ_START_KEY = "startKey";
     public static final String WILL_REQ_READ_END_KEY = "endKey";
 

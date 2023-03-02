@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.meta.raft.processor;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
@@ -30,6 +31,7 @@ import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_WILL_M
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_END_KEY;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_GET;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN_NUM;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_START_KEY;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_COMPARE_AND_PUT;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_DELETE;
@@ -59,7 +61,12 @@ public class WillMsgStateProcessor extends StateProcessor {
             } else if (WILL_REQ_READ_SCAN.equals(operation)) {
                 String startKey = request.getExtDataMap().get(WILL_REQ_READ_START_KEY);
                 String endKey = request.getExtDataMap().get(WILL_REQ_READ_END_KEY);
-                return scan(sm.getRocksDBEngine(), startKey.getBytes(), endKey.getBytes());
+                String scanNumStr = request.getExtDataMap().get(WILL_REQ_READ_SCAN_NUM);
+                long scanNum = server.getMetaConf().getScanNum();
+                if (StringUtils.isNotBlank(scanNumStr)) {
+                    scanNum = Long.parseLong(scanNumStr);
+                }
+                return scan(sm.getRocksDBEngine(), startKey.getBytes(), endKey.getBytes(), scanNum);
             }
         } catch (Exception e) {
             if (request.getKey() == null) {

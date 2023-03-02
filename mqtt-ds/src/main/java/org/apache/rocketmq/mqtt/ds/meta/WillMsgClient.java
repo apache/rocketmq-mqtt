@@ -34,6 +34,7 @@ import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.READ_INDEX_TYPE
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_END_KEY;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_GET;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_SCAN_NUM;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_READ_START_KEY;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_COMPARE_AND_PUT;
 import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.WILL_REQ_WRITE_DELETE;
@@ -157,13 +158,14 @@ public class WillMsgClient {
         }, 5000);
     }
 
-    public void scan(final String startKey, final String endKey, CompletableFuture<Map<String, String>> future) throws Exception {
+    public void scan(final String startKey, final String endKey, int scanNum, CompletableFuture<Map<String, String>> future) throws Exception {
         String groupId = whichGroup();
         final ReadRequest request = ReadRequest.newBuilder().
                 setGroup(groupId).
                 setOperation(WILL_REQ_READ_SCAN).
                 putExtData(WILL_REQ_READ_START_KEY, startKey).
                 putExtData(WILL_REQ_READ_END_KEY, endKey).
+                putExtData(WILL_REQ_READ_SCAN_NUM, String.valueOf(scanNum)).
                 setType(READ_INDEX_TYPE).
                 setCategory(CATEGORY_WILL_MSG).
                 build();

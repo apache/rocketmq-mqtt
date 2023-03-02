@@ -88,10 +88,10 @@ public class WillMsgPersistManagerImpl implements WillMsgPersistManager {
     }
 
     @Override
-    public CompletableFuture<Map<String, String>> scan(String startKey, String endKey) {
+    public CompletableFuture<Map<String, String>> scan(String startKey, String endKey, int scanNum) {
         CompletableFuture<Map<String, String>> future = new CompletableFuture<>();
         try {
-            willMsgClient.scan(startKey, endKey, future);
+            willMsgClient.scan(startKey, endKey, scanNum, future);
             return future;
         } catch (Exception e) {
             future.completeExceptionally(e);

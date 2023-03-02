@@ -29,6 +29,7 @@ import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.config.WillLoopConf;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class WillLoop {
@@ -51,6 +53,7 @@ public class WillLoop {
     private long checkAliveIntervalMillis = 5 * 1000;
     private ThreadPoolExecutor executor;
     private boolean enableLoop = true;
+    private WillLoopConf willLoopConf;
 
     @Resource
     private WillMsgPersistManager willMsgPersistManager;
@@ -60,6 +63,10 @@ public class WillLoop {
 
     @Resource
     private WillMsgSender willMsgSender;
+
+    public void setWillLoopConf(WillLoopConf willLoopConf) {
+        this.willLoopConf = willLoopConf;
+    }
 
     @PostConstruct
     public void init() {
@@ -164,7 +171,7 @@ public class WillLoop {
                 // master to check all cs state
                 String startCSKey = wrapAliveCsKeyPrefix() + Constants.CTRL_0;
                 String endCSKey = wrapAliveCsKeyPrefix() + Constants.CTRL_2;
-                willMsgPersistManager.scan(startCSKey, endCSKey).whenComplete((rs, tb) -> {
+                willMsgPersistManager.scan(startCSKey, endCSKey, willLoopConf.getMaxScanNodeNum()).whenComplete((rs, tb) -> {
                     if (rs == null || tb != null) {
                         logger.error("{} master fail to scan cs", ip, tb);
                         return;
@@ -201,27 +208,35 @@ public class WillLoop {
     }
 
     private void handleShutDownCS(String ip) {
+        AtomicInteger loopNum = new AtomicInteger(
+                Math.max(1, willLoopConf.getMaxScanClientNum()) / willLoopConf.getScanNumOnce() + 1);
+        _handleShutDownCS(ip, loopNum);
+    }
+
+    private void _handleShutDownCS(String ip, AtomicInteger loopNum) {
+        if (loopNum.getAndDecrement() <= 0) {
+            return;
+        }
         String startClientKey = ip + Constants.CTRL_0;
         String endClientKey = ip + Constants.CTRL_2;
-        willMsgPersistManager.scan(startClientKey, endClientKey).whenComplete((willMap, throwable) -> {
-            if (willMap == null || throwable != null) {
-                logger.error("{} master fail to scan cs", ip, throwable);
-                return;
-            }
-
-            if (willMap.size() == 0) {
-                logger.info("the cs:{} has no will", ip);
-                return;
-            }
-
-            for (Map.Entry<String, String> entry : willMap.entrySet()) {
-                logger.info("master handle will {} {}", entry.getKey(), entry.getValue());
-                String willKey = entry.getKey();
-                String clientId = entry.getKey().substring((ip + Constants.CTRL_1).length());
-                WillMessage willMessage = JSON.parseObject(entry.getValue(), WillMessage.class);
-                sendWillMessage(willKey, clientId, willMessage);
-            }
-        });
+        willMsgPersistManager
+                .scan(startClientKey, endClientKey, willLoopConf.getScanNumOnce())
+                .whenComplete((willMap, throwable) -> {
+                    if (willMap == null || throwable != null) {
+                        logger.error("{} master fail to scan cs", ip, throwable);
+                        return;
+                    }
+                    for (Map.Entry<String, String> entry : willMap.entrySet()) {
+                        logger.info("master handle will {} {}", entry.getKey(), entry.getValue());
+                        String willKey = entry.getKey();
+                        String clientId = entry.getKey().substring((ip + Constants.CTRL_1).length());
+                        WillMessage willMessage = JSON.parseObject(entry.getValue(), WillMessage.class);
+                        sendWillMessage(willKey, clientId, willMessage);
+                    }
+                    if (willMap.size() >= willLoopConf.getScanNumOnce()) {
+                        _handleShutDownCS(ip, loopNum);
+                    }
+                });
     }
 
     public void closeConnect(Channel channel, String clientId, String reason) {

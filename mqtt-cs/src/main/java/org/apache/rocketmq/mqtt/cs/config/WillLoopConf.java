@@ -15,20 +15,34 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.facade;
+package org.apache.rocketmq.mqtt.cs.config;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+public class WillLoopConf {
+    private int maxScanNodeNum = 100;
+    private int maxScanClientNum = 100000;
+    private int scanNumOnce = 100;
 
-public interface WillMsgPersistManager {
+    public int getMaxScanNodeNum() {
+        return maxScanNodeNum;
+    }
 
-    CompletableFuture<Boolean> put(final String key, final String value);
+    public void setMaxScanNodeNum(int maxScanNodeNum) {
+        this.maxScanNodeNum = maxScanNodeNum;
+    }
 
-    CompletableFuture<Boolean> delete(final String key);
+    public int getMaxScanClientNum() {
+        return maxScanClientNum;
+    }
 
-    CompletableFuture<byte[]> get(final String key);
+    public void setMaxScanClientNum(int maxScanClientNum) {
+        this.maxScanClientNum = maxScanClientNum;
+    }
 
-    CompletableFuture<Boolean> compareAndPut(final String key, final String expectValue, final String updateValue);
+    public int getScanNumOnce() {
+        return scanNumOnce;
+    }
 
-    CompletableFuture<Map<String, String>> scan(final String startKey, final String endKey, int scanNum);
+    public void setScanNumOnce(int scanNumOnce) {
+        this.scanNumOnce = scanNumOnce;
+    }
 }

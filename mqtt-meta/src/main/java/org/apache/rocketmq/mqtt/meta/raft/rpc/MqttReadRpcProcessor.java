@@ -43,7 +43,7 @@ public class MqttReadRpcProcessor extends AbstractRpcProcessor implements RpcPro
 
     @Override
     public void handleRequest(RpcContext rpcCtx, ReadRequest request) {
-        StatUtil.addPv("ReadRpc", 1);
+        StatUtil.addPv(StatUtil.buildKey("ReadRpc", request.getGroup()), 1);
         if (MetaConstants.READ_INDEX_TYPE.equals(request.getType())) {
             handleReadIndex(server, request.getGroup(), rpcCtx, request);
         } else if (MetaConstants.ANY_READ_TYPE.equals(request.getType())) {

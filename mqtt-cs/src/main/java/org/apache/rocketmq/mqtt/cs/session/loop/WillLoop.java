@@ -52,8 +52,7 @@ public class WillLoop {
     private ScheduledThreadPoolExecutor aliveService = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("check_alive_thread_"));
     private long checkAliveIntervalMillis = 5 * 1000;
     private ThreadPoolExecutor executor;
-    private boolean enableLoop = true;
-    private WillLoopConf willLoopConf;
+    private WillLoopConf willLoopConf = new WillLoopConf();
 
     @Resource
     private WillMsgPersistManager willMsgPersistManager;
@@ -84,7 +83,7 @@ public class WillLoop {
 
     private void csLoop() {
         try {
-            if (!enableLoop) {
+            if (!willLoopConf.isEnableWill()) {
                 return;
             }
             String ip = IpUtil.getLocalAddressCompatible();
@@ -135,7 +134,7 @@ public class WillLoop {
 
     private void masterLoop() {
         try {
-            if (!enableLoop) {
+            if (!willLoopConf.isEnableWill()) {
                 return;
             }
             String ip = IpUtil.getLocalAddressCompatible();
@@ -305,11 +304,4 @@ public class WillLoop {
         });
     }
 
-    public boolean isEnableLoop() {
-        return enableLoop;
-    }
-
-    public void setEnableLoop(boolean enableLoop) {
-        this.enableLoop = enableLoop;
-    }
 }

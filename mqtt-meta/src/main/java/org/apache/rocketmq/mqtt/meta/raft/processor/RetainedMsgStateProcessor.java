@@ -26,6 +26,7 @@ import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
@@ -58,6 +59,7 @@ public class RetainedMsgStateProcessor extends StateProcessor {
 
     @Override
     public Response onReadRequest(ReadRequest request) {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(request.getGroup());
             if (sm == null) {
@@ -100,12 +102,14 @@ public class RetainedMsgStateProcessor extends StateProcessor {
                         .addAllDatalist(msgResults)//return retained msgs of matched Topic
                         .build();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("", e);
             return Response.newBuilder()
                     .setSuccess(false)
                     .setErrMsg(e.getMessage())
                     .build();
+        } finally {
+            StatUtil.addInvoke("RetainRead", System.currentTimeMillis() - start);
         }
     }
 
@@ -159,6 +163,7 @@ public class RetainedMsgStateProcessor extends StateProcessor {
 
     @Override
     public Response onWriteRequest(WriteRequest writeRequest) {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(writeRequest.getGroup());
             if (sm == null) {
@@ -182,12 +187,14 @@ public class RetainedMsgStateProcessor extends StateProcessor {
                     .setSuccess(true)
                     .setData(ByteString.copyFrom(JSON.toJSONBytes(topic)))
                     .build();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("Put the retained message error!", e);
             return Response.newBuilder()
                     .setSuccess(false)
                     .setErrMsg(e.getMessage())
                     .build();
+        } finally {
+            StatUtil.addInvoke("RetainWrite", System.currentTimeMillis() - start);
         }
     }
 

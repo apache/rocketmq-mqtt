@@ -21,6 +21,7 @@ public class WillLoopConf {
     private int maxScanNodeNum = 100;
     private int maxScanClientNum = 100000;
     private int scanNumOnce = 100;
+    private boolean enableWill = true;
 
     public int getMaxScanNodeNum() {
         return maxScanNodeNum;
@@ -44,5 +45,13 @@ public class WillLoopConf {
 
     public void setScanNumOnce(int scanNumOnce) {
         this.scanNumOnce = scanNumOnce;
+    }
+
+    public boolean isEnableWill() {
+        return enableWill;
+    }
+
+    public void setEnableWill(boolean enableWill) {
+        this.enableWill = enableWill;
     }
 }

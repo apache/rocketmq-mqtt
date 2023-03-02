@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
 import org.slf4j.Logger;
@@ -53,6 +54,7 @@ public class HashKvStateProcessor extends StateProcessor {
 
     @Override
     public Response onReadRequest(ReadRequest request) throws Exception {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(request.getGroup());
             if (sm == null) {
@@ -98,15 +100,18 @@ public class HashKvStateProcessor extends StateProcessor {
                         .putAllDataMap(result)
                         .build();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error("Fail to process will ReadRequest, k {}", request.getKey(), e);
             throw e;
+        } finally {
+            StatUtil.addInvoke("HashKvRead", System.currentTimeMillis() - start);
         }
         return null;
     }
 
     @Override
     public Response onWriteRequest(WriteRequest log) throws Exception {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(log.getGroup());
             if (sm == null) {
@@ -167,9 +172,11 @@ public class HashKvStateProcessor extends StateProcessor {
                     return put(sm.getRocksDBEngine(), keyBytes, JSON.toJSONBytes(oldMap));
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             LOGGER.error("Fail to process will WriteRequest, k {}", log.getKey(), e);
             throw e;
+        } finally {
+            StatUtil.addInvoke("HashKvWrite", System.currentTimeMillis() - start);
         }
         return null;
     }

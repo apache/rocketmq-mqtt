@@ -35,7 +35,7 @@ public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcPr
 
     @Override
     public void handleRequest(RpcContext rpcCtx, WriteRequest request) {
-        StatUtil.addPv("WriteRpc", 1);
+        StatUtil.addPv(StatUtil.buildKey("WriteRpc", request.getGroup()), 1);
         handleRequest(server, request.getGroup(), rpcCtx, request);
     }
 

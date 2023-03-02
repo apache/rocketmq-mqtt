@@ -22,6 +22,7 @@ import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ public class WillMsgStateProcessor extends StateProcessor {
 
     @Override
     public Response onReadRequest(ReadRequest request) throws Exception {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(request.getGroup());
             if (sm == null) {
@@ -68,20 +70,23 @@ public class WillMsgStateProcessor extends StateProcessor {
                 }
                 return scan(sm.getRocksDBEngine(), startKey.getBytes(), endKey.getBytes(), scanNum);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             if (request.getKey() == null) {
                 logger.error("Fail to delete, startKey {}, endKey {}", request.getExtDataMap().get("startKey"), request.getExtDataMap().get("endKey"), e);
             } else {
                 logger.error("Fail to process will ReadRequest, k {}", request.getKey(), e);
             }
-
             throw e;
+        } finally {
+            StatUtil.addInvoke("WillRead", System.currentTimeMillis() - start);
         }
+
         return null;
     }
 
     @Override
     public Response onWriteRequest(WriteRequest log) throws Exception {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(log.getGroup());
             if (sm == null) {
@@ -103,9 +108,11 @@ public class WillMsgStateProcessor extends StateProcessor {
                 }
                 return compareAndPut(sm.getRocksDBEngine(), key.getBytes(), log.getExtDataMap().get("expectValue").getBytes(), value);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("Fail to process will WriteRequest, k {}", log.getKey(), e);
             throw e;
+        } finally {
+            StatUtil.addInvoke("WillWrite", System.currentTimeMillis() - start);
         }
         return null;
     }

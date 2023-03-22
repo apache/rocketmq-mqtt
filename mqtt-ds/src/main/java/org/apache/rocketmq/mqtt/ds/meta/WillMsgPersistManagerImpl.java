@@ -31,6 +31,9 @@ public class WillMsgPersistManagerImpl implements WillMsgPersistManager {
     @Resource
     private WillMsgClient willMsgClient;
 
+    public void init() {
+    }
+
     @Override
     public CompletableFuture<Boolean> put(String key, String value) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();

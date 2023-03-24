@@ -36,7 +36,7 @@
         <java.source.version>1.8</java.source.version>
         <java.target.version>1.8</java.target.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring.version>4.3.16.RELEASE</spring.version>
+        <spring.version>5.2.23.RELEASE</spring.version>
         <rocket.version>4.9.3</rocket.version>
         <prometheus.version>0.12.0</prometheus.version>
         <grpc-java.version>1.24.0</grpc-java.version>

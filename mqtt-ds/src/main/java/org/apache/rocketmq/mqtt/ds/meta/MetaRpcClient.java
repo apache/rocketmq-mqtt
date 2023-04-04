@@ -48,11 +48,11 @@ import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RAFT_GROUP_NUM;
 @Component
 public class MetaRpcClient {
     private static Logger logger = LoggerFactory.getLogger(MetaRpcClient.class);
+    private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
     private RouteTable rt;
     private Configuration conf;
     private CliClientServiceImpl cliClientService;
-    private static ScheduledExecutorService raftClientExecutor = Executors.newSingleThreadScheduledExecutor();
-    public String[] raftGroups;
+    private String[] raftGroups;
 
     @Resource
     private ServiceConf serviceConf;
@@ -68,8 +68,7 @@ public class MetaRpcClient {
         for (String groupId : raftGroups) {
             rt.updateConfiguration(groupId, conf);
         }
-        refreshLeader();
-        raftClientExecutor.scheduleAtFixedRate(() -> refreshLeader(), 3, 3, TimeUnit.SECONDS);
+        raftClientExecutor.scheduleAtFixedRate(() -> refreshLeader(), 1, 3, TimeUnit.SECONDS);
     }
 
     public void initRpcServer() {

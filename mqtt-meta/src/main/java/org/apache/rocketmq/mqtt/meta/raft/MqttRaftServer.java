@@ -46,7 +46,9 @@ import org.apache.rocketmq.mqtt.common.meta.RaftUtil;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.HostInfo;
 import org.apache.rocketmq.mqtt.meta.config.MetaConf;
+import org.apache.rocketmq.mqtt.meta.raft.processor.HashKvStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.RetainedMsgStateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
 import org.apache.rocketmq.mqtt.meta.raft.processor.WillMsgStateProcessor;
@@ -93,6 +95,21 @@ public class MqttRaftServer {
     private Map<String, MqttStateMachine> bizStateMachineMap = new ConcurrentHashMap<>();
     public String[] raftGroups;
     private RouteTable rt;
+    private HostInfo hostInfo = HostInfo.getInstall();
+
+    private MqttApplyListener mqttApplyListener;
+
+    public MqttApplyListener getMqttApplyListener() {
+        return mqttApplyListener;
+    }
+
+    public void setMqttApplyListener(MqttApplyListener mqttApplyListener) {
+        this.mqttApplyListener = mqttApplyListener;
+    }
+
+    public MetaConf getMetaConf() {
+        return metaConf;
+    }
 
     @PostConstruct
     void init() throws IOException, RocksDBException {
@@ -111,11 +128,20 @@ public class MqttRaftServer {
                 new LinkedBlockingQueue<>(10000),
                 new ThreadFactoryImpl("requestExecutor_"));
 
-        registerStateProcessor(new RetainedMsgStateProcessor(this, metaConf.getMaxRetainedTopicNum()));  //add retained msg processor
+        registerStateProcessor(new RetainedMsgStateProcessor(this));  //add retained msg processor
         registerStateProcessor(new WillMsgStateProcessor(this));
+        registerStateProcessor(new HashKvStateProcessor(this));
 
         rt = RouteTable.getInstance();
-        localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
+        if (StringUtils.isNotBlank(metaConf.getSelfAddress())) {
+            localPeerId = PeerId.parsePeer(metaConf.getSelfAddress());
+        } else {
+            String localDomain = hostInfo.getAddress();
+            if (StringUtils.isNotBlank(metaConf.getRaftServiceName())) {
+                localDomain = hostInfo.getName() + "." + metaConf.getRaftServiceName();
+            }
+            this.localPeerId = new PeerId(localDomain, metaConf.getRaftNodePort());
+        }
         rpcServer = createRpcServer(this, localPeerId);
         NodeManager.getInstance().addAddress(localPeerId.getEndpoint());
         if (!rpcServer.init(null)) {
@@ -129,7 +155,7 @@ public class MqttRaftServer {
             FileUtils.forceMkdir(new File(rdbPath));
             RocksDBEngine rocksDBEngine = new RocksDBEngine(rdbPath);
             rocksDBEngine.init();
-            MqttStateMachine sm = new MqttStateMachine(this);
+            MqttStateMachine sm = new MqttStateMachine(this, group);
             sm.setRocksDBEngine(rocksDBEngine);
             createRaftNode(group, sm);
         }
@@ -162,7 +188,7 @@ public class MqttRaftServer {
         nodeOptions.setSnapshotIntervalSecs(metaConf.getSnapshotIntervalSecs());
 
         final Configuration initConf = new Configuration();
-        String initConfStr = metaConf.getMembersAddress();
+        String initConfStr = initConfStr();
         if (!initConf.parse(initConfStr)) {
             throw new IllegalArgumentException("Fail to parse initConf:" + initConfStr);
         }
@@ -178,6 +204,21 @@ public class MqttRaftServer {
         registerBizStateMachine(groupId, sm);
         LOGGER.warn("createdRaftNode {}", groupId);
         return node;
+    }
+
+    public String initConfStr() {
+        if (StringUtils.isNotBlank(metaConf.getMembersAddress())) {
+            return metaConf.getMembersAddress();
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 3; i++) {
+            sb.append(metaConf.getRaftServiceName() + "-" + i);
+            sb.append("." + metaConf.getRaftServiceName());
+            sb.append(":" + metaConf.getRaftNodePort());
+            sb.append(",");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        return sb.toString();
     }
 
     private void registerBizStateMachine(String groupId, MqttStateMachine sm) {

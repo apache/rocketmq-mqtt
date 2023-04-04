@@ -19,14 +19,22 @@ package org.apache.rocketmq.mqtt.meta.raft.rpc;
 
 import com.alipay.sofa.jraft.rpc.RpcContext;
 import com.alipay.sofa.jraft.rpc.RpcProcessor;
-import org.apache.rocketmq.mqtt.common.meta.Constants;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
+import org.apache.rocketmq.mqtt.common.model.consistency.Response;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
+import org.apache.rocketmq.mqtt.meta.raft.processor.StateProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Objects;
 
 /**
  * The RPC Processor for read request.
  */
 public class MqttReadRpcProcessor extends AbstractRpcProcessor implements RpcProcessor<ReadRequest> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MqttReadRpcProcessor.class);
     private final MqttRaftServer server;
 
     public MqttReadRpcProcessor(MqttRaftServer server) {
@@ -35,10 +43,29 @@ public class MqttReadRpcProcessor extends AbstractRpcProcessor implements RpcPro
 
     @Override
     public void handleRequest(RpcContext rpcCtx, ReadRequest request) {
-        if (Constants.READ_INDEX_TYPE.equals(request.getType())) {
+        StatUtil.addPv(StatUtil.buildKey("ReadRpc", request.getGroup()), 1);
+        if (MetaConstants.READ_INDEX_TYPE.equals(request.getType())) {
             handleReadIndex(server, request.getGroup(), rpcCtx, request);
+        } else if (MetaConstants.ANY_READ_TYPE.equals(request.getType())) {
+            anyRead(rpcCtx, request);
         } else {
             handleRequest(server, request.getGroup(), rpcCtx, request);
+        }
+    }
+
+    private void anyRead(RpcContext rpcCtx, ReadRequest request) {
+        final StateProcessor processor = server.getProcessor(request.getCategory());
+        if (Objects.isNull(processor)) {
+            rpcCtx.sendResponse(Response.newBuilder().setSuccess(false)
+                    .setErrMsg("Could not find the StateProcessor: " + request.getCategory()).build());
+            return;
+        }
+        try {
+            Response response = processor.onReadRequest(request);
+            rpcCtx.sendResponse(response);
+        } catch (Throwable t) {
+            LOGGER.error("process read request in anyRead error : {}", t.toString());
+            rpcCtx.sendResponse(Response.newBuilder().setErrMsg(t.toString()).setSuccess(false).build());
         }
     }
 

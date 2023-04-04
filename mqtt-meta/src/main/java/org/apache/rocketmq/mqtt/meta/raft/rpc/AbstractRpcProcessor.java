@@ -128,7 +128,7 @@ public abstract class AbstractRpcProcessor {
                                 Response response = processor.onReadRequest(request);
                                 rpcCtx.sendResponse(response);
                             } catch (Throwable t) {
-                                LOGGER.info("process read request in handleReadIndex error : {}", t.toString());
+                                LOGGER.error("process read request in handleReadIndex error : {}", t.toString());
                                 rpcCtx.sendResponse(Response.newBuilder().setErrMsg(t.toString()).setSuccess(false).build());
                             }
                             return;

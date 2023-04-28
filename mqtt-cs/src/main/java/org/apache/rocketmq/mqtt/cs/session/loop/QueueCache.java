@@ -111,7 +111,7 @@ public class QueueCache {
         if (queue == null) {
             return;
         }
-        if (queue.isP2p() || queue.isRetry()) {
+        if (queue.isP2p() || queue.isRetry() || queue.isShare()) {
             return;
         }
         addLoadEvent(queue, pair.getRight());
@@ -188,6 +188,13 @@ public class QueueCache {
             callbackResult(pullResult, callBackResult);
             return DONE;
         }
+
+        if (subscription.isShare()) {
+            CompletableFuture<PullResult> pullResult = lmqQueueStore.popMessage(subscription.getSharedName(), toFirstTopic(subscription), queue, count);
+            callbackResult(pullResult, callBackResult);
+            return DONE;
+        }
+
         CacheEntry cacheEntry = cache.getIfPresent(queue);
         if (cacheEntry == null) {
             StatUtil.addPv("NoPullCache", 1);

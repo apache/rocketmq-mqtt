@@ -290,6 +290,9 @@ public class Session {
         if (!subscriptions.containsKey(subscription.getTopicFilter())) {
             return false;
         }
+        if (subscription.isShare()) {
+            return true;
+        }
         if (!sendingMessages.containsKey(subscription)) {
             sendingMessages.putIfAbsent(subscription, new ConcurrentHashMap<>(16));
         }

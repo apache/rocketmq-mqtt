@@ -85,6 +85,17 @@ public class Subscription {
         return topicFilter != null ? topicFilter.hashCode() : 0;
     }
 
+    public boolean isShare() {
+        return TopicUtils.isSharedSubscription(topicFilter);
+    }
+
+    public String getSharedName() {
+        if (!isShare()) {
+            return null;
+        }
+        return TopicUtils.getSharedName(topicFilter);
+    }
+
     public String getTopicFilter() {
         return topicFilter;
     }

@@ -23,6 +23,7 @@ public class Constants {
 
     public static final String PLUS_SIGN = "+";
     public static final String NUMBER_SIGN = "#";
+    public static final String DOLLAR_SIGN = "$";
     public static final String COLON = ":";
 
     public static final String P2P = "/p2p/";
@@ -55,5 +56,7 @@ public class Constants {
     public static final byte CTRL_2 = '\u0002';
 
     public static final String NOT_FOUND = "NOT_FOUND";
+    public static final String SHARED_PREFIX = DOLLAR_SIGN + "share";
+    public static final String EMPTY_SHARE_NAME = "";
 
 }

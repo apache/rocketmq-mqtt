@@ -41,13 +41,15 @@ cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 
 
-| **Config Key**        | **Instruction**          |
-|-----------------------|--------------------------|
-| username              | used for auth            |
-| secretKey             | used for auth            |
-| NAMESRV_ADDR          | specify namesrv address  |
-| eventNotifyRetryTopic | notify event retry topic |
-| clientRetryTopic      | client retry topic       |
+| **Config Key**        | **Instruction**                                               |
+|-----------------------|---------------------------------------------------------------|
+| username              | used for auth                                                 |
+| secretKey             | used for auth                                                 |
+| NAMESRV_ADDR          | specify namesrv address                                       |
+| eventNotifyRetryTopic | notify event retry topic                                      |
+| clientRetryTopic      | client retry topic                                            |
+| metaAddr              | meta all nodes ip:port. Same as membersAddress in meta.config |
+
 
 And some configuration items in the **meta.conf** configuration file
 

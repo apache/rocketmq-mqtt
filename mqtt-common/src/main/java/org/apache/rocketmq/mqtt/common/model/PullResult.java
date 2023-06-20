@@ -24,6 +24,7 @@ import java.util.List;
 public class PullResult {
     public static final int PULL_SUCCESS = 301;
     public static final int PULL_OFFSET_MOVED = 302;
+    public static final int NO_NEW_MSG = 303;
     private int code = PULL_SUCCESS;
     private String remark;
     private List<Message> messageList;

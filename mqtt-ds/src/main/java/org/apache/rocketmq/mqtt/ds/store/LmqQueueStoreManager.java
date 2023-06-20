@@ -20,7 +20,12 @@ package org.apache.rocketmq.mqtt.ds.store;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.client.consumer.AckCallback;
+import org.apache.rocketmq.client.consumer.AckResult;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
+import org.apache.rocketmq.client.consumer.PopCallback;
+import org.apache.rocketmq.client.consumer.PopResult;
+import org.apache.rocketmq.client.consumer.PopStatus;
 import org.apache.rocketmq.client.consumer.PullCallback;
 import org.apache.rocketmq.client.consumer.PullStatus;
 import org.apache.rocketmq.client.exception.MQBrokerException;
@@ -34,11 +39,15 @@ import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.common.constant.ConsumeInitMode;
 import org.apache.rocketmq.common.filter.ExpressionType;
 import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
+import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
+import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
 import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
@@ -70,12 +79,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
 public class LmqQueueStoreManager implements LmqQueueStore {
     private static Logger logger = LoggerFactory.getLogger(LmqQueueStoreManager.class);
     private PullAPIWrapper pullAPIWrapper;
+    private MQClientInstance mQClientFactory;
     private DefaultMQPullConsumer defaultMQPullConsumer;
     private DefaultMQProducer defaultMQProducer;
     private String consumerGroup = MixAll.CID_RMQ_SYS_PREFIX + "LMQ_PULL";
@@ -93,6 +104,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         defaultMQPullConsumer.setConsumerPullTimeoutMillis(2000);
         defaultMQPullConsumer.start();
         pullAPIWrapper = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getPullAPIWrapper();
+        mQClientFactory = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getRebalanceImpl().getmQClientFactory();
 
         defaultMQProducer = MqFactory.buildDefaultMQProducer("GID_LMQ_SEND", serviceConf.getProperties());
         defaultMQProducer.setRetryTimesWhenSendAsyncFailed(0);
@@ -155,6 +167,11 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                             new TypeReference<Map<String, String>>() {
                             }));
         }
+
+        if (StringUtils.isNotBlank(mqMessage.getProperty(MessageConst.PROPERTY_POP_CK))) {
+            message.getUserProperties().putIfAbsent(MessageConst.PROPERTY_POP_CK, mqMessage.getProperty(MessageConst.PROPERTY_POP_CK));
+        }
+
         return message;
     }
 
@@ -452,5 +469,170 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         }
 
         throw new MQClientException("The broker[" + queue.getBrokerName() + "] not exist", null);
+    }
+
+    @Override
+    public CompletableFuture<PullResult> popMessage(String consumerGroup, String firstTopic, Queue queue, long count) {
+        CompletableFuture<PullResult> result = new CompletableFuture<>();
+        long start = System.currentTimeMillis();
+        PopCallback popCallback = new PopCallback() {
+            @Override
+            public void onSuccess(PopResult popResult) {
+                if (popResult == null) {
+                    logger.warn("PopResult is null, just wait retry");
+                    return;
+                }
+
+                PullResult lmqPullResult = new PullResult();
+                if (PopStatus.FOUND == popResult.getPopStatus()) {
+                    lmqPullResult.setCode(PullResult.PULL_SUCCESS);
+                    List<MessageExt> messageExtList = popResult.getMsgFoundList();
+                    if (messageExtList != null && !messageExtList.isEmpty()) {
+                        List<Message> messageList = messageExtList.stream()
+                            .map(messageExt -> toLmqMessage(queue, messageExt))
+                            .collect(Collectors.toList());
+                        lmqPullResult.setMessageList(messageList);
+                    }
+                } else {
+                    lmqPullResult.setCode(PullResult.NO_NEW_MSG);
+                }
+
+                result.complete(lmqPullResult);
+
+                long rt = System.currentTimeMillis() - start;
+                StatUtil.addInvoke("lmqPop", rt);
+                collectLmqReadWriteMatchActionRt("lmqPop", rt, true);
+                StatUtil.addPv(popResult.getPopStatus().name(), 1);
+                try {
+                    MqttMetricsCollector.collectPullStatusTps(1, popResult.getPopStatus().name());
+                } catch (Throwable e) {
+                    logger.error("collect prometheus error", e);
+                }
+            }
+
+            @Override
+            public void onException(Throwable e) {
+                logger.error("pop message from {} error", queue, e);
+                result.completeExceptionally(e);
+                long rt = System.currentTimeMillis() - start;
+                StatUtil.addInvoke("lmqPop", rt, false);
+                collectLmqReadWriteMatchActionRt("lmqPop", rt, false);
+            }
+        };
+
+        try {
+            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+            MessageQueue firstTopicQueue = new MessageQueue(firstTopic, queue.getBrokerName(), (int) queue.getQueueId());
+            popKernelImpl(lmqTopic, firstTopicQueue, consumerGroup, ExpressionType.TAG, "*",
+                60000, count, ConsumeInitMode.MAX, false, 15000, 15000, popCallback);
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
+        }
+
+        return result;
+    }
+
+    public void popKernelImpl(
+        final String lmqTopic,
+        final MessageQueue mq,
+        final String consumerGroup,
+        final String expressionType,
+        final String subExpression,
+        final long invisibleTime,
+        final long maxNums,
+        final int initMode,
+        final boolean order,
+        final long pollTime,
+        final long timeoutMillis,
+        final PopCallback popCallback
+    ) throws RemotingException, InterruptedException, MQClientException {
+        FindBrokerResult findBrokerResult = mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, false);
+        if (null == findBrokerResult) {
+            mQClientFactory.updateTopicRouteInfoFromNameServer(mq.getTopic());
+            findBrokerResult = mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, false);
+            if (null == findBrokerResult) {
+                throw new MQClientException("The broker[" + mq.getBrokerName() + "] not exist", null);
+            }
+        }
+
+        PopMessageRequestHeader requestHeader = new PopMessageRequestHeader();
+        requestHeader.setConsumerGroup(consumerGroup);
+        requestHeader.setTopic(lmqTopic);
+        requestHeader.setQueueId(mq.getQueueId());
+        requestHeader.setMaxMsgNums((int) maxNums);
+        requestHeader.setInvisibleTime(invisibleTime);
+        requestHeader.setInitMode(initMode);
+        requestHeader.setExpType(expressionType);
+        requestHeader.setExp(subExpression);
+        requestHeader.setOrder(order);
+        requestHeader.setPollTime(pollTime);
+        requestHeader.setBornTime(System.currentTimeMillis());
+
+        mQClientFactory.getMQClientAPIImpl().popMessageAsync(mq.getBrokerName(), findBrokerResult.getBrokerAddr(),
+            requestHeader, timeoutMillis, popCallback);
+    }
+
+    public void popAck(String lmqTopic, String consumerGroup, Message message) {
+        long start = System.currentTimeMillis();
+        AckCallback ackCallback = new AckCallback() {
+            @Override
+            public void onSuccess(AckResult ackResult) {
+                long rt = System.currentTimeMillis() - start;
+                StatUtil.addInvoke("lmqPopAck", rt);
+                collectLmqReadWriteMatchActionRt("lmqPopAck", rt, true);
+            }
+
+            @Override
+            public void onException(Throwable e) {
+                try {
+                    TimeUnit.MILLISECONDS.sleep(10);
+                    popAckKernelImpl(lmqTopic, consumerGroup, message, 15000, this);
+                } catch (Exception ignore) {
+                    logger.warn("popAck {} message error", lmqTopic, e);
+                }
+                long rt = System.currentTimeMillis() - start;
+                StatUtil.addInvoke("lmqPopAck", rt, false);
+                collectLmqReadWriteMatchActionRt("lmqPopAck", rt, false);
+            }
+        };
+
+        try {
+            popAckKernelImpl(lmqTopic, consumerGroup, message, 15000, ackCallback);
+        } catch (Exception e) {
+            logger.error("pop ack error", e);
+        }
+    }
+
+    public void popAckKernelImpl(
+        final String lmqTopic,
+        final String consumerGroup,
+        final Message message,
+        final long timeoutMillis,
+        final AckCallback ackCallback
+    ) throws RemotingException, MQBrokerException, MQClientException, InterruptedException {
+        String extraInfo = message.getUserProperty(MessageConst.PROPERTY_POP_CK);
+        String[] extraInfoStrs = ExtraInfoUtil.split(extraInfo);
+
+        String brokerName = ExtraInfoUtil.getBrokerName(extraInfoStrs);
+        FindBrokerResult findBrokerResult = mQClientFactory.findBrokerAddressInSubscribe(brokerName, MixAll.MASTER_ID, false);
+        if (null == findBrokerResult) {
+            mQClientFactory.updateTopicRouteInfoFromNameServer(message.getFirstTopic());
+            findBrokerResult = mQClientFactory.findBrokerAddressInSubscribe(brokerName, MixAll.MASTER_ID, false);
+            if (null == findBrokerResult) {
+                throw new MQClientException("The broker[" + brokerName + "] not exist", null);
+            }
+        }
+
+        int queueId = ExtraInfoUtil.getQueueId(extraInfoStrs);
+        long queueOffset = ExtraInfoUtil.getQueueOffset(extraInfoStrs);
+
+        AckMessageRequestHeader ackMessageRequestHeader = new AckMessageRequestHeader();
+        ackMessageRequestHeader.setTopic(lmqTopic);
+        ackMessageRequestHeader.setQueueId(queueId);
+        ackMessageRequestHeader.setOffset(queueOffset);
+        ackMessageRequestHeader.setConsumerGroup(consumerGroup);
+        ackMessageRequestHeader.setExtraInfo(extraInfo);
+
+        mQClientFactory.getMQClientAPIImpl().ackMessageAsync(findBrokerResult.getBrokerAddr(), timeoutMillis, ackCallback, ackMessageRequestHeader);
     }
 }

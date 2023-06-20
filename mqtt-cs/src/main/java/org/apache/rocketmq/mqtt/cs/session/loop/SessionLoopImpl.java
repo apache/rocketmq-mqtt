@@ -30,6 +30,7 @@ import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
+import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
@@ -389,6 +390,7 @@ public class SessionLoopImpl implements SessionLoop {
                 throw new RuntimeException(
                         "invalid notifyPullMessage, subscription is null, but queue is not null," + session.getClientId());
             }
+            logger.info("session loop impl doing notifyPullMessage queueFresh.freshQueue({}, {}})", session, subscription);
             queueFresh.freshQueue(session, subscription);
             pullMessage(session, subscription, queue);
             return;
@@ -509,7 +511,6 @@ public class SessionLoopImpl implements SessionLoop {
                         pushAction.messageArrive(session, subscription, queue);
                     }
                 } else if (PullResult.PULL_OFFSET_MOVED == pullResult.getCode()) {
-                    queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
                     queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
                     session.markPersistOffsetFlag(true);
                     pullMessage(session, subscription, queue);

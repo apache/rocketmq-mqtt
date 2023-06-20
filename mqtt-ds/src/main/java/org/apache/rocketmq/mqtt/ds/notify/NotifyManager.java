@@ -117,6 +117,8 @@ public class NotifyManager {
 
     private void refresh() throws MQClientException {
         Set<String> tmp = metaPersistManager.getAllFirstTopics();
+        logger.info("Notify Manager is refreshing, all first topic is " + tmp);
+
         if (tmp == null || tmp.isEmpty()) {
             return;
         }

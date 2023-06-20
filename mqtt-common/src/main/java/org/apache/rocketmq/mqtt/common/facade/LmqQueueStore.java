@@ -20,6 +20,8 @@ package org.apache.rocketmq.mqtt.common.facade;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
@@ -47,6 +49,19 @@ public interface LmqQueueStore {
      * @return
      */
     CompletableFuture<PullResult> pullMessage(String firstTopic, Queue queue, QueueOffset queueOffset, long count);
+
+    /**
+     * pop messages
+     *
+     * @param consumerGroup
+     * @param firstTopic
+     * @param queue
+     * @param count
+     * @return
+     */
+    CompletableFuture<PullResult> popMessage(String consumerGroup, String firstTopic, Queue queue, long count);
+
+    void popAck(String lmqTopic, String consumerGroup, Message message);
 
     /**
      * pull last messages

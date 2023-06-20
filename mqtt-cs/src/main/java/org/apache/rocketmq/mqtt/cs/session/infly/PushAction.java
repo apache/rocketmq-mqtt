@@ -21,6 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.common.MixAll;
+import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
@@ -56,6 +58,8 @@ public class PushAction {
     @Resource
     private ConnectConf connectConf;
 
+    @Resource
+    private LmqQueueStore lmqQueueStore;
 
     public void messageArrive(Session session, Subscription subscription, Queue queue) {
         if (session == null) {
@@ -163,6 +167,9 @@ public class PushAction {
             if (subscription.isRetry()) {
                 message.setRetry(message.getRetry() + 1);
                 logger.warn("retryPush:{},{},{}", session.getClientId(), message.getMsgId(), message.getRetry());
+            } else if (subscription.isShare()) {
+                String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(message.getOriginTopic(), "/","%");
+                lmqQueueStore.popAck(lmqTopic, subscription.getSharedName(), message);
             }
         });
     }

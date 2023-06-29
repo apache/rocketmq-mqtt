@@ -37,6 +37,11 @@ public class ConnectConf {
     private int mqttWsPort = 8888;
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
+    private String sslCaCertFile;
+    private String sslServerCertFile;
+    private String sslServerKeyFile;
+    private String sslServerKeyPassword;
+
     private int maxPacketSizeInByte = 64 * 1024;
     private int highWater = 256 * 1024;
     private int lowWater = 16 * 1024;
@@ -220,5 +225,37 @@ public class ConnectConf {
 
     public void setExportJvmInfo(boolean exportJvmInfo) {
         this.exportJvmInfo = exportJvmInfo;
+    }
+
+    public String getSslCaCertFile() {
+        return sslCaCertFile;
+    }
+
+    public void setSslCaCertFile(String sslCaCertFile) {
+        this.sslCaCertFile = sslCaCertFile;
+    }
+
+    public String getSslServerCertFile() {
+        return sslServerCertFile;
+    }
+
+    public void setSslServerCertFile(String sslServerCertFile) {
+        this.sslServerCertFile = sslServerCertFile;
+    }
+
+    public String getSslServerKeyFile() {
+        return sslServerKeyFile;
+    }
+
+    public void setSslServerKeyFile(String sslServerKeyFile) {
+        this.sslServerKeyFile = sslServerKeyFile;
+    }
+
+    public String getSslServerKeyPassword() {
+        return sslServerKeyPassword;
+    }
+
+    public void setSslServerKeyPassword(String sslServerKeyPassword) {
+        this.sslServerKeyPassword = sslServerKeyPassword;
     }
 }

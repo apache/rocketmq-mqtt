@@ -17,8 +17,6 @@
 
 package org.apache.rocketmq.mqtt.common.util;
 
-import java.util.Arrays;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.MqttTopic;

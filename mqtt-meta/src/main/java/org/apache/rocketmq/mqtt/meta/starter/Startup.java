@@ -16,16 +16,18 @@
   */
 package org.apache.rocketmq.mqtt.meta.starter;
 
-import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.mqtt.meta.util.SpringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class Startup {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Startup.class);
+
     public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:meta_spring.xml");
         SpringUtil.setApplicationContext(applicationContext);
-        System.out.println("start meta ...");
+        LOGGER.info("start meta ...");
     }
 }

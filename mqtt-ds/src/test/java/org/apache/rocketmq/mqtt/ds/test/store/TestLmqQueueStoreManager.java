@@ -37,6 +37,7 @@ import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
@@ -201,7 +202,7 @@ public class TestLmqQueueStoreManager {
         when(mqClientInstance.getMQClientAPIImpl()).thenReturn(mqClientAPI);
         when(mqClientInstance.findBrokerAddressInPublish(anyString())).thenReturn(
                 String.valueOf(new FindBrokerResult("test", false)));
-        when(mqClientAPI.getMaxOffset(anyString(), anyString(), anyInt(), anyLong())).thenReturn(maxOffset);
+        when(mqClientAPI.getMaxOffset(anyString(), any(MessageQueue.class), anyLong())).thenReturn(maxOffset);
 
         CompletableFuture<Long> queryOffsetFuture = lmqQueueStoreManager.queryQueueMaxOffset(queue);
         verify(mqClientInstance, times(0)).updateTopicRouteInfoFromNameServer(any());

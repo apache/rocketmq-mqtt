@@ -17,19 +17,19 @@
 
 package org.apache.rocketmq.mqtt.cs.starter;
 
-import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 
 public class Startup {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(Startup.class);
     public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
         SpringUtils.SetClassPathXmlApplicationContext(applicationContext);
-        System.out.println("start rocketmq mqtt  ...");
+        LOGGER.info("start rocketmq mqtt  ...");
     }
 
 }

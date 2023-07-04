@@ -49,7 +49,7 @@ export ROCKETMQ_MQTT_HOME
 BASEDIR=$HOME
 mkdir -p $BASEDIR/logs
 
-mainClass="org.apache.rocketmq.mqtt.meta.starter.Startup"
+mainClass="org.apache.rocketmq.mqtt.meta.starter.MetaStartup"
 
 
 function startup() {

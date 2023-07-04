@@ -18,18 +18,16 @@
 package org.apache.rocketmq.mqtt.cs.starter;
 
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 
 public class Startup {
-    private static final Logger LOGGER = LoggerFactory.getLogger(Startup.class);
     public static void main(String[] args) {
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
         SpringUtils.SetClassPathXmlApplicationContext(applicationContext);
-        LOGGER.info("start rocketmq mqtt  ...");
+        System.out.println("start rocketmq mqtt  ...");
     }
 
 }

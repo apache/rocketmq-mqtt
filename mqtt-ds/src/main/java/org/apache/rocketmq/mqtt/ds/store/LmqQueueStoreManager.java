@@ -45,11 +45,6 @@ import org.apache.rocketmq.common.message.MessageAccessor;
 import org.apache.rocketmq.common.message.MessageConst;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.header.AckMessageRequestHeader;
-import org.apache.rocketmq.common.protocol.header.ExtraInfoUtil;
-import org.apache.rocketmq.common.protocol.header.PopMessageRequestHeader;
-import org.apache.rocketmq.common.protocol.header.PullMessageRequestHeader;
-import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
 import org.apache.rocketmq.common.sysflag.PullSysFlag;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.Constants;
@@ -67,6 +62,11 @@ import org.apache.rocketmq.mqtt.ds.mq.MqFactory;
 import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.apache.rocketmq.remoting.exception.RemotingException;
+import org.apache.rocketmq.remoting.protocol.header.AckMessageRequestHeader;
+import org.apache.rocketmq.remoting.protocol.header.ExtraInfoUtil;
+import org.apache.rocketmq.remoting.protocol.header.PopMessageRequestHeader;
+import org.apache.rocketmq.remoting.protocol.header.PullMessageRequestHeader;
+import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -462,7 +462,8 @@ public class LmqQueueStoreManager implements LmqQueueStore {
 
         if (brokerAddr != null) {
             try {
-                return mQClientFactory.getMQClientAPIImpl().getMaxOffset(brokerAddr, lmqTopic, (int) queue.getQueueId(), 3000L);
+                MessageQueue messageQueue = new MessageQueue(lmqTopic, queue.getBrokerName(),  (int) queue.getQueueId());
+                return mQClientFactory.getMQClientAPIImpl().getMaxOffset(brokerAddr, messageQueue, 3000L);
             } catch (Exception e) {
                 throw new MQClientException("Invoke Broker[" + brokerAddr + "] exception", e);
             }

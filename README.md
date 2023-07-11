@@ -23,6 +23,8 @@ For example, set the following parameters to true in broker.conf
 enableLmq = true
 enableMultiDispatch = true
 ```
+### Build Requirements
+The current project requires JDK 1.8.x.  When building on MAC arm64 the recommended JDK 1.8 must be based on 386 architecture or use Maven flag `-Dos.arch=x86_64` when building with Maven.
 
 
 1. Clone

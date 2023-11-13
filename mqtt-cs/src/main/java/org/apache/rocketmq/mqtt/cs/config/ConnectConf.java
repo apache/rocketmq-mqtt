@@ -111,6 +111,14 @@ public class ConnectConf {
         return needClientAuth;
     }
 
+    public void setEnableTlsSever(boolean enableTlsSever) {
+        this.enableTlsSever = enableTlsSever;
+    }
+
+    public void setNeedClientAuth(boolean needClientAuth) {
+        this.needClientAuth = needClientAuth;
+    }
+
     public void setMqttWsPort(int mqttWsPort) {
         this.mqttWsPort = mqttWsPort;
     }

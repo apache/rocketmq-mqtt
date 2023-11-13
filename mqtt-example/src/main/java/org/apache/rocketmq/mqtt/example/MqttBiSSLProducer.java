@@ -31,7 +31,7 @@ import java.util.Date;
 public class MqttBiSSLProducer {
     public static void main(String[] args) throws Exception {
         MemoryPersistence memoryPersistence = new MemoryPersistence();
-        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String brokerUrl = "ssl://" + System.getenv("host") + ":8883";
         String firstTopic = System.getenv("topic");
         String sendClientId = "send01";
         String caPath = System.getenv("ca_path");

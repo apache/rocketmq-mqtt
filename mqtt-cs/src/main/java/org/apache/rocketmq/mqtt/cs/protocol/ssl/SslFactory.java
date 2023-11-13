@@ -27,12 +27,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;

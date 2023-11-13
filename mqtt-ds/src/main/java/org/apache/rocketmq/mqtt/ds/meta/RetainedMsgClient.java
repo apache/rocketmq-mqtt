@@ -21,11 +21,15 @@ import com.alipay.sofa.jraft.error.RemotingException;
 import com.alipay.sofa.jraft.rpc.InvokeCallback;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.netty.buffer.Unpooled;
+import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
 import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
+import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +42,17 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import static org.apache.rocketmq.mqtt.common.meta.Constants.CATEGORY_RETAINED_MSG;
-import static org.apache.rocketmq.mqtt.common.meta.Constants.NOT_FOUND;
-import static org.apache.rocketmq.mqtt.common.meta.Constants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.CATEGORY_RETAINED_MSG;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.NOT_FOUND;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.READ_INDEX_TYPE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_FIRST_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_OPERATION_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_OPERATION_TRIE;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_FIRST_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_IS_EMPTY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_EXPIRE;
 import static org.apache.rocketmq.mqtt.common.meta.RaftUtil.RETAIN_RAFT_GROUP_INDEX;
 
 
@@ -49,17 +61,24 @@ public class RetainedMsgClient {
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgClient.class);
 
     @Resource
-    private ServiceConf serviceConf;
-
-    @Resource
     private MetaRpcClient metaRpcClient;
 
+    @Resource
+    public ServiceConf serviceConf;
+
     public void setRetainedMsg(String topic, Message msg, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
+        _setRetainedMsg(topic, msg, null, future);
+    }
+
+    public void _setRetainedMsg(String topic, Message msg, Long expire, CompletableFuture<Boolean> future) throws RemotingException, InterruptedException {
         String groupId = whichGroup();
         HashMap<String, String> option = new HashMap<>();
-        option.put("topic", topic);
-        option.put("firstTopic", msg.getFirstTopic());
-        option.put("isEmpty", String.valueOf(msg.isEmpty()));
+        option.put(RETAIN_REQ_WRITE_PARAM_TOPIC, topic);
+        option.put(RETAIN_REQ_WRITE_PARAM_FIRST_TOPIC, msg.getFirstTopic());
+        option.put(RETAIN_REQ_WRITE_PARAM_IS_EMPTY, String.valueOf(msg.isEmpty()));
+        if (expire != null) {
+            option.put(RETAIN_REQ_WRITE_PARAM_EXPIRE, String.valueOf(expire));
+        }
 
         logger.debug("SetRetainedMsg option:" + option);
 
@@ -99,14 +118,14 @@ public class RetainedMsgClient {
         String groupId = whichGroup();
         HashMap<String, String> option = new HashMap<>();
 
-        option.put("firstTopic", firstTopic);
-        option.put("topic", topic);
+        option.put(RETAIN_REQ_READ_PARAM_FIRST_TOPIC, firstTopic);
+        option.put(RETAIN_REQ_READ_PARAM_TOPIC, topic);
 
         logger.debug("GetRetainedMsgsFromTrie option:" + option);
 
         final ReadRequest request = ReadRequest.newBuilder()
                 .setGroup(groupId)
-                .setOperation("trie")
+                .setOperation(RETAIN_REQ_READ_PARAM_OPERATION_TRIE)
                 .setType(READ_INDEX_TYPE)
                 .putAllExtData(option)
                 .setCategory(CATEGORY_RETAINED_MSG)
@@ -126,7 +145,18 @@ public class RetainedMsgClient {
                     ArrayList<Message> resultList = new ArrayList<>();
                     for (ByteString tmp : datalistList) {
                         try {
-                            resultList.add(Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray())));
+                            Message message = Message.copyFromStoreMessage(StoreMessage.parseFrom(tmp.toByteArray()));
+                            if (System.currentTimeMillis() - message.getBornTimestamp() > serviceConf.getRetainMsgExpire()) {
+                                message.setPayload(Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8).array());
+                                message.setEmpty(true);
+                                try {
+                                    _setRetainedMsg(TopicUtils.normalizeTopic(message.getOriginTopic()), message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());
+                                } catch (Exception e) {
+                                    logger.error("", e);
+                                }
+                                continue;
+                            }
+                            resultList.add(message);
                         } catch (InvalidProtocolBufferException e) {
                             future.complete(null);
                             throw new RuntimeException(e);
@@ -149,11 +179,11 @@ public class RetainedMsgClient {
     public void GetRetainedMsg(String topic, CompletableFuture<Message> future) throws RemotingException, InterruptedException {
         String groupId = whichGroup();
         HashMap<String, String> option = new HashMap<>();
-        option.put("topic", topic);
+        option.put(RETAIN_REQ_READ_PARAM_TOPIC, topic);
 
         final ReadRequest request = ReadRequest.newBuilder()
                 .setGroup(groupId)
-                .setOperation("topic")
+                .setOperation(RETAIN_REQ_READ_PARAM_OPERATION_TOPIC)
                 .setType(READ_INDEX_TYPE)
                 .putAllExtData(option)
                 .setCategory(CATEGORY_RETAINED_MSG)
@@ -177,7 +207,17 @@ public class RetainedMsgClient {
                     Message message = null;
                     try {
                         message = Message.copyFromStoreMessage(StoreMessage.parseFrom(rsp.getData().toByteArray()));
-                    } catch (InvalidProtocolBufferException e) {
+                        if (System.currentTimeMillis() - message.getBornTimestamp() > serviceConf.getRetainMsgExpire()) {
+                            message.setPayload(Unpooled.copiedBuffer(MessageUtil.EMPTYSTRING, CharsetUtil.UTF_8).array());
+                            message.setEmpty(true);
+                            try {
+                                _setRetainedMsg(topic, message, serviceConf.getRetainMsgExpire(), new CompletableFuture<>());
+                            } catch (Exception e) {
+                                logger.error("", e);
+                            }
+                            message = null;
+                        }
+                    } catch (Exception e) {
                         future.complete(null);
                         throw new RuntimeException(e);
                     }

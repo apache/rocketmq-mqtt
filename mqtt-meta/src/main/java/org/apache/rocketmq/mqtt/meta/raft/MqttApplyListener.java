@@ -15,14 +15,18 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.meta;
+package org.apache.rocketmq.mqtt.meta.raft;
 
-public class Constants {
+import com.google.protobuf.Message;
+import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 
-    public static final String CATEGORY_RETAINED_MSG = "retainedMsg";
-    public static final String CATEGORY_WILL_MSG = "willMsg";
+public interface MqttApplyListener {
 
-    public static final String NOT_FOUND = "NOT_FOUND";
-
-    public static final String READ_INDEX_TYPE = "readIndexType";
+    /**
+     * never to block
+     *
+     * @param message
+     * @param rocksDBEngine
+     */
+    void onApply(Message message, RocksDBEngine rocksDBEngine);
 }

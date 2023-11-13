@@ -19,14 +19,17 @@ package org.apache.rocketmq.mqtt.meta.raft.processor;
 
 import com.alibaba.fastjson.JSON;
 import com.google.protobuf.ByteString;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.meta.MetaConstants;
 import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.model.consistency.ReadRequest;
 import org.apache.rocketmq.mqtt.common.model.consistency.Response;
+import org.apache.rocketmq.mqtt.common.model.consistency.StoreMessage;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 import org.apache.rocketmq.mqtt.meta.raft.MqttStateMachine;
-import org.apache.rocketmq.mqtt.common.meta.Constants;
 import org.apache.rocketmq.mqtt.meta.rocksdb.RocksDBEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,33 +39,37 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_FIRST_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_OPERATION_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_READ_PARAM_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_FIRST_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_IS_EMPTY;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_TOPIC;
+import static org.apache.rocketmq.mqtt.common.meta.MetaConstants.RETAIN_REQ_WRITE_PARAM_EXPIRE;
+
 
 public class RetainedMsgStateProcessor extends StateProcessor {
     private static Logger logger = LoggerFactory.getLogger(RetainedMsgStateProcessor.class);
     private final ConcurrentHashMap<String, Trie<String, String>> retainedMsgTopicTrie = new ConcurrentHashMap<>();  //key:firstTopic value:retained topic Trie
     private MqttRaftServer server;
-    private int maxRetainedTopicNum;
 
-    public RetainedMsgStateProcessor(MqttRaftServer server, int maxRetainedTopicNum) {
+    public RetainedMsgStateProcessor(MqttRaftServer server) {
         this.server = server;
-        this.maxRetainedTopicNum = maxRetainedTopicNum;
     }
 
     @Override
     public Response onReadRequest(ReadRequest request) {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(request.getGroup());
             if (sm == null) {
                 logger.error("Fail to process RetainedMsg ReadRequest , Not Found SM for {}", request.getGroup());
                 return null;
             }
-            String topic = request.getExtDataMap().get("topic");
-            String firstTopic = request.getExtDataMap().get("firstTopic");
+            String topic = request.getExtDataMap().get(RETAIN_REQ_READ_PARAM_TOPIC);
+            String firstTopic = request.getExtDataMap().get(RETAIN_REQ_READ_PARAM_FIRST_TOPIC);
             String operation = request.getOperation();
-
-            logger.info("FirstTopic:{} Topic:{} Operation:{}", firstTopic, topic, operation);
-
-            if (operation.equals("topic")) {    //return retained msg
+            if (operation.equals(RETAIN_REQ_READ_PARAM_OPERATION_TOPIC)) {    //return retained msg
                 return get(sm.getRocksDBEngine(), topic.getBytes(StandardCharsets.UTF_8));
             } else { //return retain msgs of matched Topic
                 String wrapTrieFirstTopic = wrapTrieFirstTopic(firstTopic);
@@ -95,24 +102,27 @@ public class RetainedMsgStateProcessor extends StateProcessor {
                         .addAllDatalist(msgResults)//return retained msgs of matched Topic
                         .build();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("", e);
             return Response.newBuilder()
                     .setSuccess(false)
                     .setErrMsg(e.getMessage())
                     .build();
+        } finally {
+            StatUtil.addInvoke("RetainRead", System.currentTimeMillis() - start);
         }
     }
 
-    boolean setRetainedMsg(RocksDBEngine rocksDBEngine, String firstTopic, String topic, boolean isEmpty, byte[] msg) throws Exception {
+    boolean setRetainedMsg(RocksDBEngine rocksDBEngine, String firstTopic, String topic, boolean isEmpty, byte[] msg, Long expire) throws Exception {
         String wrapTrieFirstTopic = wrapTrieFirstTopic(firstTopic);
         // if the trie of firstTopic doesn't exist
         if (!retainedMsgTopicTrie.containsKey(wrapTrieFirstTopic)) {
             retainedMsgTopicTrie.put(wrapTrieFirstTopic, new Trie<String, String>());
         }
         if (isEmpty) {
-            //delete from trie
-            logger.info("Delete the topic {} retained message", topic);
+            if (expire != null && !checkExpire(rocksDBEngine, expire, topic)) {
+                return true;
+            }
             delete(rocksDBEngine, topic.getBytes(StandardCharsets.UTF_8));
             Trie<String, String> trie = retainedMsgTopicTrie.get(wrapTrieFirstTopic);
             if (trie != null) {
@@ -122,7 +132,7 @@ public class RetainedMsgStateProcessor extends StateProcessor {
         } else {
             //Add to trie
             Trie<String, String> trie = retainedMsgTopicTrie.get(wrapTrieFirstTopic);
-            if (trie.getNodePath().size() < maxRetainedTopicNum) {
+            if (trie.getNodePath().size() < server.getMetaConf().getMaxRetainedTopicNum()) {
                 put(rocksDBEngine, topic.getBytes(StandardCharsets.UTF_8), msg);
                 trie.addNode(topic, "", "");
                 put(rocksDBEngine, wrapTrieFirstTopic.getBytes(StandardCharsets.UTF_8), JSON.toJSONBytes(trie));
@@ -134,48 +144,63 @@ public class RetainedMsgStateProcessor extends StateProcessor {
         return true;
     }
 
+    private boolean checkExpire(RocksDBEngine rocksDBEngine, long expire, String topic) {
+        try {
+            byte[] value = getRdb(rocksDBEngine, topic.getBytes(StandardCharsets.UTF_8));
+            if (value == null) {
+                return true;
+            }
+            return System.currentTimeMillis() - StoreMessage.parseFrom(value).getBornTimestamp() > expire;
+        } catch (Throwable t) {
+            logger.error("", t);
+        }
+        return false;
+    }
+
     private String wrapTrieFirstTopic(String firstTopic) {
         return "$" + firstTopic + "$";
     }
 
     @Override
     public Response onWriteRequest(WriteRequest writeRequest) {
+        long start = System.currentTimeMillis();
         try {
             MqttStateMachine sm = server.getMqttStateMachine(writeRequest.getGroup());
             if (sm == null) {
                 logger.error("Fail to process RetainedMsg WriteRequest , Not Found SM for {}", writeRequest.getGroup());
                 return null;
             }
-            String firstTopic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("firstTopic"));     //retained msg firstTopic
-            String topic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get("topic"));     //retained msg topic
-            boolean isEmpty = Boolean.parseBoolean(writeRequest.getExtDataMap().get("isEmpty"));     //retained msg is empty
+            String firstTopic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get(RETAIN_REQ_WRITE_PARAM_FIRST_TOPIC));     //retained msg firstTopic
+            String topic = TopicUtils.normalizeTopic(writeRequest.getExtDataMap().get(RETAIN_REQ_WRITE_PARAM_TOPIC));     //retained msg topic
+            boolean isEmpty = Boolean.parseBoolean(writeRequest.getExtDataMap().get(RETAIN_REQ_WRITE_PARAM_IS_EMPTY));     //retained msg is empty
+            String expireStr = writeRequest.getExtDataMap().get(RETAIN_REQ_WRITE_PARAM_EXPIRE);
+            Long expire = StringUtils.isNotBlank(expireStr) ? Long.parseLong(expireStr) : null;
             byte[] message = writeRequest.getData().toByteArray();
-            boolean res = setRetainedMsg(sm.getRocksDBEngine(), firstTopic, topic, isEmpty, message);
+            boolean res = setRetainedMsg(sm.getRocksDBEngine(), firstTopic, topic, isEmpty, message, expire);
             if (!res) {
-                logger.warn("Put the topic {} retained message failed! Exceeded maximum number of reserved topics limit.", topic);
                 return Response.newBuilder()
                         .setSuccess(false)
-                        .setErrMsg("Exceeded maximum number of reserved topics limit.")
+                        .setErrMsg("f")
                         .build();
             }
-            logger.info("Put the topic {} retained message success!", topic);
-
             return Response.newBuilder()
                     .setSuccess(true)
                     .setData(ByteString.copyFrom(JSON.toJSONBytes(topic)))
                     .build();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error("Put the retained message error!", e);
             return Response.newBuilder()
                     .setSuccess(false)
                     .setErrMsg(e.getMessage())
                     .build();
+        } finally {
+            StatUtil.addInvoke("RetainWrite", System.currentTimeMillis() - start);
         }
     }
 
     @Override
     public String groupCategory() {
-        return Constants.CATEGORY_RETAINED_MSG;
+        return MetaConstants.CATEGORY_RETAINED_MSG;
     }
 
 }

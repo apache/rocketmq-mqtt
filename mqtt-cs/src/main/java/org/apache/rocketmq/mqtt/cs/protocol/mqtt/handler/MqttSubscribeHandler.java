@@ -144,7 +144,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
 
 
     private void sendRetainMessage(ChannelHandlerContext ctx, Set<Subscription> subscriptions) throws InterruptedException, RemotingException, org.apache.rocketmq.remoting.exception.RemotingException {
-
         String clientId = ChannelInfo.getClientId(ctx.channel());
         Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
         Set<Subscription> preciseTopics = new HashSet<>();
@@ -169,8 +168,7 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
         }
 
         for (Subscription subscription : wildcardTopics) {
-
-            CompletableFuture<ArrayList<Message>> future = retainedPersistManager.getMsgsFromTrie(subscription);
+            CompletableFuture<ArrayList<Message>> future = retainedPersistManager.getMsgsFromTrie(subscription.toFirstTopic(), subscription.getTopicFilter());
             future.whenComplete((msgsList, throwable) -> {
                 for (Message msg : msgsList) {
                     if (msg == null) {
@@ -179,7 +177,6 @@ public class MqttSubscribeHandler implements MqttPacketHandler<MqttSubscribeMess
                     pushAction._sendMessage(session, clientId, subscription, msg);
                 }
             });
-
         }
     }
 

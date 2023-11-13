@@ -25,6 +25,7 @@ import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
+import org.apache.rocketmq.mqtt.common.facade.WillMsgSender;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
@@ -38,13 +39,14 @@ import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
 import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 
 @Component
-public class PublishProcessor implements UpstreamProcessor {
+public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
     private static Logger logger = LoggerFactory.getLogger(PublishProcessor.class);
     @Resource
     private LmqQueueStore lmqQueueStore;
@@ -60,6 +62,12 @@ public class PublishProcessor implements UpstreamProcessor {
 
     @Override
     public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage mqttMessage) {
+        CompletableFuture<StoreResult> r = put(context, mqttMessage);
+        return r.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
+                JSON.toJSONBytes(storeResult)));
+    }
+
+    public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
         boolean isEmpty = false;
         //deal empty payload
@@ -98,9 +106,14 @@ public class PublishProcessor implements UpstreamProcessor {
         message.setBornTimestamp(bornTime);
         message.setEmpty(isEmpty);
 
-        CompletableFuture<StoreResult> storeResultFuture = lmqQueueStore.putMessage(queueNames, message);
-        return storeResultFuture.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
-            JSON.toJSONBytes(storeResult)));
+        return lmqQueueStore.putMessage(queueNames, message);
     }
 
+
+    @Override
+    public CompletableFuture<StoreResult> sendWillMsg(String clientId, MqttPublishMessage message) {
+        MqttMessageUpContext ctx = new MqttMessageUpContext();
+        ctx.setClientId(clientId);
+        return put(ctx, message);
+    }
 }

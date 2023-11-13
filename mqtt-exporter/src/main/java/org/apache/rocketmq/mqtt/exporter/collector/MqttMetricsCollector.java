@@ -111,6 +111,10 @@ public class MqttMetricsCollector {
     }
 
     private static void collect(MqttMetricsInfo mqttMetricsInfo, long val, String... labels) throws PrometheusException {
+        if (!initialized) {
+            return;
+        }
+
         Map<MqttMetricsInfo, Collector> mqttMetricsInfoCollectorTypeMap = ALL_TYPE_COLLECTORS.get(mqttMetricsInfo.getType());
         if (mqttMetricsInfoCollectorTypeMap == null) {
             throw new PrometheusException("mqttMetricsInfo unregistered or collector type not support: " + mqttMetricsInfo);

@@ -48,6 +48,9 @@ public class MetaConfListener {
     @PostConstruct
     public void start() {
         confFile = metaConf.getConfFile();
+        if (confFile == null) {
+            return;
+        }
         gmt.set(confFile.lastModified());
         scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("ConnectConfListener"));
         scheduler.scheduleWithFixedDelay(() -> {

@@ -17,7 +17,6 @@
 
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.netty.channel.Channel;
 import org.apache.commons.lang3.StringUtils;
@@ -26,13 +25,10 @@ import org.apache.rocketmq.mqtt.common.facade.LmqOffsetStore;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.SubscriptionPersistManager;
 import org.apache.rocketmq.mqtt.common.facade.WillMsgPersistManager;
-import org.apache.rocketmq.mqtt.common.meta.IpUtil;
-import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
@@ -393,6 +389,7 @@ public class SessionLoopImpl implements SessionLoop {
                 throw new RuntimeException(
                         "invalid notifyPullMessage, subscription is null, but queue is not null," + session.getClientId());
             }
+            logger.info("session loop impl doing notifyPullMessage queueFresh.freshQueue({}, {}})", session, subscription);
             queueFresh.freshQueue(session, subscription);
             pullMessage(session, subscription, queue);
             return;
@@ -409,32 +406,6 @@ public class SessionLoopImpl implements SessionLoop {
                 }
             }
         }
-    }
-
-    @Override
-    public void addWillMessage(Channel channel, WillMessage willMessage) {
-        Session session = getSession(ChannelInfo.getId(channel));
-        String clientId = ChannelInfo.getClientId(channel);
-        String ip = IpUtil.getLocalAddressCompatible();
-
-        if (session == null) {
-            return;
-        }
-        if (willMessage == null) {
-            return;
-        }
-
-        String message = JSON.toJSONString(willMessage);
-        String willKey = ip + Constants.CTRL_1 + clientId;
-
-        // key: ip + clientId; value: WillMessage
-        willMsgPersistManager.put(willKey, message).whenComplete((result, throwable) -> {
-            if (!result || throwable != null) {
-                logger.error("fail to put will message key {} value {}", willKey, willMessage);
-                return;
-            }
-            logger.debug("put will message key {} value {} successfully", willKey, message);
-        });
     }
 
     private String eventQueueKey(Session session, Queue queue) {
@@ -539,7 +510,6 @@ public class SessionLoopImpl implements SessionLoop {
                         pushAction.messageArrive(session, subscription, queue);
                     }
                 } else if (PullResult.PULL_OFFSET_MOVED == pullResult.getCode()) {
-                    queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
                     queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
                     session.markPersistOffsetFlag(true);
                     pullMessage(session, subscription, queue);

@@ -116,6 +116,9 @@ public class TopicUtils {
         if (topics.startsWith(Constants.MQTT_TOPIC_DELIMITER)) {
             topics = topics.substring(1);
         }
+        if (topics.startsWith(Constants.SHARED_PREFIX)) {
+            topics = TopicUtils.getSharedTopicFilter(topics);
+        }
         String topic;
         String secondTopic = null;
         int index = topics.indexOf(Constants.MQTT_TOPIC_DELIMITER, 1);
@@ -184,5 +187,25 @@ public class TopicUtils {
 
     public static String wrapP2pLmq(String clientId) {
         return normalizeTopic(Constants.P2P + clientId);
+    }
+
+    // shared subscription topic filter format: $share/{ShareName}/{filter}
+    public static boolean isSharedSubscription(String topicFilter) {
+        if (StringUtils.isEmpty(topicFilter)) {
+            return false;
+        }
+        if (!topicFilter.startsWith(Constants.SHARED_PREFIX)) {
+            return false;
+        }
+        String[] arr = topicFilter.split(Constants.MQTT_TOPIC_DELIMITER);
+        return arr.length > 2;
+    }
+
+    public static String getSharedName(String topicFilter) {
+        return topicFilter.split(Constants.MQTT_TOPIC_DELIMITER)[1];
+    }
+
+    public static String getSharedTopicFilter(String topicFilter) {
+        return topicFilter.split(Constants.MQTT_TOPIC_DELIMITER, 3)[2];
     }
 }

@@ -20,6 +20,7 @@ package org.apache.rocketmq.mqtt.meta.raft.rpc;
 import com.alipay.sofa.jraft.rpc.RpcContext;
 import com.alipay.sofa.jraft.rpc.RpcProcessor;
 import org.apache.rocketmq.mqtt.common.model.consistency.WriteRequest;
+import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.meta.raft.MqttRaftServer;
 
 /**
@@ -34,6 +35,7 @@ public class MqttWriteRpcProcessor extends AbstractRpcProcessor implements RpcPr
 
     @Override
     public void handleRequest(RpcContext rpcCtx, WriteRequest request) {
+        StatUtil.addPv(StatUtil.buildKey("WriteRpc", request.getGroup()), 1);
         handleRequest(server, request.getGroup(), rpcCtx, request);
     }
 

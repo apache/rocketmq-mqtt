@@ -17,15 +17,13 @@
 
 package org.apache.rocketmq.mqtt.cs.starter;
 
-import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.mqtt.common.util.SpringUtils;
+
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 
 public class Startup {
-
     public static void main(String[] args) {
-        System.setProperty(ClientLogger.CLIENT_LOG_USESLF4J, "true");
 
         ClassPathXmlApplicationContext applicationContext = new ClassPathXmlApplicationContext("classpath:spring.xml");
         SpringUtils.SetClassPathXmlApplicationContext(applicationContext);

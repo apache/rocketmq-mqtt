@@ -34,6 +34,7 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -53,6 +54,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Resource
     private SessionLoop sessionLoop;
+
+    @Resource
+    private WillLoop willLoop;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
@@ -116,7 +120,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                 }
 
                 willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
-                sessionLoop.addWillMessage(channel, willMessage);
+                willLoop.addWillMessage(channel, willMessage);
             }
 
         } catch (Exception e) {

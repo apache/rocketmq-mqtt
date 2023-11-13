@@ -28,6 +28,7 @@ public class RaftUtil {
 
     public static final int RETAIN_RAFT_GROUP_INDEX = 0;
     public static final int WILL_RAFT_GROUP_INDEX = 1;
+    public static final int HASH_KV_RAFT_GROUP_INDEX = 2;
 
     static {
         RAFT_GROUPS = new String[RAFT_GROUP_NUM];

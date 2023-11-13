@@ -23,45 +23,44 @@ import java.io.InputStream;
 import java.util.Properties;
 
 import org.apache.rocketmq.common.MixAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MetaConf {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetaConf.class);
     private static final String CONF_FILE_NAME = "meta.conf";
     private File confFile;
-    private String clusterName = "defaultCluster";
     private String allNodeAddress;
-    private String dbPath = System.getProperty("user.home") + "/mqtt_meta/db";
-    private String raftDataPath = System.getProperty("user.home") + "/mqtt_meta/raft";
     private int metaPort = 25000;
     private String selfAddress;
+    private int raftNodePort = 8081;
     private String membersAddress;
-    private int maxRetainedTopicNum =  10000;
+    private int maxRetainedTopicNum = 10000;
     private int electionTimeoutMs = 1000;
     private int snapshotIntervalSecs = 60 * 1000;
     private String raftServiceName = System.getenv("RaftServiceName");
 
+    private int scanNum = 10000;
+
     public MetaConf() throws IOException {
-        ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
-        InputStream in = classPathResource.getInputStream();
-        Properties properties = new Properties();
-        properties.load(in);
-        in.close();
-        MixAll.properties2Object(properties, this);
-        this.confFile = new File(classPathResource.getURL().getFile());
+        try {
+            ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
+            InputStream in = classPathResource.getInputStream();
+            Properties properties = new Properties();
+            properties.load(in);
+            in.close();
+            MixAll.properties2Object(properties, this);
+            this.confFile = new File(classPathResource.getURL().getFile());
+        } catch (Exception e) {
+            LOGGER.error("", e);
+        }
     }
 
     public File getConfFile() {
         return confFile;
-    }
-
-    public String getClusterName() {
-        return clusterName;
-    }
-
-    public void setClusterName(String clusterName) {
-        this.clusterName = clusterName;
     }
 
     public String getAllNodeAddress() {
@@ -70,22 +69,6 @@ public class MetaConf {
 
     public void setAllNodeAddress(String allNodeAddress) {
         this.allNodeAddress = allNodeAddress;
-    }
-
-    public String getDbPath() {
-        return dbPath;
-    }
-
-    public void setDbPath(String dbPath) {
-        this.dbPath = dbPath;
-    }
-
-    public String getRaftDataPath() {
-        return raftDataPath;
-    }
-
-    public void setRaftDataPath(String raftDataPath) {
-        this.raftDataPath = raftDataPath;
     }
 
     public int getMetaPort() {
@@ -142,5 +125,21 @@ public class MetaConf {
 
     public void setRaftServiceName(String raftServiceName) {
         this.raftServiceName = raftServiceName;
+    }
+
+    public int getRaftNodePort() {
+        return raftNodePort;
+    }
+
+    public void setRaftNodePort(int raftNodePort) {
+        this.raftNodePort = raftNodePort;
+    }
+
+    public int getScanNum() {
+        return scanNum;
+    }
+
+    public void setScanNum(int scanNum) {
+        this.scanNum = scanNum;
     }
 }

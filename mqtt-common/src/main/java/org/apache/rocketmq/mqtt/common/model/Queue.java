@@ -51,6 +51,10 @@ public class Queue {
         return TopicUtils.isP2pTopic(queueName);
     }
 
+    public boolean isShare() {
+        return TopicUtils.isSharedSubscription(queueName);
+    }
+
     public long getQueueId() {
         return queueId;
     }

@@ -110,7 +110,7 @@ public class WillMsgPersistManagerImplTest {
         String ip = "xxxx";
         String startClientKey = ip + Constants.CTRL_0;
         String endClientKey = ip + Constants.CTRL_2;
-        willMsgPersistManager.scan(startClientKey, endClientKey).whenComplete((willMap, throwable) -> {
+        willMsgPersistManager.scan(startClientKey, endClientKey, 100).whenComplete((willMap, throwable) -> {
             if (willMap == null || throwable != null) {
                 return;
             }

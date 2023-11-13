@@ -29,7 +29,7 @@ import java.util.Date;
 
 public class MqttBiSSLConsumer {
     public static void main(String[] args) throws Exception {
-        String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
+        String brokerUrl = "ssl://" + System.getenv("host") + ":8883";
         String firstTopic = System.getenv("topic");
         MemoryPersistence memoryPersistence = new MemoryPersistence();
         String recvClientId = "recv01";

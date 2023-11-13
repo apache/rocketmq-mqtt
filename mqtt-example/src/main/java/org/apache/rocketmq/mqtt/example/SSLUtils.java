@@ -156,7 +156,7 @@ public class SSLUtils {
     public static MqttConnectOptions buildMqttConnectOptions(String clientId, String caPath, String deviceCrtPath,
                                                              String deviceKyPath, String password) throws Exception {
         MqttConnectOptions connOpts = new MqttConnectOptions();
-        connOpts.setCleanSession(true);
+        connOpts.setCleanSession(false);
         connOpts.setKeepAliveInterval(60);
         connOpts.setAutomaticReconnect(true);
         connOpts.setMaxInflight(10000);

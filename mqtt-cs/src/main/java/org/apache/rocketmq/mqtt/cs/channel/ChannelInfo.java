@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.cs.channel;
 
 import com.alibaba.fastjson.JSON;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +55,7 @@ public class ChannelInfo {
 
     public static final AttributeKey<ConcurrentMap<String, String>> CHANNEL_EXTDATA_ATTRIBUTE_KEY = AttributeKey
         .valueOf("E");
+    private static final AttributeKey<MqttVersion> CHANNEL_VERSION_ATTRIBUTE_KEY = AttributeKey.valueOf("V");
 
     public static final AttributeKey<String> CHANNEL_GA_ATTRIBUTE_KEY = AttributeKey.valueOf("GA");
 
@@ -247,6 +249,14 @@ public class ChannelInfo {
             infoAttribute.setIfAbsent(new ConcurrentHashMap<>(8));
         }
         return infoAttribute.get();
+    }
+
+    public static MqttVersion getMqttVersion(Channel channel) {
+        return channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).get();
+    }
+
+    public static void setMqttVersion(Channel channel,MqttVersion mqttVersion){
+        channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).setIfAbsent(mqttVersion);
     }
 
 }

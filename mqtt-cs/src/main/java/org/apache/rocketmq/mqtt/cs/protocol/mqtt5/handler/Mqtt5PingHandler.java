@@ -15,30 +15,23 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
+package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
-import io.netty.handler.codec.mqtt.MqttMessageType;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
-import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 
 @Component
-public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
-    private final MqttFixedHeader pubRelMqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBREL, false,
-
-            MqttQoS.AT_LEAST_ONCE, false, 0);
-
-    @Resource
-    private RetryDriver retryDriver;
+public class Mqtt5PingHandler implements MqttPacketHandler<MqttMessage> {
+    private static Logger logger = LoggerFactory.getLogger(Mqtt5PingHandler.class);
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
@@ -47,12 +40,8 @@ public class MqttPubRecHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
-        MqttMessageIdVariableHeader variableHeader = (MqttMessageIdVariableHeader) mqttMessage.variableHeader();
-        String channelId = ChannelInfo.getId(ctx.channel());
-        retryDriver.unMountPublish(variableHeader.messageId(), channelId);
-        retryDriver.mountPubRel(variableHeader.messageId(), channelId);
-
-        MqttMessage pubRelMqttMessage = new MqttMessage(pubRelMqttFixedHeader, variableHeader);
-        ctx.channel().writeAndFlush(pubRelMqttMessage);
+        Channel channel = ctx.channel();
+        ChannelInfo.touch(channel);
+        channel.writeAndFlush(MqttMessageFactory.buildPingRespMessage());
     }
 }

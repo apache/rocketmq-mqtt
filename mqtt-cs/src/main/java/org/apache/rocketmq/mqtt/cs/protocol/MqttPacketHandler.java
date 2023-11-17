@@ -15,34 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
+package org.apache.rocketmq.mqtt.cs.protocol;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
-import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.Resource;
 
 
+public interface MqttPacketHandler<T extends MqttMessage> {
 
-@Component
-public class MqttDisconnectHandler implements MqttPacketHandler<MqttMessage> {
+    /**
+     * preHandler before upstream processor, for preprocessing
+     *
+     * @param ctx
+     * @param mqttMessage
+     * @return
+     */
+    boolean preHandler(ChannelHandlerContext ctx, T mqttMessage);
 
-    @Resource
-    private ChannelManager channelManager;
-
-    @Override
-    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
-        return true;
-    }
-
-    @Override
-    public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
-        channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "disconnect");
-    }
+    /**
+     * doHandler after upstream processor
+     *
+     * @param ctx
+     * @param mqttMessage
+     */
+    void doHandler(ChannelHandlerContext ctx, T mqttMessage, HookResult upstreamHookResult);
 
 }

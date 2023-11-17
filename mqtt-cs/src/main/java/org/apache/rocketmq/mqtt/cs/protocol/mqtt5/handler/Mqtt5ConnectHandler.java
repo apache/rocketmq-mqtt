@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler;
-
+package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -25,6 +24,7 @@ import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
+import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
@@ -44,10 +44,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-
 @Component
-public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage> {
-    private static Logger logger = LoggerFactory.getLogger(MqttConnectHandler.class);
+public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage> {
+    private static Logger logger = LoggerFactory.getLogger(Mqtt5ConnectHandler.class);
 
     @Resource
     private ChannelManager channelManager;
@@ -61,12 +60,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
     @Override
-    public boolean preHandler(ChannelHandlerContext ctx, MqttConnectMessage mqttMessage) {
-        MqttConnectVariableHeader variableHeader = mqttMessage.variableHeader();
-        Channel channel = ctx.channel();
-        ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
-        ChannelInfo.setClientId(channel, mqttMessage.payload().clientIdentifier());
-        ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
+    public boolean preHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage) {
         return true;
     }
 
@@ -79,6 +73,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
         ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
         ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
+
 
         String remark = upstreamHookResult.getRemark();
         if (!upstreamHookResult.isSuccess()) {
@@ -128,5 +123,4 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "ConnectException");
         }
     }
-
 }

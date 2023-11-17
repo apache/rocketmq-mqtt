@@ -190,7 +190,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
     private boolean preHandler(ChannelHandlerContext ctx, MqttMessage msg) {
         switch (msg.fixedHeader().messageType()) {
             case CONNECT:
-                return mqtt5ConnectHandler.preHandler(ctx, msg);
+                return mqtt5ConnectHandler.preHandler(ctx, (MqttConnectMessage) msg);
             case PUBLISH:
                 return mqtt5PublishHandler.preHandler(ctx, msg);
             case SUBSCRIBE:

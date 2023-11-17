@@ -25,6 +25,7 @@ import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
@@ -73,6 +74,10 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
         ChannelInfo.setKeepLive(channel, variableHeader.keepAliveTimeSeconds());
         ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
+
+        if (MqttVersion.MQTT_5.equals(ChannelInfo.getMqttVersion(channel))) {
+
+        }
 
 
         String remark = upstreamHookResult.getRemark();

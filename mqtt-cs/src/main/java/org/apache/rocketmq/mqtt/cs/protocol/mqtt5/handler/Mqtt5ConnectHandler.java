@@ -47,9 +47,13 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_QOS;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RETAIN_AVAILABLE;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SHARED_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS_MAXIMUM;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.USER_PROPERTY;
 
@@ -155,7 +159,22 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
         }, 1, TimeUnit.SECONDS);
 
         try {
-            MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.buildConnAckMessage(MqttConnectReturnCode.CONNECTION_ACCEPTED);
+            Boolean sessionPresent = false;
+            if (!ChannelInfo.getCleanSessionFlag(channel) && sessionLoop.getSessionList(ChannelInfo.getClientId(channel)).size() > 0) {
+                sessionPresent = true;
+            }
+
+            // set server properties send to client
+            MqttProperties props = new MqttProperties();
+            props.add(new MqttProperties.IntegerProperty(RETAIN_AVAILABLE.value(), 0));
+            props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value(), 0));
+            props.add(new MqttProperties.IntegerProperty(SHARED_SUBSCRIPTION_AVAILABLE.value(), 0));
+
+            final MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.createConnAckMessage(
+                    MqttConnectReturnCode.CONNECTION_ACCEPTED,
+                    sessionPresent,
+                    props);
+
             future.thenAccept(aVoid -> {
                 if (!channel.isActive()) {
                     return;

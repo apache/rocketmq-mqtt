@@ -25,8 +25,10 @@ import io.netty.handler.codec.mqtt.MqttConnAckVariableHeader;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageBuilders;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
@@ -101,5 +103,22 @@ public class MqttMessageFactory {
         return new MqttUnsubAckMessage(mqttFixedHeader, idVariableHeader);
     }
 
+
+    public static MqttConnAckMessage createConnAckMessage(MqttConnectReturnCode mqttConnectReturnCode, Boolean sessionPresent) {
+        return MqttMessageBuilders.connAck()
+                .returnCode(mqttConnectReturnCode)
+                .properties(MqttProperties.NO_PROPERTIES)
+                .sessionPresent(sessionPresent)
+                .build();
+    }
+
+    public static MqttConnAckMessage createConnAckMessage(MqttConnectReturnCode mqttConnectReturnCode,
+                                                          Boolean sessionPresent, MqttProperties properties) {
+        return MqttMessageBuilders.connAck()
+                .returnCode(mqttConnectReturnCode)
+                .properties(properties)
+                .sessionPresent(sessionPresent)
+                .build();
+    }
 
 }

@@ -33,6 +33,7 @@ import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
 import io.netty.handler.codec.mqtt.MqttSubAckPayload;
 import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
@@ -118,6 +119,12 @@ public class MqttMessageFactory {
                 .returnCode(mqttConnectReturnCode)
                 .properties(properties)
                 .sessionPresent(sessionPresent)
+                .build();
+    }
+
+    public static MqttMessage createDisconnectMessage(MqttReasonCodes.Disconnect mqttDisconnectReasonCode) {
+        return MqttMessageBuilders.disconnect()
+                .reasonCode(mqttDisconnectReasonCode.byteValue())
                 .build();
     }
 

@@ -22,6 +22,7 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
@@ -37,6 +38,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect.NORMAL_DISCONNECT;
 
 @Component
 public class DefaultChannelManager implements ChannelManager {
@@ -131,6 +134,7 @@ public class DefaultChannelManager implements ChannelManager {
         }
 
         if (channel.isActive()) {
+            channel.writeAndFlush(MqttMessageFactory.createDisconnectMessage(NORMAL_DISCONNECT));
             channel.close();
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);

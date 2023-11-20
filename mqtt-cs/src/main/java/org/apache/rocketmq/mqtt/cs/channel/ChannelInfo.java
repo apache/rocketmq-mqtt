@@ -25,6 +25,7 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -69,7 +70,7 @@ public class ChannelInfo {
 
     public static final AttributeKey<Map<MqttProperties.MqttPropertyType, Object>> CHANNEL_INFO_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("I5");
 
-    public static final AttributeKey<ConcurrentMap<String, String>> CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("UP");
+    public static final AttributeKey<List<MqttProperties.UserProperty>> CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("UP");
 
     public static Map<String, String> getExtData(Channel channel) {
         Attribute<ConcurrentMap<String, String>> extAttribute = channel.attr(CHANNEL_EXTDATA_ATTRIBUTE_KEY);
@@ -263,12 +264,12 @@ public class ChannelInfo {
         return infoAttribute.get();
     }
 
-    public static ConcurrentMap<String, String> getUserPropertyMap(Channel channel) {
+    public static List<MqttProperties.UserProperty> getUserProperties(Channel channel) {
         return channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).get();
     }
 
-    public static void setUserPropertyMap(Channel channel, ConcurrentMap<String, String> userPropertyMap){
-        channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).set(userPropertyMap);
+    public static void setUserProperty(Channel channel, List<MqttProperties.UserProperty> userProperties){
+        channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).set(userProperties);
     }
 
     public static MqttVersion getMqttVersion(Channel channel) {
@@ -335,7 +336,4 @@ public class ChannelInfo {
     public static void setRequestProblemInformation(Channel channel, Integer requestProblemInformation) {
         getMqtt5Info(channel).put(REQUEST_RESPONSE_INFORMATION, requestProblemInformation);
     }
-
-
-
 }

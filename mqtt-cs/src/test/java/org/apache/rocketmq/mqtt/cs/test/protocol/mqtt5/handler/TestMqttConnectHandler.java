@@ -21,12 +21,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.mqtt.MqttConnAckMessage;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
-import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
-import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessageBuilders;
-import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttVersion;
@@ -35,10 +31,11 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.DefaultChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler.Mqtt5ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +46,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.AUTHENTICATION_METHOD;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.WILL_DELAY_INTERVAL;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -73,6 +71,9 @@ public class TestMqttConnectHandler {
 
     @Mock
     private SessionLoop sessionLoop;
+
+    @Mock
+    private WillLoop willLoop;
 
     private static final String CLIENT_ID = "RANDOM_TEST_CLIENT";
     private static final String WILL_TOPIC = "/my_will";
@@ -108,7 +109,10 @@ public class TestMqttConnectHandler {
         MqttProperties props = new MqttProperties();
         props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 10));
         props.add(new MqttProperties.StringProperty(AUTHENTICATION_METHOD.value(), "Plain"));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
         props.add(new MqttProperties.UserProperty("hello", "1"));
+        props.add(new MqttProperties.UserProperty("hello", "2"));
         props.add(new MqttProperties.UserProperty("tag", "secondTag"));
         MqttProperties willProps = new MqttProperties();
         willProps.add(new MqttProperties.IntegerProperty(WILL_DELAY_INTERVAL.value(), 100));
@@ -117,6 +121,8 @@ public class TestMqttConnectHandler {
         connectHandler = new Mqtt5ConnectHandler();
         FieldUtils.writeDeclaredField(connectHandler, "channelManager", channelManager, true);
         FieldUtils.writeDeclaredField(connectHandler, "sessionLoop", sessionLoop, true);
+        FieldUtils.writeDeclaredField(connectHandler, "willLoop", willLoop, true);
+        ChannelInfo.setMqttVersion(channel, MqttVersion.MQTT_5);
 
         when(ctx.channel()).thenReturn(channel);
     }
@@ -149,7 +155,7 @@ public class TestMqttConnectHandler {
 
         // wait scheduler execution
         try {
-            Thread.sleep(1100);
+            Thread.sleep(1000);
         } catch (InterruptedException ignored) {
         }
 

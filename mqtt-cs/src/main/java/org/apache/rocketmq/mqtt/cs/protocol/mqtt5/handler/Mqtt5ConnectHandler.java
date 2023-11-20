@@ -182,6 +182,8 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
                 ChannelInfo.removeFuture(channel, ChannelInfo.FUTURE_CONNECT);
                 channel.writeAndFlush(mqttConnAckMessage);
             });
+
+            // TODO if sessionPresent = true, should load the exist session by clientId
             sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
 
             // TODO save will Propertiess in MQTT 5.0

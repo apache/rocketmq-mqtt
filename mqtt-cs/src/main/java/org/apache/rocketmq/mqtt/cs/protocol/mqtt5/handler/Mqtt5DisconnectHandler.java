@@ -56,7 +56,12 @@ public class Mqtt5DisconnectHandler implements MqttPacketHandler<MqttMessage> {
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         final MqttReasonCodeAndPropertiesVariableHeader variableHeader = (MqttReasonCodeAndPropertiesVariableHeader) mqttMessage.variableHeader();
 
-        if (variableHeader.properties().getProperty(SESSION_EXPIRY_INTERVAL.value()) != null) {
+        if (variableHeader == null) {
+            channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.CLIENT, "disconnect");
+            return;
+        }
+
+        if (variableHeader.properties() != null && variableHeader.properties().getProperty(SESSION_EXPIRY_INTERVAL.value()) != null) {
             Integer disconnectSessionExpiryInterval = (Integer) variableHeader.properties().getProperty(SESSION_EXPIRY_INTERVAL.value()).value();
             Integer channelSessionExpiryInterval = ChannelInfo.getSessionExpiryInterval(ctx.channel());
             if (channelSessionExpiryInterval != null && disconnectSessionExpiryInterval != null) {

@@ -56,7 +56,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestMqttConnectHandler {
+public class TestMqtt5ConnectHandler {
     private Mqtt5ConnectHandler connectHandler;
     private MqttConnectMessage connectMessage;
 

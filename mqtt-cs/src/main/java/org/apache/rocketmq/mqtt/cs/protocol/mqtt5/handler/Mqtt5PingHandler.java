@@ -20,10 +20,10 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -42,6 +42,6 @@ public class Mqtt5PingHandler implements MqttPacketHandler<MqttMessage> {
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         Channel channel = ctx.channel();
         ChannelInfo.touch(channel);
-        channel.writeAndFlush(MqttMessageFactory.buildPingRespMessage());
+        channel.writeAndFlush(MqttMessage.PINGRESP);
     }
 }

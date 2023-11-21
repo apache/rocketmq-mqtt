@@ -127,5 +127,4 @@ public class MqttMessageFactory {
                 .reasonCode(mqttDisconnectReasonCode.byteValue())
                 .build();
     }
-
 }

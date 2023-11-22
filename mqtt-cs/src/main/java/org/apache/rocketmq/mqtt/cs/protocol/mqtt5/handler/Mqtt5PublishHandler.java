@@ -20,9 +20,11 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -33,6 +35,10 @@ import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+
+import java.nio.charset.StandardCharsets;
+
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
 
 @Component
 public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage> {
@@ -48,11 +54,34 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
         final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
         Channel channel = ctx.channel();
         String channelId = ChannelInfo.getId(channel);
-        final boolean isQos2 = isQos2Message(mqttMessage);
-        boolean dup = isQos2 && inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId());
-        if (dup) {
-            doResponse(ctx, mqttMessage);
-            return false;
+
+        if (inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
+            if (isQos1Message(mqttMessage)) {
+                sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PACKET_IDENTIFIER_IN_USE);
+                return false;
+            } else if (isQos2Message(mqttMessage)) {
+                sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PACKET_IDENTIFIER_IN_USE);
+                return false;
+            }
+        }
+
+        MqttProperties mqttProperties = variableHeader.properties();
+        if (mqttProperties != null) {
+            Integer payloadFormatIndicator = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(PAYLOAD_FORMAT_INDICATOR.value())).value();
+            if (payloadFormatIndicator != null && payloadFormatIndicator == 1) {
+                if (mqttMessage.payload().readableBytes() != 0) {
+                    try {
+                        mqttMessage.payload().toString(StandardCharsets.UTF_8);
+                    } catch (Exception e) {
+                        if (isQos1Message(mqttMessage)) {
+                            sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PAYLOAD_FORMAT_INVALID);
+                        } else if (isQos2Message(mqttMessage)) {
+                            sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PAYLOAD_FORMAT_INVALID);
+                        }
+                        return false;
+                    }
+                }
+            }
         }
         return true;
     }
@@ -68,7 +97,7 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
             return;
         }
 
-        doResponse(ctx, mqttMessage);
+        doResponseSuccess(ctx, mqttMessage);
 
         final boolean isQos2Message = isQos2Message(mqttMessage);
         if (isQos2Message && !inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
@@ -80,7 +109,11 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
         return MqttQoS.EXACTLY_ONCE.equals(mqttPublishMessage.fixedHeader().qosLevel());
     }
 
-    private void doResponse(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
+    private boolean isQos1Message(MqttPublishMessage mqttPublishMessage) {
+        return MqttQoS.AT_LEAST_ONCE.equals(mqttPublishMessage.fixedHeader().qosLevel());
+    }
+
+    private void doResponseSuccess(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
         MqttFixedHeader fixedHeader = mqttMessage.fixedHeader();
         MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
         int messageId = variableHeader.packetId();
@@ -88,13 +121,27 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
             case AT_MOST_ONCE:
                 break;
             case AT_LEAST_ONCE:
-                ctx.channel().writeAndFlush(MqttMessageFactory.buildPubAckMessage(messageId));
+                ctx.channel().writeAndFlush(MqttMessageFactory.createPubAckMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
                 break;
             case EXACTLY_ONCE:
-                ctx.channel().writeAndFlush(MqttMessageFactory.buildPubRecMessage(messageId));
+                ctx.channel().writeAndFlush(MqttMessageFactory.createPubRecMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
                 break;
             default:
                 throw new IllegalArgumentException("unknown qos:" + fixedHeader.qosLevel());
         }
+    }
+
+    private void sendPubAck(Channel channel, Integer messageId, MqttReasonCodes.PubAck reasonCode) {
+        channel.writeAndFlush(MqttMessageFactory.createPubAckMessage(
+                messageId,
+                reasonCode.byteValue(),
+                MqttProperties.NO_PROPERTIES));
+    }
+
+    private void sendPubRec(Channel channel, Integer messageId, MqttReasonCodes.PubRec reasonCode) {
+        channel.writeAndFlush(MqttMessageFactory.createPubRecMessage(
+                messageId,
+                reasonCode.byteValue(),
+                MqttProperties.NO_PROPERTIES));
     }
 }

@@ -30,6 +30,7 @@ import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
+import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
@@ -126,5 +127,20 @@ public class MqttMessageFactory {
         return MqttMessageBuilders.disconnect()
                 .reasonCode(mqttDisconnectReasonCode.byteValue())
                 .build();
+    }
+
+    public static MqttMessage createPubAckMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        return MqttMessageBuilders.pubAck()
+                .packetId(messageId)
+                .reasonCode(reasonCode)
+                .properties(properties)
+                .build();
+    }
+
+    public static MqttMessage createPubRecMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
     }
 }

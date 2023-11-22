@@ -17,8 +17,6 @@
 
 package org.apache.rocketmq.mqtt.cs.protocol.mqtt5;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -51,8 +49,6 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.concurrent.CompletableFuture;
-
-import static io.netty.handler.codec.mqtt.MqttMessageType.PUBLISH;
 
 
 @ChannelHandler.Sharable
@@ -154,7 +150,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
                 mqtt5ConnectHandler.doHandler(ctx, (MqttConnectMessage) msg, upstreamHookResult);
                 break;
             case PUBLISH:
-                mqtt5PublishHandler.doHandler(ctx, msg, upstreamHookResult);
+                mqtt5PublishHandler.doHandler(ctx, (MqttPublishMessage) msg, upstreamHookResult);
                 break;
             case PUBACK:
                 mqtt5PubAckHandler.doHandler(ctx, msg, upstreamHookResult);
@@ -192,7 +188,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
             case CONNECT:
                 return mqtt5ConnectHandler.preHandler(ctx, (MqttConnectMessage) msg);
             case PUBLISH:
-                return mqtt5PublishHandler.preHandler(ctx, msg);
+                return mqtt5PublishHandler.preHandler(ctx, (MqttPublishMessage) msg);
             case SUBSCRIBE:
                 return mqtt5SubscribeHandler.preHandler(ctx, msg);
             case PUBACK:
@@ -221,6 +217,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
         context.setChannelId(ChannelInfo.getId(channel));
         context.setNode(HostInfo.getInstall().getAddress());
         context.setNamespace(ChannelInfo.getNamespace(channel));
+        context.setMqttVersion(ChannelInfo.getMqttVersion(channel));
         return context;
     }
 

@@ -36,6 +36,14 @@ public class Constants {
     public static final String PROPERTY_MQTT_CLIENT = "clientId";
     public static final String PROPERTY_MQTT_RETRY_TIMES = "retryTimes";
     public static final String PROPERTY_MQTT_EXT_DATA = "extData";
+    public static final String PROPERTY_CORRELATION_DATA = "correlationData";
+    public static final String PROPERTY_PAYLOAD_FORMAT_INDICATOR = "payloadFormatIndicator";
+    public static final String PROPERTY_MESSAGE_EXPIRY_INTERVAL = "messageExpiryInterval";
+    public static final String PROPERTY_TOPIC_ALIAS = "topicAlias";
+    public static final String PROPERTY_RESPONSE_TOPIC = "responseTopic";
+    public static final String PROPERTY_MQTT5_USER_PROPERTY = "userProperty";
+    public static final String PROPERTY_SUBSCRIPTION_IDENTIFIER = "subscriptionIdentifier";
+    public static final String PROPERTY_CONTENT_TYPE = "contentType";
 
 
     public static final String PROPERTY_MQTT_MSG_EVENT_RETRY_NODE = "retryNode";

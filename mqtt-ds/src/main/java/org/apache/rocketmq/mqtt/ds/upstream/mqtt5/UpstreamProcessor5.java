@@ -15,10 +15,22 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.hook;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt5;
 
-public enum UpstreamHookEnum {
-    AUTH,
-    UPSTREAM_PROCESS,
-    UPSTREAM_PROCESS5
+import io.netty.handler.codec.mqtt.MqttMessage;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.remoting.exception.RemotingException;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+public interface UpstreamProcessor5 {
+    /**
+     * process mqtt upstream packet
+     * @param context
+     * @param message
+     * @return
+     */
+    CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException;
 }

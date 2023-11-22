@@ -15,10 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.hook;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt5.processor;
 
-public enum UpstreamHookEnum {
-    AUTH,
-    UPSTREAM_PROCESS,
-    UPSTREAM_PROCESS5
+import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt5.UpstreamProcessor5;
+
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+
+public abstract class BaseProcessor5 implements UpstreamProcessor5 {
+
+    protected ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            8,
+            16,
+            1,
+            TimeUnit.MINUTES,
+            new LinkedBlockingQueue<>(10000),
+            new ThreadFactoryImpl("UpstreamBaseProcessor_"));
+
 }

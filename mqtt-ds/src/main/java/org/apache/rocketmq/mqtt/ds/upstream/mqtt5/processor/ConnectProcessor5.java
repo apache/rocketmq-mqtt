@@ -15,10 +15,22 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.hook;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt5.processor;
 
-public enum UpstreamHookEnum {
-    AUTH,
-    UPSTREAM_PROCESS,
-    UPSTREAM_PROCESS5
+import io.netty.handler.codec.mqtt.MqttMessage;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt5.UpstreamProcessor5;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.CompletableFuture;
+
+@Component
+public class ConnectProcessor5 extends BaseProcessor5 implements UpstreamProcessor5 {
+
+    @Override
+    public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) {
+        return HookResult.newHookResult(HookResult.SUCCESS, null, null);
+    }
+
 }

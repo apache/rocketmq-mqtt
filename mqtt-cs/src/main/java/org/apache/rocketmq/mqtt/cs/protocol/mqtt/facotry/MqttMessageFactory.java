@@ -143,4 +143,18 @@ public class MqttMessageFactory {
         MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
         return new MqttMessage(mqttFixedHeader, variableHeader);
     }
+
+    public static MqttMessage createPubRelMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
+    }
+
+    public static MqttMessage createPubCompMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
+    }
 }

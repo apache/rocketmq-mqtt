@@ -19,12 +19,25 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
+import io.netty.handler.codec.mqtt.MqttReasonCodeAndPropertiesVariableHeader;
+import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
+import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
 
 @Component
 public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
+
+    @Resource
+    private InFlyCache inFlyCache;
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
@@ -33,6 +46,21 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
+        String channelId = ChannelInfo.getId(ctx.channel());
 
+        if (!inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId())) {
+            ctx.channel().writeAndFlush(MqttMessageFactory.createPubCompMessage(
+                    variableHeader.messageId(),
+                    MqttReasonCodes.PubComp.PACKET_IDENTIFIER_NOT_FOUND.byteValue(),
+                    MqttProperties.NO_PROPERTIES));
+            return;
+        }
+
+        inFlyCache.remove(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId());
+        ctx.channel().writeAndFlush(MqttMessageFactory.createPubCompMessage(
+                variableHeader.messageId(),
+                MqttReasonCodes.PubComp.SUCCESS.byteValue(),
+                MqttProperties.NO_PROPERTIES));
     }
 }

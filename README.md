@@ -6,7 +6,7 @@
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/apache/rocketmq-mqtt.svg)](http://isitmaintained.com/project/apache/rocketmq-mqtt "Percentage of issues still open")
 [![Twitter Follow](https://img.shields.io/twitter/follow/ApacheRocketMQ?style=social)](https://twitter.com/intent/follow?screen_name=ApacheRocketMQ)
 
-A new MQTT protocol architecture model, based on which RocketMQ can better support messages from terminals such as IoT devices and Mobile APP. Based on the RocketMQ message unified storage engine, it supports both MQTT terminal and server message sending and receiving.
+A new MQTT protocol architecture model, based on which RocketMQ can better support messages from terminals such as IoT devices and Mobile APP. Based on the RocketMQ message unified storage engine, it supports both MQTT terminal and server message sending and receiving.The entire project design refer to [MQTT overview](https://rocketmq.apache.org/docs/mqtt/01RocketMQMQTTOverview).
 
 ## Architecture
 The relevant architecture design is introduced in [RIP-33](https://docs.google.com/document/d/1AD1GkV9mqE_YFA97uVem4SmB8ZJSXiJZvzt7-K6Jons/edit#).
@@ -23,6 +23,8 @@ For example, set the following parameters to true in broker.conf
 enableLmq = true
 enableMultiDispatch = true
 ```
+### Build Requirements
+The current project requires JDK 1.8.x.  When building on MAC arm64 the recommended JDK 1.8 must be based on 386 architecture or use Maven flag `-Dos.arch=x86_64` when building with Maven.
 
 
 1. Clone

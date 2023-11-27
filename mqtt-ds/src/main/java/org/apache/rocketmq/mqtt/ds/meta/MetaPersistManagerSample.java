@@ -18,7 +18,9 @@
 package org.apache.rocketmq.mqtt.ds.meta;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
+import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.MetaPersistManager;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
@@ -26,9 +28,11 @@ import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.mq.MqFactory;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.protocol.ResponseCode;
+import org.apache.rocketmq.remoting.protocol.body.ConsumerConnection;
 import org.apache.rocketmq.tools.admin.DefaultMQAdminExt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
 import java.util.HashSet;
@@ -50,13 +54,14 @@ public class MetaPersistManagerSample implements MetaPersistManager {
     private ScheduledThreadPoolExecutor scheduler;
     private static final String RMQ_NAMESPACE = "LMQ";
     private static final String KEY_LMQ_ALL_FIRST_TOPICS = "ALL_FIRST_TOPICS";
-    private static final String KEY_LMQ_CONNECT_NODES = "LMQ_CONNECT_NODES";
     private static final String VALUE_SPLITTER = ",";
+    private static final String NODE_ADDR_SPLITTER = ":";
+    private String dispatcherConsumerGroup = MixAll.CID_RMQ_SYS_PREFIX + "mqtt_event";
 
     @Resource
     private ServiceConf serviceConf;
 
-    public void init() throws MQClientException, RemotingException, InterruptedException {
+    public void init() throws MQClientException, RemotingException, InterruptedException, MQBrokerException {
         defaultMQAdminExt = MqFactory.buildDefaultMQAdminExt("MetaLoad", serviceConf.getProperties());
         defaultMQAdminExt.start();
         refreshMeta();
@@ -70,7 +75,7 @@ public class MetaPersistManagerSample implements MetaPersistManager {
         }, 5, 5, TimeUnit.SECONDS);
     }
 
-    private void refreshMeta() throws RemotingException, InterruptedException, MQClientException {
+    private void refreshMeta() throws RemotingException, InterruptedException, MQClientException, MQBrokerException {
         String value = defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE, KEY_LMQ_ALL_FIRST_TOPICS);
         if (value == null) {
             return;
@@ -97,15 +102,16 @@ public class MetaPersistManagerSample implements MetaPersistManager {
         }
         firstTopics = tmpFirstTopics;
         wildcardCache = tmpWildcardCache;
-        value = defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE, KEY_LMQ_CONNECT_NODES);
-        if (StringUtils.isNotBlank(value)) {
-            String[] ss = StringUtils.split(value, VALUE_SPLITTER);
-            Set<String> set = new HashSet<>();
-            for (String s : ss) {
-                set.add(s);
-            }
-            connectNodeSet = set;
+
+        ConsumerConnection consumerConn = defaultMQAdminExt.examineConsumerConnectionInfo(dispatcherConsumerGroup);
+        if (CollectionUtils.isEmpty(consumerConn.getConnectionSet())) {
+            return;
         }
+        Set<String> clientIpSet = new HashSet<>();
+        consumerConn.getConnectionSet().forEach(connection -> {
+            clientIpSet.add(connection.getClientAddr().split(NODE_ADDR_SPLITTER)[0]);
+        });
+        connectNodeSet = clientIpSet;
     }
 
     @Override

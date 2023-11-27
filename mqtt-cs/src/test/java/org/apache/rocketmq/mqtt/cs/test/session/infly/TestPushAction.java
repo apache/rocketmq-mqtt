@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -185,6 +186,34 @@ public class TestPushAction {
         spyPushAction.push(message, subscription, session, queue);
         verify(spyPushAction).write(any(), any(), anyInt(), anyInt(), any());
         verify(spyPushAction).rollNextByAck(any(), anyInt());
+    }
+
+    @Test
+    public void testPushQos() {
+        subscription.setTopicFilter("/test/qos");
+        when(session.isClean()).thenReturn(false);
+        when(inFlyCache.getPendingDownCache()).thenReturn(new InFlyCache().getPendingDownCache());
+
+        PushAction spyPushAction = spy(pushAction);
+        doNothing().when(spyPushAction).write(any(), any(), anyInt(), anyInt(), any());
+        doNothing().when(spyPushAction).rollNextByAck(any(), anyInt());
+
+        when(message.qos()).thenReturn(1);
+        subscription.setQos(1);
+        spyPushAction.push(message, subscription, session, queue);
+        verify(spyPushAction).write(any(), any(), anyInt(), eq(1), any());
+
+        clearInvocations(spyPushAction);
+        when(message.qos()).thenReturn(1);
+        subscription.setQos(2);
+        spyPushAction.push(message, subscription, session, queue);
+        verify(spyPushAction).write(any(), any(), anyInt(), eq(1), any());
+
+        clearInvocations(spyPushAction);
+        when(message.qos()).thenReturn(3);
+        subscription.setQos(2);
+        spyPushAction.push(message, subscription, session, queue);
+        verify(spyPushAction).write(any(), any(), anyInt(), eq(2), any());
     }
 
     @Test

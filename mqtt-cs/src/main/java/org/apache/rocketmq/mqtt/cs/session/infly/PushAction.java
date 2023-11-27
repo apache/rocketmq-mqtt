@@ -109,7 +109,7 @@ public class PushAction {
         }
 
         int qos = subscription.getQos();
-        if (subscription.isP2p() && message.qos() != null) {
+        if (message.qos() != null && (subscription.isP2p() || message.qos() < qos)) {
             qos = message.qos();
         }
         if (qos == 0) {

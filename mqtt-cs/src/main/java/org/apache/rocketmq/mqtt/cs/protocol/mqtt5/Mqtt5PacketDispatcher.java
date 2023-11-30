@@ -24,6 +24,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
@@ -165,7 +166,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
                 mqtt5PubCompHandler.doHandler(ctx, msg, upstreamHookResult);
                 break;
             case SUBSCRIBE:
-                mqtt5SubscribeHandler.doHandler(ctx, msg, upstreamHookResult);
+                mqtt5SubscribeHandler.doHandler(ctx, (MqttSubscribeMessage) msg, upstreamHookResult);
                 break;
             case UNSUBSCRIBE:
                 mqtt5UnSubscribeHandler.doHandler(ctx, msg, upstreamHookResult);
@@ -190,7 +191,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
             case PUBLISH:
                 return mqtt5PublishHandler.preHandler(ctx, (MqttPublishMessage) msg);
             case SUBSCRIBE:
-                return mqtt5SubscribeHandler.preHandler(ctx, msg);
+                return mqtt5SubscribeHandler.preHandler(ctx, (MqttSubscribeMessage) msg);
             case PUBACK:
                 return mqtt5PubAckHandler.preHandler(ctx, msg);
             case PINGREQ:

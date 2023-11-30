@@ -17,12 +17,17 @@
 
 package org.apache.rocketmq.mqtt.common.model;
 
+import io.netty.handler.codec.mqtt.MqttSubscriptionOption;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 
 
 public class Subscription {
     private String topicFilter;
     private int qos;
+    private int subscriptionIdentifier;
+    private boolean noLocal;
+    private boolean retainAsPublished;
+    private MqttSubscriptionOption.RetainedHandlingPolicy retainHandling;
 
     public Subscription() {
     }
@@ -112,11 +117,47 @@ public class Subscription {
         this.qos = qos;
     }
 
+    public int getSubscriptionIdentifier() {
+        return subscriptionIdentifier;
+    }
+
+    public void setSubscriptionIdentifier(int subscriptionIdentifier) {
+        this.subscriptionIdentifier = subscriptionIdentifier;
+    }
+
+    public boolean isNoLocal() {
+        return noLocal;
+    }
+
+    public void setNoLocal(boolean noLocal) {
+        this.noLocal = noLocal;
+    }
+
+    public boolean isRetainAsPublished() {
+        return retainAsPublished;
+    }
+
+    public void setRetainAsPublished(boolean retainAsPublished) {
+        this.retainAsPublished = retainAsPublished;
+    }
+
+    public MqttSubscriptionOption.RetainedHandlingPolicy getRetainHandling() {
+        return retainHandling;
+    }
+
+    public void setRetainHandling(MqttSubscriptionOption.RetainedHandlingPolicy retainHandling) {
+        this.retainHandling = retainHandling;
+    }
+
     @Override
     public String toString() {
         return "Subscription{" +
-            "topicFilter='" + topicFilter + '\'' +
-            ", qos=" + qos +
-            '}';
+                "topicFilter='" + topicFilter + '\'' +
+                ", qos=" + qos +
+                ", subscriptionIdentifier=" + subscriptionIdentifier +
+                ", noLocal=" + noLocal +
+                ", retainAsPublished=" + retainAsPublished +
+                ", retainHandling=" + retainHandling +
+                '}';
     }
 }

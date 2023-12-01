@@ -119,6 +119,26 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Override
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
+        unloadResource(channel, reason);
+
+        if (channel.isActive()) {
+            channel.close();
+        }
+        logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+    }
+
+    @Override
+    public void closeConnect(Channel channel, ChannelCloseFrom from, String reason, byte reasonCode) {
+        unloadResource(channel, reason);
+
+        if (channel.isActive()) {
+            channel.writeAndFlush(MqttMessageFactory.createDisconnectMessage(reasonCode));
+            channel.close();
+        }
+        logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+    }
+
+    public void unloadResource(Channel channel, String reason) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
         willLoop.closeConnect(channel, clientId, reason);
@@ -132,12 +152,6 @@ public class DefaultChannelManager implements ChannelManager {
             channelMap.remove(channelId);
             ChannelInfo.clear(channel);
         }
-
-        if (channel.isActive()) {
-            channel.writeAndFlush(MqttMessageFactory.createDisconnectMessage(NORMAL_DISCONNECT));
-            channel.close();
-        }
-        logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
 
     @Override

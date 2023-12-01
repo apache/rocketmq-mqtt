@@ -38,6 +38,8 @@ public interface ChannelManager {
      */
     void closeConnect(Channel channel, ChannelCloseFrom from, String reason);
 
+    void closeConnect(Channel channel, ChannelCloseFrom from, String reason, byte reasonCode);
+
     /**
      *  closeConnect
      * @param channelId

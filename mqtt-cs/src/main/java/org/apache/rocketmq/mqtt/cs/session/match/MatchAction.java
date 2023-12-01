@@ -132,23 +132,27 @@ public class MatchAction {
             return;
         }
         for (Subscription subscription : subscriptions) {
-            if (subscription.isRetry() || subscription.isP2p()) {
-                continue;
-            }
-            String topicFilter = subscription.getTopicFilter();
-            boolean isWildCard = TopicUtils.isWildCard(topicFilter);
-            if (isWildCard) {
-                trie.deleteNode(topicFilter, channelId);
-                continue;
-            }
+            removeSubscription(channelId, subscription);
+        }
+    }
 
-            synchronized (topicCache) {
-                Set<String> channelIdSet = topicCache.get(topicFilter);
-                if (channelIdSet != null) {
-                    channelIdSet.remove(channelId);
-                    if (channelIdSet.isEmpty()) {
-                        topicCache.remove(topicFilter);
-                    }
+    public void removeSubscription(String channelId, Subscription subscription) {
+        if (subscription.isRetry() || subscription.isP2p()) {
+            return;
+        }
+        String topicFilter = subscription.getTopicFilter();
+        boolean isWildCard = TopicUtils.isWildCard(topicFilter);
+        if (isWildCard) {
+            trie.deleteNode(topicFilter, channelId);
+            return;
+        }
+
+        synchronized (topicCache) {
+            Set<String> channelIdSet = topicCache.get(topicFilter);
+            if (channelIdSet != null) {
+                channelIdSet.remove(channelId);
+                if (channelIdSet.isEmpty()) {
+                    topicCache.remove(topicFilter);
                 }
             }
         }

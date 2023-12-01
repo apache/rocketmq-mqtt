@@ -173,6 +173,10 @@ public class Session {
         subscriptions.remove(subscription.getTopicFilter());
     }
 
+    public Subscription getSubscription(String topicFilter) {
+        return subscriptions.get(topicFilter);
+    }
+
     public void freshQueue(Subscription subscription, Set<Queue> queues) {
         if (subscription == null) {
             throw new RuntimeException("subscription is null");

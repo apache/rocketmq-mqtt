@@ -86,6 +86,8 @@ public interface SessionLoop {
      */
     void removeSubscription(String channelId, Set<Subscription> subscriptions);
 
+    void removeSubscription(String channelId, Subscription subscription);
+
     /**
      * notify to pull message from queue
      *

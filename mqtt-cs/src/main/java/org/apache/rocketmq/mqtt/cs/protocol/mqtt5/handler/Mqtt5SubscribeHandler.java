@@ -53,7 +53,7 @@ import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCR
 
 @Component
 public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMessage> {
-    private static Logger logger = LoggerFactory.getLogger(MqttSubscribeHandler.class);
+    private static Logger logger = LoggerFactory.getLogger(Mqtt5SubscribeHandler.class);
 
     @Resource
     private SessionLoop sessionLoop;
@@ -79,18 +79,27 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
         Channel channel = ctx.channel();
 
         // check MqttSubscribeMessage
-        MqttProperties.IntegerProperty subscriptionIdentifierProperty = (MqttProperties.IntegerProperty) variableHeader.properties().getProperty(SUBSCRIPTION_IDENTIFIER.value());
+        MqttProperties.IntegerProperty subscriptionIdentifierProperty =
+                (MqttProperties.IntegerProperty) variableHeader.properties().getProperty(SUBSCRIPTION_IDENTIFIER.value());
         if (subscriptionIdentifierProperty != null) {
             Integer subscriptionIdentifier = subscriptionIdentifierProperty.value();
             if ((subscriptionIdentifier > SUBSCRIPTION_IDENTIFIER_MAX || subscriptionIdentifier < SUBSCRIPTION_IDENTIFIER_MIN)) {
-                sendSubAck(channel, variableHeader.messageId(), new int[]{MqttReasonCodes.SubAck.UNSPECIFIED_ERROR.byteValue()});
+                channelManager.closeConnect(
+                        channel,
+                        ChannelCloseFrom.SERVER,
+                        "PROTOCOL_ERROR",
+                        MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
                 return false;
             }
         }
 
         MqttSubscribePayload mqttSubscribePayload = mqttSubscribeMessage.payload();
         if (mqttSubscribePayload == null) {
-            sendSubAck(channel, variableHeader.messageId(), new int[]{MqttReasonCodes.SubAck.UNSPECIFIED_ERROR.byteValue()});
+            channelManager.closeConnect(
+                    channel,
+                    ChannelCloseFrom.SERVER,
+                    "PROTOCOL_ERROR",
+                    MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
             return false;
         }
 

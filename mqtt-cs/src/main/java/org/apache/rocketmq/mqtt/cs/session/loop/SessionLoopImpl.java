@@ -279,6 +279,19 @@ public class SessionLoopImpl implements SessionLoop {
         matchAction.removeSubscription(session, subscriptions);
     }
 
+    @Override
+    public void removeSubscription(String channelId, Subscription subscription) {
+        if (subscription == null) {
+            return;
+        }
+        Session session = getSession(channelId);
+        if (session == null) {
+            return;
+        }
+        session.removeSubscription(subscription);
+        matchAction.removeSubscription(channelId, subscription);
+    }
+
     private void addSubscriptionAndInit(Session session, Set<Subscription> subscriptions,
                                         CompletableFuture<Void> future) {
         if (session == null) {

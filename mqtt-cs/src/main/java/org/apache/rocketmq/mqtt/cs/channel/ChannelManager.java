@@ -40,6 +40,8 @@ public interface ChannelManager {
 
     void closeConnect(Channel channel, ChannelCloseFrom from, String reason, byte reasonCode);
 
+    void closeConnectWithProtocolError(Channel channel);
+
     /**
      *  closeConnect
      * @param channelId

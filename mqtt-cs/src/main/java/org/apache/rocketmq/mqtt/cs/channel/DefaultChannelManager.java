@@ -18,6 +18,7 @@
 package org.apache.rocketmq.mqtt.cs.channel;
 
 import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
@@ -136,6 +137,11 @@ public class DefaultChannelManager implements ChannelManager {
             channel.close();
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+    }
+
+    @Override
+    public void closeConnectWithProtocolError(Channel channel) {
+        closeConnect(channel, ChannelCloseFrom.SERVER, "PROTOCOL_ERROR", MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
     }
 
     public void unloadResource(Channel channel, String reason) {

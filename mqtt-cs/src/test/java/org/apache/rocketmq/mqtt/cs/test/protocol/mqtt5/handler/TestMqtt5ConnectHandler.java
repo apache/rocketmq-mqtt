@@ -45,6 +45,7 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_PACKET_SIZE;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.WILL_DELAY_INTERVAL;
@@ -129,6 +130,57 @@ public class TestMqtt5ConnectHandler {
 
     @After
     public void After() {
+    }
+
+
+    @Test
+    public void testDupSessionExpiryInterval() {
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 10));
+        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 20));
+        props.add(new MqttProperties.UserProperty("hello", "1"));
+        props.add(new MqttProperties.UserProperty("tag", "secondTag"));
+
+        MqttConnectMessage connectMessage = createConnectMessage(MqttVersion.MQTT_5, USER_NAME, PASSWORD, props, MqttProperties.NO_PROPERTIES);
+
+        HookResult hookResult = new HookResult(HookResult.SUCCESS, Remark.SUCCESS, null);
+        doReturn(true).when(channel).isActive();
+        doNothing().when(sessionLoop).loadSession(any(), any());
+
+        connectHandler.doHandler(ctx, connectMessage, hookResult);
+
+        // wait scheduler execution
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ignored) {
+        }
+
+        verify(channel).writeAndFlush(any(MqttConnAckMessage.class));
+        verify(sessionLoop).loadSession(any(), any());
+        verifyNoMoreInteractions(channelManager, sessionLoop);
+    }
+
+    @Test
+    public void testReceiveMaximumZero() {
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(MAXIMUM_PACKET_SIZE.value(), 0));
+
+        MqttConnectMessage connectMessage = createConnectMessage(MqttVersion.MQTT_5, USER_NAME, PASSWORD, props, MqttProperties.NO_PROPERTIES);
+        doReturn(true).when(channel).isActive();
+        doNothing().when(sessionLoop).loadSession(any(), any());
+
+        connectHandler.preHandler(ctx, connectMessage);
+        // wait scheduler execution
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ignored) {
+        }
+
+        verify(channel).writeAndFlush(any(MqttConnAckMessage.class));
+        verify(sessionLoop).loadSession(any(), any());
+        verifyNoMoreInteractions(channelManager, sessionLoop);
     }
 
     @Test

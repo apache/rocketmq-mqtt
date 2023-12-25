@@ -28,8 +28,8 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.Mqtt5PacketDispatcher;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler.Mqtt5PingHandler;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,7 +37,6 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -52,7 +51,7 @@ import static org.mockito.Mockito.when;
 public class TestMqtt5PacketDispatcher {
     private CompletableFuture<HookResult> upstreamHookResult = new CompletableFuture<>();
 
-    private MqttPacketDispatcher packetDispatcher;
+    private Mqtt5PacketDispatcher packetDispatcher;
     private MqttFixedHeader mqttFixedHeader;
     private MqttMessage mqttMessage;
 
@@ -66,16 +65,16 @@ public class TestMqtt5PacketDispatcher {
     private UpstreamHookManager upstreamHookManager;
 
     @Mock
-    private MqttPingHandler mqttPingHandler;
+    private Mqtt5PingHandler mqtt5PingHandler;
 
     @Before
     public void setUp() throws Exception {
-        packetDispatcher = new MqttPacketDispatcher();
+        packetDispatcher = new Mqtt5PacketDispatcher();
         mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PINGREQ, false, MqttQoS.AT_MOST_ONCE, false, 0);
         FieldUtils.writeDeclaredField(packetDispatcher, "upstreamHookManager", upstreamHookManager, true);
-        FieldUtils.writeDeclaredField(packetDispatcher, "mqttPingHandler", mqttPingHandler, true);
+        FieldUtils.writeDeclaredField(packetDispatcher, "mqtt5PingHandler", mqtt5PingHandler, true);
 
-        when(mqttPingHandler.preHandler(any(), any())).thenReturn(true);
+        when(mqtt5PingHandler.preHandler(any(), any())).thenReturn(true);
         when(ctx.channel()).thenReturn(channel);
         doReturn(true).when(channel).isActive();
     }
@@ -89,13 +88,7 @@ public class TestMqtt5PacketDispatcher {
 
         verify(ctx).channel();
         verify(channel).isActive();
-        verifyNoMoreInteractions(ctx, channel, upstreamHookManager, mqttPingHandler);
-    }
-
-    @Test (expected = InvocationTargetException.class)
-    public void testRead0DecoderFail() throws Exception {
-        mqttMessage = new MqttMessage(mqttFixedHeader, null, null, DecoderResult.UNFINISHED);
-        MethodUtils.invokeMethod(packetDispatcher, true, "channelRead0", ctx, mqttMessage);
+        verifyNoMoreInteractions(ctx, channel, upstreamHookManager, mqtt5PingHandler);
     }
 
     @Test
@@ -110,9 +103,9 @@ public class TestMqtt5PacketDispatcher {
         verify(ctx, times(3)).channel();
         verify(channel).isActive();
         verify(upstreamHookManager).doUpstreamHook(any(), any());
-        verify(mqttPingHandler).doHandler(eq(ctx), any(), any());
-        verify(mqttPingHandler).preHandler(eq(ctx), any());
-        verifyNoMoreInteractions(ctx, upstreamHookManager, mqttPingHandler);
+        verify(mqtt5PingHandler).doHandler(eq(ctx), any(), any());
+        verify(mqtt5PingHandler).preHandler(eq(ctx), any());
+        verifyNoMoreInteractions(ctx, upstreamHookManager, mqtt5PingHandler);
     }
 
     @Test

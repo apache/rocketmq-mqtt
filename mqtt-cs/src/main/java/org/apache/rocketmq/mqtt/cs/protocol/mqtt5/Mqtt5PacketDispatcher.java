@@ -25,6 +25,7 @@ import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
+import io.netty.handler.codec.mqtt.MqttUnsubscribeMessage;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
@@ -169,7 +170,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
                 mqtt5SubscribeHandler.doHandler(ctx, (MqttSubscribeMessage) msg, upstreamHookResult);
                 break;
             case UNSUBSCRIBE:
-                mqtt5UnSubscribeHandler.doHandler(ctx, msg, upstreamHookResult);
+                mqtt5UnSubscribeHandler.doHandler(ctx, (MqttUnsubscribeMessage) msg, upstreamHookResult);
                 break;
             case PINGREQ:
                 mqtt5PingHandler.doHandler(ctx, msg, upstreamHookResult);
@@ -197,7 +198,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
             case PINGREQ:
                 return mqtt5PingHandler.preHandler(ctx, msg);
             case UNSUBSCRIBE:
-                return mqtt5UnSubscribeHandler.preHandler(ctx, msg);
+                return mqtt5UnSubscribeHandler.preHandler(ctx, (MqttUnsubscribeMessage) msg);
             case PUBREL:
                 return mqtt5PubRelHandler.preHandler(ctx, msg);
             case PUBREC:

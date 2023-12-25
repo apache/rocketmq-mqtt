@@ -25,7 +25,7 @@ import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
 import io.netty.handler.codec.mqtt.MqttProperties;
-import io.netty.handler.codec.mqtt.MqttVersion;
+import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
@@ -80,6 +80,23 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage) {
+        final MqttConnectVariableHeader variableHeader = connectMessage.variableHeader();
+        MqttProperties mqttProperties = variableHeader.properties();
+        Channel channel = ctx.channel();
+
+        if (mqttProperties.getProperty(RECEIVE_MAXIMUM.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RECEIVE_MAXIMUM.value())).value() == 0) {
+            channelManager.closeConnectWithProtocolError(channel);
+            return false;
+        }
+
+        if (mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value())).value() == 0) {
+            channelManager.closeConnectWithProtocolError(channel);
+            return false;
+        }
+
+
         return true;
     }
 
@@ -93,49 +110,47 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
         ChannelInfo.setClientId(channel, connectMessage.payload().clientIdentifier());
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
 
-        if (MqttVersion.MQTT_5.equals(ChannelInfo.getMqttVersion(channel))) {
-            MqttProperties mqttProperties = variableHeader.properties();
+        MqttProperties mqttProperties = variableHeader.properties();
 
-            Integer sessionExpiryInterval = DEFAULT_SESSION_EXPIRY_INTERVAL;
-            if (mqttProperties.getProperty(SESSION_EXPIRY_INTERVAL.value()) != null) {
-                sessionExpiryInterval =
-                        Math.max(0, ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SESSION_EXPIRY_INTERVAL.value())).value());
-            }
-            ChannelInfo.setSessionExpiryInterval(channel, sessionExpiryInterval);
+        Integer sessionExpiryInterval = DEFAULT_SESSION_EXPIRY_INTERVAL;
+        if (mqttProperties.getProperty(SESSION_EXPIRY_INTERVAL.value()) != null) {
+            sessionExpiryInterval =
+                    Math.max(0, ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SESSION_EXPIRY_INTERVAL.value())).value());
+        }
+        ChannelInfo.setSessionExpiryInterval(channel, sessionExpiryInterval);
 
-            Integer receiveMaximum = DEFAULT_RECEIVE_MAXIMUM;
-            if (mqttProperties.getProperty(RECEIVE_MAXIMUM.value()) != null) {
-                receiveMaximum = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RECEIVE_MAXIMUM.value())).value();
-            }
-            ChannelInfo.setReceiveMaximum(channel, receiveMaximum);
+        Integer receiveMaximum = DEFAULT_RECEIVE_MAXIMUM;
+        if (mqttProperties.getProperty(RECEIVE_MAXIMUM.value()) != null) {
+            receiveMaximum = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RECEIVE_MAXIMUM.value())).value();
+        }
+        ChannelInfo.setReceiveMaximum(channel, receiveMaximum);
 
-            // MAXIMUM_PACKET_SIZE no default value. If the Maximum Packet Size is not present, no limit
-            if (mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value()) != null) {
-                ChannelInfo.setMaximumPacketSize(channel,
-                        ((MqttProperties.IntegerProperty) mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value())).value());
-            }
+        // MAXIMUM_PACKET_SIZE no default value. If the Maximum Packet Size is not present, no limit
+        if (mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value()) != null) {
+            ChannelInfo.setMaximumPacketSize(channel,
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value())).value());
+        }
 
-            Integer topicAliasMaximum = DEFAULT_TOPIC_ALIAS_MAXIMUM;
-            if (mqttProperties.getProperty(TOPIC_ALIAS_MAXIMUM.value()) != null) {
-                topicAliasMaximum = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS_MAXIMUM.value())).value();
-            }
-            ChannelInfo.setTopicAliasMaximum(channel, topicAliasMaximum);
+        Integer topicAliasMaximum = DEFAULT_TOPIC_ALIAS_MAXIMUM;
+        if (mqttProperties.getProperty(TOPIC_ALIAS_MAXIMUM.value()) != null) {
+            topicAliasMaximum = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS_MAXIMUM.value())).value();
+        }
+        ChannelInfo.setTopicAliasMaximum(channel, topicAliasMaximum);
 
-            Integer requestResponseInformation = DEFAULT_REQUEST_RESPONSE_INFORMATION;
-            if (mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value()) != null) {
-                requestResponseInformation = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value())).value();
-            }
-            ChannelInfo.setRequestResponseInformation(channel, requestResponseInformation);
+        Integer requestResponseInformation = DEFAULT_REQUEST_RESPONSE_INFORMATION;
+        if (mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value()) != null) {
+            requestResponseInformation = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value())).value();
+        }
+        ChannelInfo.setRequestResponseInformation(channel, requestResponseInformation);
 
-            Integer requestProblemInformation = DEFAULT_REQUEST_PROBLEM_INFORMATION;
-            if (mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value()) != null) {
-                requestProblemInformation = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value())).value();
-            }
-            ChannelInfo.setRequestProblemInformation(channel, requestProblemInformation);
+        Integer requestProblemInformation = DEFAULT_REQUEST_PROBLEM_INFORMATION;
+        if (mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value()) != null) {
+            requestProblemInformation = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(REQUEST_PROBLEM_INFORMATION.value())).value();
+        }
+        ChannelInfo.setRequestProblemInformation(channel, requestProblemInformation);
 
-            if (mqttProperties.getProperties(USER_PROPERTY.value()) != null) {
-                ChannelInfo.setUserProperty(channel, (List<MqttProperties.UserProperty>) mqttProperties.getProperties(USER_PROPERTY.value()));
-            }
+        if (mqttProperties.getProperties(USER_PROPERTY.value()) != null) {
+            ChannelInfo.setUserProperty(channel, (List<MqttProperties.UserProperty>) mqttProperties.getProperties(USER_PROPERTY.value()));
         }
 
         String remark = upstreamHookResult.getRemark();

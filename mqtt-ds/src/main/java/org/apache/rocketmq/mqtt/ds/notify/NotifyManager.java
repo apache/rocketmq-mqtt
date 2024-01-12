@@ -125,7 +125,7 @@ public class NotifyManager {
         Set<String> thisTopicList = new HashSet<>();
         for (String topic : tmp) {
             try {
-                if (topic.equals(serviceConf.getClientRetryTopic())) {
+                if (topic.equals(serviceConf.getEventNotifyRetryTopic())) {
                     // notify by RetryDriver self
                     continue;
                 }

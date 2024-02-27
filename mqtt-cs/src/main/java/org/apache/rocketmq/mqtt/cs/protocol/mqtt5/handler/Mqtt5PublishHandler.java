@@ -39,6 +39,8 @@ import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 
 @Component
 public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage> {
@@ -82,7 +84,17 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
                     }
                 }
             }
+
+            if (mqttProperties.getProperty(TOPIC_ALIAS.value()) == null &&
+                    (variableHeader.topicName() == null || variableHeader.topicName().isEmpty())) {
+                channelManager.closeConnectWithProtocolError(channel);
+            }
         }
+
+        // If the Server receives such a packet, this is a Protocol Error. The
+        // Server SHOULD send a DISCONNECT with Reason Code of 0x9A (Retain not supported)
+        if ()
+
         return true;
     }
 

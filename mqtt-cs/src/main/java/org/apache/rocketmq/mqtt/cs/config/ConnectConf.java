@@ -58,6 +58,8 @@ public class ConnectConf {
     private boolean exportJvmInfo = true;
 
     private boolean enableSharedSubscription = false;
+    private boolean enableRetain = false;
+    private boolean enableSubscriptionIdentifier = false;
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -275,5 +277,21 @@ public class ConnectConf {
 
     public void setEnableSharedSubscription(boolean enableSharedSubscription) {
         this.enableSharedSubscription = enableSharedSubscription;
+    }
+
+    public boolean isEnableRetain() {
+        return enableRetain;
+    }
+
+    public void setEnableRetain(boolean enableRetain) {
+        this.enableRetain = enableRetain;
+    }
+
+    public boolean isEnableSubscriptionIdentifier() {
+        return enableSubscriptionIdentifier;
+    }
+
+    public void setEnableSubscriptionIdentifier(boolean enableSubscriptionIdentifier) {
+        this.enableSubscriptionIdentifier = enableSubscriptionIdentifier;
     }
 }

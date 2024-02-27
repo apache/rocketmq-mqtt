@@ -103,6 +103,7 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
             return false;
         }
 
+
         return true;
     }
 
@@ -132,6 +133,15 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
             if (mqttTopicSubscriptions != null && !mqttTopicSubscriptions.isEmpty()) {
                 for (MqttTopicSubscription mqttTopicSubscription : mqttTopicSubscriptions) {
                     Subscription subscription = new Subscription();
+
+                    if (mqttTopicSubscription.qualityOfService().value() > 2) {
+                        channelManager.closeConnect(
+                                channel,
+                                ChannelCloseFrom.SERVER,
+                                "PROTOCOL_ERROR",
+                                MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+                        return;
+                    }
                     subscription.setQos(mqttTopicSubscription.qualityOfService().value());
                     subscription.setTopicFilter(TopicUtils.normalizeTopic(mqttTopicSubscription.topicName()));
                     subscription.setNoLocal(mqttTopicSubscription.option().isNoLocal());

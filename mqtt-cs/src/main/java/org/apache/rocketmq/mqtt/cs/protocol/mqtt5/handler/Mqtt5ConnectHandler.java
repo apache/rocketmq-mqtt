@@ -32,6 +32,7 @@ import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
@@ -76,6 +77,9 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
     @Resource
     private WillLoop willLoop;
 
+    @Resource
+    private ConnectConf connectConf;
+
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_connect_future"));
 
     @Override
@@ -96,6 +100,40 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
             return false;
         }
 
+        if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 0 &&
+                !connectConf.isEnableRetain()) {
+
+            final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
+                    MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
+                    false,
+                    new MqttProperties());
+            channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
+            return false;
+        }
+
+        // The Server uses DISCONNECT with Reason Code 0x9E Shared Subscriptions not supported)
+        if (mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value())).value() == 0 &&
+                !connectConf.isEnableSharedSubscription()) {
+            channelManager.closeConnect(
+                    channel,
+                    ChannelCloseFrom.SERVER,
+                    "SHARED_SUBSCRIPTIONS_NOT_SUPPORTED",
+                    MqttReasonCodes.Disconnect.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byteValue());
+            return false;
+        }
+
+        if (mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value())).value() == 0 &&
+                !connectConf.isEnableSubscriptionIdentifier()) {
+            channelManager.closeConnect(
+                    channel,
+                    ChannelCloseFrom.SERVER,
+                    "SUBSCRIPTION_IDENTIFIER_NOT_SUPPORTED",
+                    MqttReasonCodes.Disconnect.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byteValue());
+            return false;
+        }
 
         return true;
     }

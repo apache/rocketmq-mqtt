@@ -100,18 +100,6 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
             return false;
         }
 
-        if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 0 &&
-                !connectConf.isEnableRetain()) {
-
-            final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
-                    MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
-                    false,
-                    new MqttProperties());
-            channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
-            return false;
-        }
-
         // The Server uses DISCONNECT with Reason Code 0x9E Shared Subscriptions not supported)
         if (mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value()) != null &&
                 ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value())).value() == 0 &&
@@ -227,17 +215,6 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
                     sessionPresent,
                     props);
 
-            future.thenAccept(aVoid -> {
-                if (!channel.isActive()) {
-                    return;
-                }
-                ChannelInfo.removeFuture(channel, ChannelInfo.FUTURE_CONNECT);
-                channel.writeAndFlush(mqttConnAckMessage);
-            });
-
-            // TODO if sessionPresent = true, should load the exist session by clientId
-            sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
-
             // TODO save will Propertiess in MQTT 5.0
             // save will message
             WillMessage willMessage = null;
@@ -249,8 +226,27 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
                 }
 
                 willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                if (willMessage.isRetain() && !connectConf.isEnableRetain()) {
+                    final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
+                            MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
+                            false,
+                            new MqttProperties());
+                    channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
+                }
+
                 willLoop.addWillMessage(channel, willMessage);
             }
+
+            future.thenAccept(aVoid -> {
+                if (!channel.isActive()) {
+                    return;
+                }
+                ChannelInfo.removeFuture(channel, ChannelInfo.FUTURE_CONNECT);
+                channel.writeAndFlush(mqttConnAckMessage);
+            });
+
+            // TODO if sessionPresent = true, should load the exist session by clientId
+            sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
 
         } catch (Exception e) {
             logger.error("Connect:{}", payload.clientIdentifier(), e);

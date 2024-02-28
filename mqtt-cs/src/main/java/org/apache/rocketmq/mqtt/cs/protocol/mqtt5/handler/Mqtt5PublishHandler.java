@@ -19,6 +19,8 @@ package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.mqtt.MqttConnAckMessage;
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
@@ -29,6 +31,7 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
@@ -39,6 +42,7 @@ import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RETAIN_AVAILABLE;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 
@@ -50,6 +54,9 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private ConnectConf connectConf;
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
@@ -91,9 +98,17 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
             }
         }
 
-        // If the Server receives such a packet, this is a Protocol Error. The
-        // Server SHOULD send a DISCONNECT with Reason Code of 0x9A (Retain not supported)
-        if ()
+        if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
+                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 1 &&
+                !connectConf.isEnableRetain()) {
+
+            final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
+                    MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
+                    false,
+                    new MqttProperties());
+            channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
+            return false;
+        }
 
         return true;
     }

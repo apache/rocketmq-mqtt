@@ -44,9 +44,6 @@ import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
-
-
 @Component
 public class PublishProcessor5 implements UpstreamProcessor5, WillMsgSender {
     private static Logger logger = LoggerFactory.getLogger(PublishProcessor5.class);

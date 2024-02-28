@@ -268,7 +268,7 @@ public class ChannelInfo {
         return channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).get();
     }
 
-    public static void setUserProperty(Channel channel, List<MqttProperties.UserProperty> userProperties){
+    public static void setUserProperty(Channel channel, List<MqttProperties.UserProperty> userProperties) {
         channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).set(userProperties);
     }
 
@@ -276,7 +276,7 @@ public class ChannelInfo {
         return channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).get();
     }
 
-    public static void setMqttVersion(Channel channel, MqttVersion mqttVersion){
+    public static void setMqttVersion(Channel channel, MqttVersion mqttVersion) {
         channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).setIfAbsent(mqttVersion);
     }
 

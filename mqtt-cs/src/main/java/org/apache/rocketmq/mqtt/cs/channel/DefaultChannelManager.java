@@ -40,8 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.handler.codec.mqtt.MqttReasonCodes.Disconnect.NORMAL_DISCONNECT;
-
 @Component
 public class DefaultChannelManager implements ChannelManager {
     private static Logger logger = LoggerFactory.getLogger(DefaultChannelManager.class);

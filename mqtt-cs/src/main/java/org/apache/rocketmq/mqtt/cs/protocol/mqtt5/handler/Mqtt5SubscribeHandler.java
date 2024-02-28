@@ -35,7 +35,6 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttSubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,7 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
                 (MqttProperties.IntegerProperty) variableHeader.properties().getProperty(SUBSCRIPTION_IDENTIFIER.value());
         if (subscriptionIdentifierProperty != null) {
             Integer subscriptionIdentifier = subscriptionIdentifierProperty.value();
-            if ((subscriptionIdentifier > SUBSCRIPTION_IDENTIFIER_MAX || subscriptionIdentifier < SUBSCRIPTION_IDENTIFIER_MIN)) {
+            if (subscriptionIdentifier > SUBSCRIPTION_IDENTIFIER_MAX || subscriptionIdentifier < SUBSCRIPTION_IDENTIFIER_MIN) {
                 channelManager.closeConnect(
                         channel,
                         ChannelCloseFrom.SERVER,

@@ -82,30 +82,30 @@ public class MessageUtil {
         MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
         MqttProperties mqttProperties = variableHeader.properties();
         if (mqttProperties != null) {
-            Integer payloadFormatIndicator = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(PAYLOAD_FORMAT_INDICATOR.value())).value();
+            MqttProperties.IntegerProperty payloadFormatIndicator = (MqttProperties.IntegerProperty) mqttProperties.getProperty(PAYLOAD_FORMAT_INDICATOR.value());
             if (payloadFormatIndicator != null) {
-                message.putUserProperty(Message.propertyPayloadFormatIndicator, String.valueOf(payloadFormatIndicator));
+                message.putUserProperty(Message.propertyPayloadFormatIndicator, String.valueOf(payloadFormatIndicator.value()));
             }
 
             // If absent, the Application Message does not expire.
-            Integer messageExpiryInterval = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(PUBLICATION_EXPIRY_INTERVAL.value())).value();
+            MqttProperties.IntegerProperty messageExpiryInterval = (MqttProperties.IntegerProperty) mqttProperties.getProperty(PUBLICATION_EXPIRY_INTERVAL.value());
             if (messageExpiryInterval != null) {
-                message.putUserProperty(Message.propertyMessageExpiryInterval, String.valueOf(messageExpiryInterval));
+                message.putUserProperty(Message.propertyMessageExpiryInterval, String.valueOf(messageExpiryInterval.value()));
             }
 
-            Integer topicAlias = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS.value())).value();
+            MqttProperties.IntegerProperty topicAlias = (MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS.value());
             if (topicAlias != null) {
-                message.putUserProperty(Message.propertyTopicAlias, String.valueOf(topicAlias));
+                message.putUserProperty(Message.propertyTopicAlias, String.valueOf(topicAlias.value()));
             }
 
-            String responseTopic = ((MqttProperties.StringProperty) mqttProperties.getProperty(RESPONSE_TOPIC.value())).value();
+            MqttProperties.StringProperty responseTopic = (MqttProperties.StringProperty) mqttProperties.getProperty(RESPONSE_TOPIC.value());
             if (responseTopic != null) {
-                message.putUserProperty(Message.propertyResponseTopic, responseTopic);
+                message.putUserProperty(Message.propertyResponseTopic, responseTopic.value());
             }
 
-            byte[] correlationData = ((MqttProperties.BinaryProperty) mqttProperties.getProperty(CORRELATION_DATA.value())).value();
+            MqttProperties.BinaryProperty correlationData = (MqttProperties.BinaryProperty) mqttProperties.getProperty(CORRELATION_DATA.value());
             if (correlationData != null) {
-                message.putUserProperty(Message.propertyCorrelationData, new String(correlationData, StandardCharsets.UTF_8));
+                message.putUserProperty(Message.propertyCorrelationData, new String(correlationData.value(), StandardCharsets.UTF_8));
             }
 
             // User Properties
@@ -128,9 +128,9 @@ public class MessageUtil {
                 message.putUserProperty(Message.propertySubscriptionIdentifier, JSON.toJSONString(subscriptionIdentifierList));
             }
 
-            String contentType = ((MqttProperties.StringProperty) mqttProperties.getProperty(CONTENT_TYPE.value())).value();
+            MqttProperties.StringProperty contentType = (MqttProperties.StringProperty) mqttProperties.getProperty(CONTENT_TYPE.value());
             if (contentType != null) {
-                message.putUserProperty(Message.propertyContentType, contentType);
+                message.putUserProperty(Message.propertyContentType, contentType.value());
             }
         }
 

@@ -35,6 +35,8 @@ import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -47,6 +49,7 @@ import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_
 
 @Component
 public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage> {
+    private static Logger logger = LoggerFactory.getLogger(Mqtt5PublishHandler.class);
 
     @Resource
     private InFlyCache inFlyCache;
@@ -59,54 +62,59 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttPublishMessage mqttMessage) {
-        final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
-        Channel channel = ctx.channel();
-        String channelId = ChannelInfo.getId(channel);
 
-        if (inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
-            if (isQos1Message(mqttMessage)) {
-                sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PACKET_IDENTIFIER_IN_USE);
-                return false;
-            } else if (isQos2Message(mqttMessage)) {
-                sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PACKET_IDENTIFIER_IN_USE);
-                return false;
-            }
-        }
+        try {
+            final MqttPublishVariableHeader variableHeader = mqttMessage.variableHeader();
+            Channel channel = ctx.channel();
+            String channelId = ChannelInfo.getId(channel);
 
-        MqttProperties mqttProperties = variableHeader.properties();
-        if (mqttProperties != null) {
-            Integer payloadFormatIndicator = ((MqttProperties.IntegerProperty) mqttProperties.getProperty(PAYLOAD_FORMAT_INDICATOR.value())).value();
-            if (payloadFormatIndicator != null && payloadFormatIndicator == 1) {
-                if (mqttMessage.payload().readableBytes() != 0) {
-                    try {
-                        mqttMessage.payload().toString(StandardCharsets.UTF_8);
-                    } catch (Exception e) {
-                        if (isQos1Message(mqttMessage)) {
-                            sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PAYLOAD_FORMAT_INVALID);
-                        } else if (isQos2Message(mqttMessage)) {
-                            sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PAYLOAD_FORMAT_INVALID);
-                        }
-                        return false;
-                    }
+            if (inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
+                if (isQos1Message(mqttMessage)) {
+                    sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PACKET_IDENTIFIER_IN_USE);
+                    return false;
+                } else if (isQos2Message(mqttMessage)) {
+                    sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PACKET_IDENTIFIER_IN_USE);
+                    return false;
                 }
             }
 
-            if (mqttProperties.getProperty(TOPIC_ALIAS.value()) == null &&
-                    (variableHeader.topicName() == null || variableHeader.topicName().isEmpty())) {
-                channelManager.closeConnectWithProtocolError(channel);
+            MqttProperties mqttProperties = variableHeader.properties();
+            if (mqttProperties != null) {
+                MqttProperties.IntegerProperty payloadFormatIndicator = (MqttProperties.IntegerProperty) mqttProperties.getProperty(PAYLOAD_FORMAT_INDICATOR.value());
+                if (payloadFormatIndicator != null && payloadFormatIndicator.value() == 1) {
+                    if (mqttMessage.payload().readableBytes() != 0) {
+                        try {
+                            mqttMessage.payload().toString(StandardCharsets.UTF_8);
+                        } catch (Exception e) {
+                            if (isQos1Message(mqttMessage)) {
+                                sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PAYLOAD_FORMAT_INVALID);
+                            } else if (isQos2Message(mqttMessage)) {
+                                sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PAYLOAD_FORMAT_INVALID);
+                            }
+                            return false;
+                        }
+                    }
+                }
+
+                if (mqttProperties.getProperty(TOPIC_ALIAS.value()) == null &&
+                        (variableHeader.topicName() == null || variableHeader.topicName().isEmpty())) {
+                    channelManager.closeConnectWithProtocolError(channel);
+                }
             }
-        }
 
-        if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 1 &&
-                !connectConf.isEnableRetain()) {
+            if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 1 &&
+                    !connectConf.isEnableRetain()) {
 
-            final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
-                    MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
-                    false,
-                    new MqttProperties());
-            channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
-            return false;
+                final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
+                        MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
+                        false,
+                        new MqttProperties());
+                channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
+                return false;
+            }
+        } catch (Throwable e) {
+            logger.error("preHandler Mqtt5PublishHandler error", e);
         }
 
         return true;

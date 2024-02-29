@@ -25,7 +25,6 @@ import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
-import org.apache.rocketmq.mqtt.common.facade.WillMsgSender;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;

@@ -45,7 +45,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Component
-public class PublishProcessor5 implements UpstreamProcessor5, WillMsgSender {
+public class PublishProcessor5 implements UpstreamProcessor5 {
     private static Logger logger = LoggerFactory.getLogger(PublishProcessor5.class);
     @Resource
     private LmqQueueStore lmqQueueStore;
@@ -107,13 +107,5 @@ public class PublishProcessor5 implements UpstreamProcessor5, WillMsgSender {
         message.setEmpty(isEmpty);
 
         return lmqQueueStore.putMessage(queueNames, message);
-    }
-
-
-    @Override
-    public CompletableFuture<StoreResult> sendWillMsg(String clientId, MqttPublishMessage message) {
-        MqttMessageUpContext ctx = new MqttMessageUpContext();
-        ctx.setClientId(clientId);
-        return put(ctx, message);
     }
 }

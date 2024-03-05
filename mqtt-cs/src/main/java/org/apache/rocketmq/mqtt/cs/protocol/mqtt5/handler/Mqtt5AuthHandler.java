@@ -15,30 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.protocol.mqtt;
+package org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
+import org.springframework.stereotype.Component;
 
+@Component
+public class Mqtt5AuthHandler implements MqttPacketHandler<MqttMessage> {
 
-public interface MqttPacketHandler<T extends MqttMessage> {
+    @Override
+    public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
+        return true;
+    }
 
-    /**
-     * preHandler before upstream processor, for preprocessing
-     *
-     * @param ctx
-     * @param mqttMessage
-     * @return
-     */
-    boolean preHandler(ChannelHandlerContext ctx, T mqttMessage);
-
-    /**
-     * doHandler after upstream processor
-     *
-     * @param ctx
-     * @param mqttMessage
-     */
-    void doHandler(ChannelHandlerContext ctx, T mqttMessage, HookResult upstreamHookResult);
-
+    @Override
+    public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        // not support, do nothing
+    }
 }

@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.ds.upstream.processor;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt;
 
 import io.netty.handler.codec.mqtt.MqttMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
-import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
-import org.springframework.stereotype.Component;
+import org.apache.rocketmq.remoting.exception.RemotingException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-@Component
-public class ConnectProcessor extends BaseProcessor implements UpstreamProcessor {
-
-    @Override
-    public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) {
-        return HookResult.newHookResult(HookResult.SUCCESS, null, null);
-    }
-
+public interface UpstreamProcessor {
+    /**
+     * process mqtt upstream packet
+     * @param context
+     * @param message
+     * @return
+     */
+    CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) throws RemotingException, com.alipay.sofa.jraft.error.RemotingException, ExecutionException, InterruptedException;
 }

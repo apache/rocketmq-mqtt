@@ -20,6 +20,14 @@
 package org.apache.rocketmq.mqtt.ds.test.store;
 
 import com.alibaba.fastjson.JSON;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.mqtt.MqttFixedHeader;
+import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
+import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
+import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPullConsumer;
@@ -43,6 +51,7 @@ import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
+import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.store.LmqQueueStoreManager;
@@ -65,6 +74,13 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PUBLICATION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -209,4 +225,35 @@ public class TestLmqQueueStoreManager {
         Assert.assertEquals(maxOffset, queryOffsetFuture.get().longValue());
     }
 
+    @Test
+    public void testPutMqtt5Message() throws RemotingException, InterruptedException, MQClientException {
+        Set<String> queues = new HashSet<>(Arrays.asList("test"));
+
+        MqttProperties props = new MqttProperties();
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(PUBLICATION_EXPIRY_INTERVAL.value(), 10));
+        props.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), 1));
+        props.add(new MqttProperties.StringProperty(RESPONSE_TOPIC.value(), "Response Topic"));
+        props.add(new MqttProperties.BinaryProperty(CORRELATION_DATA.value(), "Correlation Data".getBytes(StandardCharsets.UTF_8)));
+        props.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), "Content Type"));
+
+        props.add(new MqttProperties.UserProperty("isSecret", "true"));
+        props.add(new MqttProperties.UserProperty("tag", "firstTag"));
+        props.add(new MqttProperties.UserProperty("tag", "secondTag"));
+
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 100));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 101));
+
+        MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_LEAST_ONCE, false, 1);
+        MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader("test", 0, props);
+        ByteBuf payload = Unpooled.copiedBuffer("test".getBytes(StandardCharsets.UTF_8));
+        MqttPublishMessage publishMessage = new MqttPublishMessage(mqttFixedHeader, variableHeader, payload);
+        Message message = MessageUtil.toMessage(publishMessage);
+
+        lmqQueueStoreManager.putMessage(queues, message);
+        ArgumentCaptor<org.apache.rocketmq.common.message.Message> argumentCaptor = ArgumentCaptor.forClass(
+                org.apache.rocketmq.common.message.Message.class);
+        verify(defaultMQProducer).send(argumentCaptor.capture(), any(SendCallback.class));
+        Assert.assertTrue(null != argumentCaptor.getValue().getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH));
+    }
 }

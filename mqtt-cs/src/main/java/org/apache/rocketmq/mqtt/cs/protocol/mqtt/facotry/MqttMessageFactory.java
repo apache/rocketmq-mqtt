@@ -25,15 +25,20 @@ import io.netty.handler.codec.mqtt.MqttConnAckVariableHeader;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageBuilders;
+import io.netty.handler.codec.mqtt.MqttMessageIdAndPropertiesVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageIdVariableHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
+import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttSubAckMessage;
 import io.netty.handler.codec.mqtt.MqttSubAckPayload;
 import io.netty.handler.codec.mqtt.MqttUnsubAckMessage;
+import io.netty.handler.codec.mqtt.MqttUnsubAckPayload;
 
 import java.util.Objects;
 
@@ -102,4 +107,71 @@ public class MqttMessageFactory {
     }
 
 
+    public static MqttConnAckMessage createConnAckMessage(MqttConnectReturnCode mqttConnectReturnCode, Boolean sessionPresent) {
+        return MqttMessageBuilders.connAck()
+                .returnCode(mqttConnectReturnCode)
+                .properties(MqttProperties.NO_PROPERTIES)
+                .sessionPresent(sessionPresent)
+                .build();
+    }
+
+    public static MqttConnAckMessage createConnAckMessage(MqttConnectReturnCode mqttConnectReturnCode,
+                                                          Boolean sessionPresent, MqttProperties properties) {
+        return MqttMessageBuilders.connAck()
+                .returnCode(mqttConnectReturnCode)
+                .properties(properties)
+                .sessionPresent(sessionPresent)
+                .build();
+    }
+
+    public static MqttMessage createDisconnectMessage(byte mqttDisconnectReasonCode) {
+        return MqttMessageBuilders.disconnect()
+                .reasonCode(mqttDisconnectReasonCode)
+                .build();
+    }
+
+    public static MqttMessage createPubAckMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        return MqttMessageBuilders.pubAck()
+                .packetId(messageId)
+                .reasonCode(reasonCode)
+                .properties(properties)
+                .build();
+    }
+
+    public static MqttMessage createPubRecMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBREC, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
+    }
+
+    public static MqttMessage createPubRelMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBREL, false, MqttQoS.AT_LEAST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
+    }
+
+    public static MqttMessage createPubCompMessage(Integer messageId, byte reasonCode, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.PUBCOMP, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttPubReplyMessageVariableHeader variableHeader = new MqttPubReplyMessageVariableHeader(messageId, reasonCode, properties);
+        return new MqttMessage(mqttFixedHeader, variableHeader);
+    }
+
+    public static MqttSubAckMessage createSubAckMessage(Integer messageId, int[] reasonCodes, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttMessageIdAndPropertiesVariableHeader mqttMessageIdAndPropertiesVariableHeader = new MqttMessageIdAndPropertiesVariableHeader(messageId, properties);
+        MqttSubAckPayload mqttSubAckPayload = new MqttSubAckPayload(reasonCodes);
+        return new MqttSubAckMessage(mqttFixedHeader, mqttMessageIdAndPropertiesVariableHeader, mqttSubAckPayload);
+    }
+
+    public static MqttUnsubAckMessage createUnSubAckMessage(Integer messageId, short[] reasonCodes, MqttProperties properties) {
+        MqttFixedHeader mqttFixedHeader =
+                new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
+        MqttMessageIdAndPropertiesVariableHeader mqttMessageIdAndPropertiesVariableHeader = new MqttMessageIdAndPropertiesVariableHeader(messageId, properties);
+        MqttUnsubAckPayload mqttUnsubAckPayload = new MqttUnsubAckPayload(reasonCodes);
+        return new MqttUnsubAckMessage(mqttFixedHeader, mqttMessageIdAndPropertiesVariableHeader, mqttUnsubAckPayload);
+    }
 }

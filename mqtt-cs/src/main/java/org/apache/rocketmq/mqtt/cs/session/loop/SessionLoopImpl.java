@@ -39,7 +39,7 @@ import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
-import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.processor.PublishProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -277,6 +277,19 @@ public class SessionLoopImpl implements SessionLoop {
             session.removeSubscription(subscription);
         }
         matchAction.removeSubscription(session, subscriptions);
+    }
+
+    @Override
+    public void removeSubscription(String channelId, Subscription subscription) {
+        if (subscription == null) {
+            return;
+        }
+        Session session = getSession(channelId);
+        if (session == null) {
+            return;
+        }
+        session.removeSubscription(subscription);
+        matchAction.removeSubscription(channelId, subscription);
     }
 
     private void addSubscriptionAndInit(Session session, Set<Subscription> subscriptions,

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.ds.upstream.processor;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt.processor;
 
 import com.alibaba.fastjson.JSON;
 import io.netty.buffer.ByteBufUtil;
@@ -35,7 +35,7 @@ import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
-import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.UpstreamProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -69,6 +69,7 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
 
     public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
+
         boolean isEmpty = false;
         //deal empty payload
         if (ByteBufUtil.getBytes(mqttPublishMessage.content()).length == 0) {

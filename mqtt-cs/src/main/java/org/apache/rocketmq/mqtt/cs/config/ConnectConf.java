@@ -57,6 +57,10 @@ public class ConnectConf {
     private boolean enablePrometheus = false;
     private boolean exportJvmInfo = true;
 
+    private boolean enableSharedSubscription = false;
+    private boolean enableRetain = false;
+    private boolean enableSubscriptionIdentifier = false;
+
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -265,5 +269,29 @@ public class ConnectConf {
 
     public void setSslServerKeyPassword(String sslServerKeyPassword) {
         this.sslServerKeyPassword = sslServerKeyPassword;
+    }
+
+    public boolean isEnableSharedSubscription() {
+        return enableSharedSubscription;
+    }
+
+    public void setEnableSharedSubscription(boolean enableSharedSubscription) {
+        this.enableSharedSubscription = enableSharedSubscription;
+    }
+
+    public boolean isEnableRetain() {
+        return enableRetain;
+    }
+
+    public void setEnableRetain(boolean enableRetain) {
+        this.enableRetain = enableRetain;
+    }
+
+    public boolean isEnableSubscriptionIdentifier() {
+        return enableSubscriptionIdentifier;
+    }
+
+    public void setEnableSubscriptionIdentifier(boolean enableSubscriptionIdentifier) {
+        this.enableSubscriptionIdentifier = enableSubscriptionIdentifier;
     }
 }

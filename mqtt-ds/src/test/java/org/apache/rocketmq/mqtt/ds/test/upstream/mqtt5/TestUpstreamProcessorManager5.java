@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test.upstream;
+package org.apache.rocketmq.mqtt.ds.test.upstream.mqtt5;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -29,8 +29,8 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
-import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessorManager;
-import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.UpstreamProcessorManager;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.processor.PublishProcessor;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,7 +49,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestUpstreamProcessorManager {
+public class TestUpstreamProcessorManager5 {
 
     @Mock
     private PublishProcessor publishProcessor;

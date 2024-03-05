@@ -17,11 +17,14 @@
 
 package org.apache.rocketmq.mqtt.common.model;
 
+import io.netty.handler.codec.mqtt.MqttVersion;
+
 public class MqttMessageUpContext {
     private String namespace;
     private String clientId;
     private String channelId;
     private String node;
+    private MqttVersion mqttVersion;
 
     public String getNamespace() {
         return namespace;
@@ -53,5 +56,13 @@ public class MqttMessageUpContext {
 
     public void setNode(String node) {
         this.node = node;
+    }
+
+    public MqttVersion getMqttVersion() {
+        return mqttVersion;
+    }
+
+    public void setMqttVersion(MqttVersion mqttVersion) {
+        this.mqttVersion = mqttVersion;
     }
 }

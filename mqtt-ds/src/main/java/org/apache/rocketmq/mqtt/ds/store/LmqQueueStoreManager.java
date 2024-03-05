@@ -151,7 +151,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                     continue;
                 }
                 String originQueue = lmq.replace(MixAll.LMQ_PREFIX, "");
-                message.setOriginTopic(StringUtils.replace(originQueue, "%","/"));
+                message.setOriginTopic(StringUtils.replace(originQueue, "%", "/"));
             }
         }
         message.setFirstTopic(mqMessage.getTopic());
@@ -187,7 +187,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         String[] queues = multiDispatchQueue.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
         String[] queueOffsets = multiQueueOffset.split(MixAll.MULTI_DISPATCH_QUEUE_SPLITTER);
         for (int i = 0; i < queues.length; i++) {
-            if ((MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%")).equals(queues[i])) {
+            if ((MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%")).equals(queues[i])) {
                 return Long.parseLong(queueOffsets[i]);
             }
         }
@@ -239,12 +239,13 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     @Override
-    public CompletableFuture<PullResult> pullMessage(String firstTopic, Queue queue, QueueOffset queueOffset, long count) {
+    public CompletableFuture<PullResult> pullMessage(String firstTopic, Queue queue, QueueOffset queueOffset,
+                                                     long count) {
         CompletableFuture<PullResult> result = new CompletableFuture<>();
         try {
             MessageQueue messageQueue = new MessageQueue(firstTopic, queue.getBrokerName(), (int) queue.getQueueId());
             long start = System.currentTimeMillis();
-            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%");
             pull(lmqTopic, messageQueue, queueOffset.getOffset(), (int) count, new PullCallback() {
                 @Override
                 public void onSuccess(org.apache.rocketmq.client.consumer.PullResult pullResult) {
@@ -452,7 +453,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     private long maxOffset(Queue queue) throws MQClientException {
-        String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+        String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%");
         MQClientInstance mQClientFactory = defaultMQPullConsumer.getDefaultMQPullConsumerImpl().getRebalanceImpl().getmQClientFactory();
         String brokerAddr = mQClientFactory.findBrokerAddressInPublish(queue.getBrokerName());
         if (null == brokerAddr) {
@@ -462,7 +463,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
 
         if (brokerAddr != null) {
             try {
-                MessageQueue messageQueue = new MessageQueue(lmqTopic, queue.getBrokerName(),  (int) queue.getQueueId());
+                MessageQueue messageQueue = new MessageQueue(lmqTopic, queue.getBrokerName(), (int) queue.getQueueId());
                 return mQClientFactory.getMQClientAPIImpl().getMaxOffset(brokerAddr, messageQueue, 3000L);
             } catch (Exception e) {
                 throw new MQClientException("Invoke Broker[" + brokerAddr + "] exception", e);
@@ -490,8 +491,8 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                     List<MessageExt> messageExtList = popResult.getMsgFoundList();
                     if (messageExtList != null && !messageExtList.isEmpty()) {
                         List<Message> messageList = messageExtList.stream()
-                            .map(messageExt -> toLmqMessage(queue, messageExt))
-                            .collect(Collectors.toList());
+                                .map(messageExt -> toLmqMessage(queue, messageExt))
+                                .collect(Collectors.toList());
                         lmqPullResult.setMessageList(messageList);
                     }
                 } else {
@@ -522,10 +523,10 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         };
 
         try {
-            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/","%");
+            String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(queue.getQueueName(), "/", "%");
             MessageQueue firstTopicQueue = new MessageQueue(firstTopic, queue.getBrokerName(), (int) queue.getQueueId());
             popKernelImpl(lmqTopic, firstTopicQueue, consumerGroup, ExpressionType.TAG, "*",
-                60000, count, ConsumeInitMode.MAX, false, 15000, 15000, popCallback);
+                    60000, count, ConsumeInitMode.MAX, false, 15000, 15000, popCallback);
         } catch (Throwable e) {
             result.completeExceptionally(e);
         }
@@ -534,18 +535,18 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     public void popKernelImpl(
-        final String lmqTopic,
-        final MessageQueue mq,
-        final String consumerGroup,
-        final String expressionType,
-        final String subExpression,
-        final long invisibleTime,
-        final long maxNums,
-        final int initMode,
-        final boolean order,
-        final long pollTime,
-        final long timeoutMillis,
-        final PopCallback popCallback
+            final String lmqTopic,
+            final MessageQueue mq,
+            final String consumerGroup,
+            final String expressionType,
+            final String subExpression,
+            final long invisibleTime,
+            final long maxNums,
+            final int initMode,
+            final boolean order,
+            final long pollTime,
+            final long timeoutMillis,
+            final PopCallback popCallback
     ) throws RemotingException, InterruptedException, MQClientException {
         FindBrokerResult findBrokerResult = mQClientFactory.findBrokerAddressInSubscribe(mq.getBrokerName(), MixAll.MASTER_ID, false);
         if (null == findBrokerResult) {
@@ -570,7 +571,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         requestHeader.setBornTime(System.currentTimeMillis());
 
         mQClientFactory.getMQClientAPIImpl().popMessageAsync(mq.getBrokerName(), findBrokerResult.getBrokerAddr(),
-            requestHeader, timeoutMillis, popCallback);
+                requestHeader, timeoutMillis, popCallback);
     }
 
     public void popAck(String lmqTopic, String consumerGroup, Message message) {
@@ -605,11 +606,11 @@ public class LmqQueueStoreManager implements LmqQueueStore {
     }
 
     public void popAckKernelImpl(
-        final String lmqTopic,
-        final String consumerGroup,
-        final Message message,
-        final long timeoutMillis,
-        final AckCallback ackCallback
+            final String lmqTopic,
+            final String consumerGroup,
+            final Message message,
+            final long timeoutMillis,
+            final AckCallback ackCallback
     ) throws RemotingException, MQBrokerException, MQClientException, InterruptedException {
         String extraInfo = message.getUserProperty(MessageConst.PROPERTY_POP_CK);
         String[] extraInfoStrs = ExtraInfoUtil.split(extraInfo);

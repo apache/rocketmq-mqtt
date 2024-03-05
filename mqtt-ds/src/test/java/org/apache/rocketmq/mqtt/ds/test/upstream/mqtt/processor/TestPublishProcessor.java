@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.rocketmq.mqtt.ds.test.upstream.processor;
+package org.apache.rocketmq.mqtt.ds.test.upstream.mqtt.processor;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -33,7 +33,7 @@ import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
-import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.processor.PublishProcessor;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Assert;
 import org.junit.Test;

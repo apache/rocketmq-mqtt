@@ -61,4 +61,12 @@ message StoreMessage {
   int64 storeTimestamp = 11;
   int32 ack = 12;
   map<string, string> userProperties = 13;
+  repeated StringPair mqtt5UserProperties = 14;
+  bytes mqtt5CorrelationData = 15;
+
+}
+
+message StringPair {
+  string key = 1;
+  string value = 2;
 }

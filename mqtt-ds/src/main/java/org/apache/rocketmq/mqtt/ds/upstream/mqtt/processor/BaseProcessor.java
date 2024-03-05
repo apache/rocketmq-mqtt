@@ -15,21 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.ds.upstream.processor;
+package org.apache.rocketmq.mqtt.ds.upstream.mqtt.processor;
 
-import io.netty.handler.codec.mqtt.MqttMessage;
-import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
-import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
-import org.springframework.stereotype.Component;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
-import java.util.concurrent.CompletableFuture;
+import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.ds.upstream.mqtt.UpstreamProcessor;
 
-@Component
-public class DisconnectProcessor extends BaseProcessor implements UpstreamProcessor {
 
-    @Override
-    public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage message) {
-        return HookResult.newHookResult(HookResult.SUCCESS, null, null);
-    }
+public abstract class BaseProcessor implements UpstreamProcessor {
+
+    protected ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            8,
+            16,
+            1,
+            TimeUnit.MINUTES,
+            new LinkedBlockingQueue<>(10000),
+            new ThreadFactoryImpl("UpstreamBaseProcessor_"));
+
 }

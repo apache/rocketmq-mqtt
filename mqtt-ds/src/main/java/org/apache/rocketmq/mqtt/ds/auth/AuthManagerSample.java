@@ -89,6 +89,9 @@ public class AuthManagerSample extends AbstractUpstreamHook implements AuthManag
                 logger.error("", e);
             }
             if (!Objects.equals(username, serviceConf.getUsername()) || !validateSign) {
+                if (mqttConnectMessage.variableHeader().version() == 5) {
+                    return new HookResult(HookResult.FAIL, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USERNAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
+                }
                 return new HookResult(HookResult.FAIL, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
             }
         }

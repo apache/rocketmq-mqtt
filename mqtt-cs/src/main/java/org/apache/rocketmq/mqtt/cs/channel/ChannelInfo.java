@@ -19,15 +19,25 @@ package org.apache.rocketmq.mqtt.cs.channel;
 
 import com.alibaba.fastjson.JSON;
 import io.netty.channel.Channel;
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RECEIVE_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.REQUEST_RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS_MAXIMUM;
 
 public class ChannelInfo {
     private static final String CHANNEL_ID_KEY = "0";
@@ -54,9 +64,13 @@ public class ChannelInfo {
 
     public static final AttributeKey<ConcurrentMap<String, String>> CHANNEL_EXTDATA_ATTRIBUTE_KEY = AttributeKey
         .valueOf("E");
+    private static final AttributeKey<MqttVersion> CHANNEL_VERSION_ATTRIBUTE_KEY = AttributeKey.valueOf("V");
 
     public static final AttributeKey<String> CHANNEL_GA_ATTRIBUTE_KEY = AttributeKey.valueOf("GA");
 
+    public static final AttributeKey<Map<MqttProperties.MqttPropertyType, Object>> CHANNEL_INFO_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("I5");
+
+    public static final AttributeKey<List<MqttProperties.UserProperty>> CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("UP");
 
     public static Map<String, String> getExtData(Channel channel) {
         Attribute<ConcurrentMap<String, String>> extAttribute = channel.attr(CHANNEL_EXTDATA_ATTRIBUTE_KEY);
@@ -239,6 +253,7 @@ public class ChannelInfo {
         }
         channel.attr(CHANNEL_INFO_ATTRIBUTE_KEY).set(newInfoAttribute);
         channel.attr(CHANNEL_EXTDATA_ATTRIBUTE_KEY).set(null);
+        channel.attr(CHANNEL_INFO_MQTT5_ATTRIBUTE_KEY).set(null);
     }
 
     public static Map<String, Object> getInfo(Channel channel) {
@@ -249,4 +264,76 @@ public class ChannelInfo {
         return infoAttribute.get();
     }
 
+    public static List<MqttProperties.UserProperty> getUserProperties(Channel channel) {
+        return channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).get();
+    }
+
+    public static void setUserProperty(Channel channel, List<MqttProperties.UserProperty> userProperties) {
+        channel.attr(CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY).set(userProperties);
+    }
+
+    public static MqttVersion getMqttVersion(Channel channel) {
+        return channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).get();
+    }
+
+    public static void setMqttVersion(Channel channel, MqttVersion mqttVersion) {
+        channel.attr(CHANNEL_VERSION_ATTRIBUTE_KEY).setIfAbsent(mqttVersion);
+    }
+
+
+    public static Map<MqttProperties.MqttPropertyType, Object> getMqtt5Info(Channel channel) {
+        Attribute<Map<MqttProperties.MqttPropertyType, Object>> infoMqtt5Attribute = channel.attr(CHANNEL_INFO_MQTT5_ATTRIBUTE_KEY);
+        if (infoMqtt5Attribute.get() == null) {
+            infoMqtt5Attribute.setIfAbsent(new ConcurrentHashMap<>(8));
+        }
+        return infoMqtt5Attribute.get();
+    }
+
+    public static Integer getSessionExpiryInterval(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(SESSION_EXPIRY_INTERVAL);
+    }
+
+    public static void setSessionExpiryInterval(Channel channel, Integer sessionExpiryInterval) {
+        getMqtt5Info(channel).put(SESSION_EXPIRY_INTERVAL, sessionExpiryInterval);
+    }
+
+    public static Integer getReceiveMaximum(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(RECEIVE_MAXIMUM);
+    }
+
+    public static void setReceiveMaximum(Channel channel, Integer receiveMaximum) {
+        getMqtt5Info(channel).put(RECEIVE_MAXIMUM, receiveMaximum);
+    }
+
+    public static Integer getMaximumPacketSize(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(MAXIMUM_PACKET_SIZE);
+    }
+
+    public static void setMaximumPacketSize(Channel channel, Integer maximumPacketSize) {
+        getMqtt5Info(channel).put(MAXIMUM_PACKET_SIZE, maximumPacketSize);
+    }
+
+    public static Integer getTopicAliasMaximum(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(TOPIC_ALIAS_MAXIMUM);
+    }
+
+    public static void setTopicAliasMaximum(Channel channel, Integer topicAliasMaximum) {
+        getMqtt5Info(channel).put(TOPIC_ALIAS_MAXIMUM, topicAliasMaximum);
+    }
+
+    public static Boolean getRequestResponseInformation(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(REQUEST_PROBLEM_INFORMATION) == 1;
+    }
+
+    public static void setRequestResponseInformation(Channel channel, Integer requestResponseInformation) {
+        getMqtt5Info(channel).put(REQUEST_PROBLEM_INFORMATION, requestResponseInformation);
+    }
+
+    public static Boolean getRequestProblemInformation(Channel channel) {
+        return (Integer) getMqtt5Info(channel).get(REQUEST_RESPONSE_INFORMATION) == 1;
+    }
+
+    public static void setRequestProblemInformation(Channel channel, Integer requestProblemInformation) {
+        getMqtt5Info(channel).put(REQUEST_RESPONSE_INFORMATION, requestProblemInformation);
+    }
 }

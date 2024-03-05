@@ -19,5 +19,6 @@ package org.apache.rocketmq.mqtt.common.hook;
 
 public enum UpstreamHookEnum {
     AUTH,
-    UPSTREAM_PROCESS
+    UPSTREAM_PROCESS,
+    UPSTREAM_PROCESS5
 }

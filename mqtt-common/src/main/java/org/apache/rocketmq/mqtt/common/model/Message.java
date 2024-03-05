@@ -59,6 +59,16 @@ public class Message {
     public static String extPropertyNamespaceId = "namespace";
     public static String extPropertyClientId = "clientId";
 
+    // MQTT 5
+    public static String propertyPayloadFormatIndicator = "payloadFormatIndicator";
+    public static String propertyMessageExpiryInterval = "messageExpiryInterval";
+    public static String propertyTopicAlias = "topicAlias";
+    public static String propertyResponseTopic = "responseTopic";
+    public static String propertyCorrelationData = "correlationData";
+    public static String propertySubscriptionIdentifier = "subscriptionIdentifier";
+    public static String propertyMqtt5UserProperty = "mqtt5UserProperty";
+    public static String propertyContentType = "contentType";
+
 
     public Message copy() {
         Message message = new Message();

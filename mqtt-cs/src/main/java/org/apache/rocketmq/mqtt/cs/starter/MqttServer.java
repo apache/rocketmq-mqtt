@@ -30,11 +30,16 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
+import org.apache.rocketmq.mqtt.cs.protocol.ChannelPipelineLazyInit;
+import org.apache.rocketmq.mqtt.cs.protocol.MqttVersionHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
+import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.Mqtt5PacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
@@ -64,10 +69,16 @@ public class MqttServer {
     private MqttPacketDispatcher mqttPacketDispatcher;
 
     @Resource
+    private Mqtt5PacketDispatcher mqtt5PacketDispatcher;
+
+    @Resource
     private WebSocketServerHandler webSocketServerHandler;
 
     @Resource
     private SslFactory sslFactory;
+
+    @Resource
+    private ChannelManager channelManager;
 
     @PostConstruct
     public void init() throws Exception {
@@ -91,9 +102,19 @@ public class MqttServer {
                 public void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast("connectHandler", connectHandler);
-                    pipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
-                    pipeline.addLast("encoder", MqttEncoder.INSTANCE);
-                    pipeline.addLast("dispatcher", mqttPacketDispatcher);
+                    pipeline.addLast("versionHandler", new MqttVersionHandler(channelManager, new ChannelPipelineLazyInit() {
+                        @Override
+                        public void init(ChannelPipeline channelPipeline, MqttVersion mqttVersion) {
+                            channelPipeline.addLast("decoder", new MqttDecoder(connectConf.getMaxPacketSizeInByte()));
+                            channelPipeline.addLast("encoder", MqttEncoder.INSTANCE);
+                            if (MqttVersion.MQTT_5.equals(mqttVersion)) {
+                                channelPipeline.addLast("mqtt5PacketDispatcher", mqtt5PacketDispatcher);
+                            } else {
+                                channelPipeline.addLast("dispatcher", mqttPacketDispatcher);
+                            }
+                        }
+                    }));
+
                 }
             });
         serverBootstrap.bind();

@@ -72,17 +72,29 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttSubscribeMessage mqttMessage) {
-        MqttSubscribeMessage mqttSubscribeMessage = mqttMessage;
-        final MqttMessageIdAndPropertiesVariableHeader variableHeader =
-                (MqttMessageIdAndPropertiesVariableHeader) mqttMessage.variableHeader();
-        Channel channel = ctx.channel();
+        try {
+            MqttSubscribeMessage mqttSubscribeMessage = mqttMessage;
+            final MqttMessageIdAndPropertiesVariableHeader variableHeader =
+                    (MqttMessageIdAndPropertiesVariableHeader) mqttMessage.variableHeader();
+            Channel channel = ctx.channel();
 
-        // check MqttSubscribeMessage
-        MqttProperties.IntegerProperty subscriptionIdentifierProperty =
-                (MqttProperties.IntegerProperty) variableHeader.properties().getProperty(SUBSCRIPTION_IDENTIFIER.value());
-        if (subscriptionIdentifierProperty != null) {
-            Integer subscriptionIdentifier = subscriptionIdentifierProperty.value();
-            if (subscriptionIdentifier > SUBSCRIPTION_IDENTIFIER_MAX || subscriptionIdentifier < SUBSCRIPTION_IDENTIFIER_MIN) {
+            // check MqttSubscribeMessage
+            MqttProperties.IntegerProperty subscriptionIdentifierProperty =
+                    (MqttProperties.IntegerProperty) variableHeader.properties().getProperty(SUBSCRIPTION_IDENTIFIER.value());
+            if (subscriptionIdentifierProperty != null) {
+                Integer subscriptionIdentifier = subscriptionIdentifierProperty.value();
+                if (subscriptionIdentifier > SUBSCRIPTION_IDENTIFIER_MAX || subscriptionIdentifier < SUBSCRIPTION_IDENTIFIER_MIN) {
+                    channelManager.closeConnect(
+                            channel,
+                            ChannelCloseFrom.SERVER,
+                            "PROTOCOL_ERROR",
+                            MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+                    return false;
+                }
+            }
+
+            MqttSubscribePayload mqttSubscribePayload = mqttSubscribeMessage.payload();
+            if (mqttSubscribePayload == null) {
                 channelManager.closeConnect(
                         channel,
                         ChannelCloseFrom.SERVER,
@@ -90,18 +102,11 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
                         MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
                 return false;
             }
-        }
-
-        MqttSubscribePayload mqttSubscribePayload = mqttSubscribeMessage.payload();
-        if (mqttSubscribePayload == null) {
-            channelManager.closeConnect(
-                    channel,
-                    ChannelCloseFrom.SERVER,
-                    "PROTOCOL_ERROR",
-                    MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+        } catch (Throwable e) {
+            logger.error("preHandler error", e);
+            channelManager.closeConnectWithProtocolError(ctx.channel(), e.toString());
             return false;
         }
-
 
         return true;
     }
@@ -194,6 +199,6 @@ public class Mqtt5SubscribeHandler implements MqttPacketHandler<MqttSubscribeMes
     }
 
     public void sendSubAck(Channel channel, Integer packetId, int[] subAckCodes) {
-        channel.writeAndFlush(MqttMessageFactory.createSubAckMessage(packetId, subAckCodes, MqttProperties.NO_PROPERTIES));
+        channel.writeAndFlush(MqttMessageFactory.buildMqtt5SubAckMessage(packetId, subAckCodes, MqttProperties.NO_PROPERTIES));
     }
 }

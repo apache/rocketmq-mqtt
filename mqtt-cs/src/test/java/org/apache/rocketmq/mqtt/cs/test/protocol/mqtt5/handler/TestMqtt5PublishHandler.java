@@ -17,6 +17,8 @@
 
 package org.apache.rocketmq.mqtt.cs.test.protocol.mqtt5.handler;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -33,9 +35,11 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPublishHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler.Mqtt5PublishHandler;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,6 +49,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -68,6 +73,7 @@ public class TestMqtt5PublishHandler {
     private MqttPublishMessage atMostPubMessage;
     private MqttPublishMessage atLeastPubMessage;
     private MqttPublishMessage exactlyPubMessage;
+    private MqttPublishMessage noTopicName;
 
     private HookResult failHook;
     private HookResult successHook;
@@ -84,8 +90,12 @@ public class TestMqtt5PublishHandler {
     @Spy
     private NioSocketChannel channel;
 
+    @Mock
+    private ConnectConf connectConf;
+
     @Before
     public void setUp() throws Exception {
+        FieldUtils.writeDeclaredField(publishHandler, "connectConf", connectConf, true);
         FieldUtils.writeDeclaredField(publishHandler, "inFlyCache", inFlyCache, true);
         FieldUtils.writeDeclaredField(publishHandler, "channelManager", channelManager, true);
 
@@ -93,6 +103,7 @@ public class TestMqtt5PublishHandler {
         props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
         props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
         props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), 10));
         props.add(new MqttProperties.UserProperty("isSecret", "true"));
         props.add(new MqttProperties.UserProperty("tag", "firstTag"));
         props.add(new MqttProperties.UserProperty("tag", "secondTag"));
@@ -105,6 +116,11 @@ public class TestMqtt5PublishHandler {
         atLeastPubMessage = new MqttPublishMessage(atLeastHeader, variableHeader, null);
         exactlyHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.EXACTLY_ONCE, false, 0);
         exactlyPubMessage = new MqttPublishMessage(exactlyHeader, variableHeader, null);
+
+        MqttProperties propsNoTopicName = new MqttProperties();
+        propsNoTopicName.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), 10));
+        MqttPublishVariableHeader variableHeaderNoTopicName = new MqttPublishVariableHeader("", packetId, propsNoTopicName);
+        noTopicName = new MqttPublishMessage(atLeastHeader, variableHeaderNoTopicName, Unpooled.buffer());
 
         failHook = new HookResult(HookResult.FAIL, MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED.byteValue(),
                 Remark.INVALID_PARAM, null);
@@ -165,4 +181,17 @@ public class TestMqtt5PublishHandler {
         verifyNoMoreInteractions(inFlyCache, channelManager, ctx);
     }
 
+    @Test
+    public void testPreHandlerTopicAlias() {
+        doReturn(false).when(inFlyCache).contains(eq(InFlyCache.CacheType.PUB), anyString(), eq(packetId));
+        when(connectConf.getTopicAliasMaximum()).thenReturn(1000);
+
+        publishHandler.preHandler(ctx, exactlyPubMessage);
+
+        Assert.assertTrue(publishHandler.preHandler(ctx, noTopicName));
+
+        verify(ctx, times(2)).channel();
+        verify(inFlyCache, times(2)).contains(eq(InFlyCache.CacheType.PUB), anyString(), eq(packetId));
+        verifyNoMoreInteractions(inFlyCache, ctx);
+    }
 }

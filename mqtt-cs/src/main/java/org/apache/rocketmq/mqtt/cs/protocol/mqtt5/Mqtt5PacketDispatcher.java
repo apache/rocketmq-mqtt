@@ -220,6 +220,7 @@ public class Mqtt5PacketDispatcher extends SimpleChannelInboundHandler<MqttMessa
         context.setNode(HostInfo.getInstall().getAddress());
         context.setNamespace(ChannelInfo.getNamespace(channel));
         context.setMqttVersion(ChannelInfo.getMqttVersion(channel));
+        context.setClientTopicAliasMap(ChannelInfo.getClientTopicAliasMap(channel));
         return context;
     }
 

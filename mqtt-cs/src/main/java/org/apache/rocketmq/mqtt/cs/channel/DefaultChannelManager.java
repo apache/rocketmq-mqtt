@@ -131,15 +131,15 @@ public class DefaultChannelManager implements ChannelManager {
         unloadResource(channel, reason);
 
         if (channel.isActive()) {
-            channel.writeAndFlush(MqttMessageFactory.createDisconnectMessage(reasonCode));
+            channel.writeAndFlush(MqttMessageFactory.buildMqtt5DisconnectMessage(reasonCode, reason));
             channel.close();
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
     }
 
     @Override
-    public void closeConnectWithProtocolError(Channel channel) {
-        closeConnect(channel, ChannelCloseFrom.SERVER, "PROTOCOL_ERROR", MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+    public void closeConnectWithProtocolError(Channel channel, String reason) {
+        closeConnect(channel, ChannelCloseFrom.SERVER, reason, MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
     }
 
     public void unloadResource(Channel channel, String reason) {

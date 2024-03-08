@@ -53,14 +53,20 @@ public class Mqtt5UnSubscribeHandler implements MqttPacketHandler<MqttUnsubscrib
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttUnsubscribeMessage mqttMessage) {
-        MqttUnsubscribePayload mqttUnsubscribePayload = mqttMessage.payload();
-        Channel channel = ctx.channel();
-        if (mqttUnsubscribePayload == null) {
-            channelManager.closeConnect(
-                    channel,
-                    ChannelCloseFrom.SERVER,
-                    "PROTOCOL_ERROR",
-                    MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+        try {
+            MqttUnsubscribePayload mqttUnsubscribePayload = mqttMessage.payload();
+            Channel channel = ctx.channel();
+            if (mqttUnsubscribePayload == null) {
+                channelManager.closeConnect(
+                        channel,
+                        ChannelCloseFrom.SERVER,
+                        "PROTOCOL_ERROR",
+                        MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
+                return false;
+            }
+        } catch (Throwable e) {
+            logger.error("preHandler error", e);
+            channelManager.closeConnectWithProtocolError(ctx.channel(), e.toString());
             return false;
         }
 
@@ -100,6 +106,6 @@ public class Mqtt5UnSubscribeHandler implements MqttPacketHandler<MqttUnsubscrib
     }
 
     public void sendUnSubAck(Channel channel, Integer packetId, short[] unSubAckCodes) {
-        channel.writeAndFlush(MqttMessageFactory.createUnSubAckMessage(packetId, unSubAckCodes, MqttProperties.NO_PROPERTIES));
+        channel.writeAndFlush(MqttMessageFactory.buildMqtt5UnSubAckMessage(packetId, unSubAckCodes, MqttProperties.NO_PROPERTIES));
     }
 }

@@ -105,6 +105,7 @@ public class Mqtt5Consumer {
         connOpts.setAutomaticReconnect(true);
         connOpts.setUserName(System.getenv("username"));
         connOpts.setPassword(HmacSHA1Util.macSignature(clientId, System.getenv("password")).getBytes(StandardCharsets.UTF_8));
+        connOpts.setTopicAliasMaximum(10);
         return connOpts;
     }
 

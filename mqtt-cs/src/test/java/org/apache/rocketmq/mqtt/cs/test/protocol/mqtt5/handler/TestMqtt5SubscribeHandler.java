@@ -32,7 +32,6 @@ import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.DefaultChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.handler.Mqtt5SubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.junit.Assert;

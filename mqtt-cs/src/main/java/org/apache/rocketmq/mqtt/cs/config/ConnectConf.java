@@ -60,6 +60,7 @@ public class ConnectConf {
     private boolean enableSharedSubscription = false;
     private boolean enableRetain = false;
     private boolean enableSubscriptionIdentifier = false;
+    private int topicAliasMaximum = 10;
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -293,5 +294,13 @@ public class ConnectConf {
 
     public void setEnableSubscriptionIdentifier(boolean enableSubscriptionIdentifier) {
         this.enableSubscriptionIdentifier = enableSubscriptionIdentifier;
+    }
+
+    public int getTopicAliasMaximum() {
+        return topicAliasMaximum;
+    }
+
+    public void setTopicAliasMaximum(int topicAliasMaximum) {
+        this.topicAliasMaximum = topicAliasMaximum;
     }
 }

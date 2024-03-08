@@ -84,42 +84,49 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttConnectMessage connectMessage) {
-        final MqttConnectVariableHeader variableHeader = connectMessage.variableHeader();
-        MqttProperties mqttProperties = variableHeader.properties();
-        Channel channel = ctx.channel();
 
-        if (mqttProperties.getProperty(RECEIVE_MAXIMUM.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RECEIVE_MAXIMUM.value())).value() == 0) {
-            channelManager.closeConnectWithProtocolError(channel);
-            return false;
-        }
+        try {
+            final MqttConnectVariableHeader variableHeader = connectMessage.variableHeader();
+            MqttProperties mqttProperties = variableHeader.properties();
+            Channel channel = ctx.channel();
 
-        if (mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value())).value() == 0) {
-            channelManager.closeConnectWithProtocolError(channel);
-            return false;
-        }
+            if (mqttProperties.getProperty(RECEIVE_MAXIMUM.value()) != null &&
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RECEIVE_MAXIMUM.value())).value() == 0) {
+                channelManager.closeConnectWithProtocolError(channel, "RECEIVE_MAXIMUM_ZERO");
+                return false;
+            }
 
-        // The Server uses DISCONNECT with Reason Code 0x9E Shared Subscriptions not supported)
-        if (mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value())).value() == 0 &&
-                !connectConf.isEnableSharedSubscription()) {
-            channelManager.closeConnect(
-                    channel,
-                    ChannelCloseFrom.SERVER,
-                    "SHARED_SUBSCRIPTIONS_NOT_SUPPORTED",
-                    MqttReasonCodes.Disconnect.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byteValue());
-            return false;
-        }
+            if (mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value()) != null &&
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(MAXIMUM_PACKET_SIZE.value())).value() == 0) {
+                channelManager.closeConnectWithProtocolError(channel, "MAXIMUM_PACKET_SIZE_ZERO");
+                return false;
+            }
 
-        if (mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value()) != null &&
-                ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value())).value() == 0 &&
-                !connectConf.isEnableSubscriptionIdentifier()) {
-            channelManager.closeConnect(
-                    channel,
-                    ChannelCloseFrom.SERVER,
-                    "SUBSCRIPTION_IDENTIFIER_NOT_SUPPORTED",
-                    MqttReasonCodes.Disconnect.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byteValue());
+            // The Server uses DISCONNECT with Reason Code 0x9E Shared Subscriptions not supported)
+            if (mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value()) != null &&
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SHARED_SUBSCRIPTION_AVAILABLE.value())).value() == 0 &&
+                    !connectConf.isEnableSharedSubscription()) {
+                channelManager.closeConnect(
+                        channel,
+                        ChannelCloseFrom.SERVER,
+                        "SHARED_SUBSCRIPTIONS_NOT_SUPPORTED",
+                        MqttReasonCodes.Disconnect.SHARED_SUBSCRIPTIONS_NOT_SUPPORTED.byteValue());
+                return false;
+            }
+
+            if (mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value()) != null &&
+                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value())).value() == 0 &&
+                    !connectConf.isEnableSubscriptionIdentifier()) {
+                channelManager.closeConnect(
+                        channel,
+                        ChannelCloseFrom.SERVER,
+                        "SUBSCRIPTION_IDENTIFIER_NOT_SUPPORTED",
+                        MqttReasonCodes.Disconnect.SUBSCRIPTION_IDENTIFIERS_NOT_SUPPORTED.byteValue());
+                return false;
+            }
+        } catch (Throwable e) {
+            logger.error("preHandler error", e);
+            channelManager.closeConnectWithProtocolError(ctx.channel(), e.toString());
             return false;
         }
 
@@ -209,8 +216,9 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
             props.add(new MqttProperties.IntegerProperty(RETAIN_AVAILABLE.value(), 0));
             props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value(), 0));
             props.add(new MqttProperties.IntegerProperty(SHARED_SUBSCRIPTION_AVAILABLE.value(), 0));
+            props.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS_MAXIMUM.value(), connectConf.getTopicAliasMaximum()));
 
-            final MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.createConnAckMessage(
+            final MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.buildMqtt5ConnAckMessage(
                     MqttConnectReturnCode.CONNECTION_ACCEPTED,
                     sessionPresent,
                     props);
@@ -227,7 +235,7 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
 
                 willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
                 if (willMessage.isRetain() && !connectConf.isEnableRetain()) {
-                    final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
+                    final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.buildMqtt5ConnAckMessage(
                             MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
                             false,
                             new MqttProperties());

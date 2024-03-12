@@ -72,6 +72,7 @@ public class PublishProcessor5 implements UpstreamProcessor5 {
     public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
 
+        // process topic alias
         final MqttPublishVariableHeader variableHeaderTmp = mqttPublishMessage.variableHeader();
         MqttProperties mqttProperties = variableHeaderTmp.properties();
         if (mqttProperties != null && context.getClientTopicAliasMap() != null) {

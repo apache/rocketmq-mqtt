@@ -92,6 +92,9 @@ public class Mqtt5Producer {
             userProperties.add(new UserProperty("tag", "r1"));
             userProperties.add(new UserProperty("tag", "r11"));
             mqttProperties.setUserProperties(userProperties);
+
+            // content type
+            mqttProperties.setContentType("text/plain");
             message.setProperties(mqttProperties);
 
             message.setQos(1);

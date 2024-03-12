@@ -44,6 +44,7 @@ import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static java.lang.Math.min;
 import static java.util.Objects.hash;
@@ -177,6 +178,11 @@ public class PushAction {
             case MQTT_5:
                 // process publish user properties
                 processUserProperties(message, mqttProperties);
+
+                // add content type
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyContentType))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), message.getUserProperty(Message.propertyContentType)));
+                }
 
                 // process topic alias
                 // TODO retain flag should be set by subscription option

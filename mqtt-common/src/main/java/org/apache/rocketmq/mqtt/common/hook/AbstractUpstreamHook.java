@@ -41,7 +41,7 @@ public abstract class AbstractUpstreamHook implements UpstreamHook {
     @Override
     public CompletableFuture<HookResult> doHook(MqttMessageUpContext context, MqttMessage msg) {
         try {
-            CompletableFuture<HookResult> result = processMqttMessage(context,msg);
+            CompletableFuture<HookResult> result = processMqttMessage(context, msg);
             if (nextUpstreamHook == null) {
                 return result;
             }

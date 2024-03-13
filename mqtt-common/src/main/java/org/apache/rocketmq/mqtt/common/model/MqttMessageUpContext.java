@@ -19,12 +19,15 @@ package org.apache.rocketmq.mqtt.common.model;
 
 import io.netty.handler.codec.mqtt.MqttVersion;
 
+import java.util.Map;
+
 public class MqttMessageUpContext {
     private String namespace;
     private String clientId;
     private String channelId;
     private String node;
     private MqttVersion mqttVersion;
+    private Map<Integer, String> clientTopicAliasMap;
 
     public String getNamespace() {
         return namespace;
@@ -64,5 +67,13 @@ public class MqttMessageUpContext {
 
     public void setMqttVersion(MqttVersion mqttVersion) {
         this.mqttVersion = mqttVersion;
+    }
+
+    public Map<Integer, String> getClientTopicAliasMap() {
+        return clientTopicAliasMap;
+    }
+
+    public void setClientTopicAliasMap(Map<Integer, String> clientTopicAliasMap) {
+        this.clientTopicAliasMap = clientTopicAliasMap;
     }
 }

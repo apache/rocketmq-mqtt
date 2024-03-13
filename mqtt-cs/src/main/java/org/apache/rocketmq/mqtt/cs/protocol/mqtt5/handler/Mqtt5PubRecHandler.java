@@ -49,7 +49,7 @@ public class Mqtt5PubRecHandler implements MqttPacketHandler<MqttMessage> {
         String channelId = ChannelInfo.getId(ctx.channel());
         RetryDriver.RetryMessage retryMessage = retryDriver.unMountPublish(variableHeader.messageId(), channelId);
         if (retryMessage == null) {
-            ctx.channel().writeAndFlush(MqttMessageFactory.createPubRelMessage(
+            ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubRelMessage(
                     variableHeader.messageId(),
                     MqttReasonCodes.PubRel.PACKET_IDENTIFIER_NOT_FOUND.byteValue(),
                     MqttProperties.NO_PROPERTIES));
@@ -58,7 +58,7 @@ public class Mqtt5PubRecHandler implements MqttPacketHandler<MqttMessage> {
 
         retryDriver.mountPubRel(variableHeader.messageId(), channelId);
 
-        ctx.channel().writeAndFlush(MqttMessageFactory.createPubRelMessage(
+        ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubRelMessage(
                 variableHeader.messageId(),
                 MqttReasonCodes.PubRel.SUCCESS.byteValue(),
                 MqttProperties.NO_PROPERTIES));

@@ -72,6 +72,11 @@ public class ChannelInfo {
 
     public static final AttributeKey<List<MqttProperties.UserProperty>> CHANNEL_USER_PROPERTY_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("UP");
 
+    public static final AttributeKey<ConcurrentMap<Integer, String>> CHANNEL_CLIENT_TOPIC_ALIAS_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("CTA");
+    public static final AttributeKey<ConcurrentMap<String, Integer>> CHANNEL_SERVER_TOPIC_ALIAS_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("STA");
+    public static final AttributeKey<ConcurrentMap<Integer, String>> CHANNEL_SERVER_ALIAS_TOPIC_MQTT5_ATTRIBUTE_KEY = AttributeKey.valueOf("SAT");
+
+
     public static Map<String, String> getExtData(Channel channel) {
         Attribute<ConcurrentMap<String, String>> extAttribute = channel.attr(CHANNEL_EXTDATA_ATTRIBUTE_KEY);
         if (extAttribute.get() == null) {
@@ -335,5 +340,53 @@ public class ChannelInfo {
 
     public static void setRequestProblemInformation(Channel channel, Integer requestProblemInformation) {
         getMqtt5Info(channel).put(REQUEST_RESPONSE_INFORMATION, requestProblemInformation);
+    }
+
+    public static ConcurrentMap<Integer, String> getClientTopicAliasMap(Channel channel) {
+        Attribute<ConcurrentMap<Integer, String>> clientTopicAliasMap = channel.attr(CHANNEL_CLIENT_TOPIC_ALIAS_MQTT5_ATTRIBUTE_KEY);
+        if (clientTopicAliasMap.get() == null) {
+            clientTopicAliasMap.setIfAbsent(new ConcurrentHashMap<>(8));
+        }
+        return clientTopicAliasMap.get();
+    }
+
+    public static void setClientTopicAlias(Channel channel, Integer topicAlias, String topicName) {
+        getClientTopicAliasMap(channel).put(topicAlias, topicName);
+    }
+
+    public static String getClientTopicAlias(Channel channel, Integer topicAlias) {
+        return getClientTopicAliasMap(channel).get(topicAlias);
+    }
+
+    public static ConcurrentMap<String, Integer> getServerTopicAliasMap(Channel channel) {
+        Attribute<ConcurrentMap<String, Integer>> serverClientTopicAliasMap = channel.attr(CHANNEL_SERVER_TOPIC_ALIAS_MQTT5_ATTRIBUTE_KEY);
+        if (serverClientTopicAliasMap.get() == null) {
+            serverClientTopicAliasMap.setIfAbsent(new ConcurrentHashMap<>(8));
+        }
+        return serverClientTopicAliasMap.get();
+    }
+
+    public static Integer getServerTopicAlias(Channel channel, String topicName) {
+        return getServerTopicAliasMap(channel).get(topicName);
+    }
+
+    public static void setServerTopicAlias(Channel channel, String topicName, Integer topicAlias) {
+        getServerTopicAliasMap(channel).put(topicName, topicAlias);
+    }
+
+    public static ConcurrentMap<Integer, String> getServerAliasTopicMap(Channel channel) {
+        Attribute<ConcurrentMap<Integer, String>> serverAliasTopicMap = channel.attr(CHANNEL_SERVER_ALIAS_TOPIC_MQTT5_ATTRIBUTE_KEY);
+        if (serverAliasTopicMap.get() == null) {
+            serverAliasTopicMap.setIfAbsent(new ConcurrentHashMap<>(8));
+        }
+        return serverAliasTopicMap.get();
+    }
+
+    public static String getServerAliasTopic(Channel channel, Integer topicAlias) {
+        return getServerAliasTopicMap(channel).get(topicAlias);
+    }
+
+    public static void setServerAliasTopic(Channel channel, Integer topicAlias, String topicName) {
+        getServerAliasTopicMap(channel).put(topicAlias, topicName);
     }
 }

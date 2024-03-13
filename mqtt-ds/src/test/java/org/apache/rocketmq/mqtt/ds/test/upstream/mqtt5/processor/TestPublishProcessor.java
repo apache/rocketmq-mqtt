@@ -37,6 +37,7 @@ import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.mqtt5.processor.PublishProcessor5;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -44,8 +45,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
@@ -73,15 +76,16 @@ public class TestPublishProcessor {
     @Mock
     private FirstTopicManager firstTopicManager;
 
-    @Test
-    public void test() throws IllegalAccessException, ExecutionException, InterruptedException, RemotingException, com.alipay.sofa.jraft.error.RemotingException {
-        PublishProcessor5 publishProcessor5 = new PublishProcessor5();
+    private MqttPublishMessage publishMessage;
+
+    private PublishProcessor5 publishProcessor5;
+
+    @Before
+    public void init() throws IllegalAccessException {
+        publishProcessor5 = new PublishProcessor5();
         FieldUtils.writeDeclaredField(publishProcessor5, "lmqQueueStore", lmqQueueStore, true);
         FieldUtils.writeDeclaredField(publishProcessor5, "wildcardManager", wildcardManager, true);
         FieldUtils.writeDeclaredField(publishProcessor5, "firstTopicManager", firstTopicManager, true);
-
-        MqttMessageUpContext upContext = new MqttMessageUpContext();
-        upContext.setNamespace("testPubProcessor");
 
         MqttProperties props = new MqttProperties();
         props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
@@ -97,11 +101,12 @@ public class TestPublishProcessor {
 
         props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 100));
         props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 101));
+        props.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), 10));
 
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH, false, MqttQoS.AT_LEAST_ONCE, false, 1);
         MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader("test", 0, props);
         ByteBuf payload = Unpooled.copiedBuffer("test".getBytes(StandardCharsets.UTF_8));
-        MqttPublishMessage publishMessage = new MqttPublishMessage(mqttFixedHeader, variableHeader, payload);
+        publishMessage = new MqttPublishMessage(mqttFixedHeader, variableHeader, payload);
 
         Set<String> queues = Collections.singleton("testQueue");
         when(wildcardManager.matchQueueSetByMsgTopic(anyString(), anyString())).thenReturn(queues);
@@ -110,8 +115,34 @@ public class TestPublishProcessor {
         storeResultFuture.complete(storeResult);
         when(lmqQueueStore.putMessage(anySet(), any())).thenReturn(storeResultFuture);
 
+    }
+
+    @Test
+    public void test() throws IllegalAccessException, ExecutionException, InterruptedException, RemotingException, com.alipay.sofa.jraft.error.RemotingException {
+
+        MqttMessageUpContext upContext = new MqttMessageUpContext();
+        upContext.setNamespace("testPubProcessor");
+
         CompletableFuture<HookResult> hookResultCompletableFuture = publishProcessor5.process(upContext, publishMessage);
 
+        verify(firstTopicManager).checkFirstTopicIfCreated(anyString());
+        Assert.assertNull(hookResultCompletableFuture.get().getRemark());
+        Assert.assertNotNull(hookResultCompletableFuture.get().getData());
+    }
+
+    @Test
+    public void testClientTopicAlias() throws ExecutionException, InterruptedException {
+
+        MqttMessageUpContext upContext = new MqttMessageUpContext();
+        upContext.setNamespace("testPubProcessor");
+
+        Map<Integer, String> topicAliasMap = new ConcurrentHashMap<>();
+        topicAliasMap.put(10, "testQueue");
+        upContext.setClientTopicAliasMap(topicAliasMap);
+
+        CompletableFuture<HookResult> hookResultCompletableFuture = publishProcessor5.process(upContext, publishMessage);
+
+        Assert.assertEquals(topicAliasMap.get(10), "test");
         verify(firstTopicManager).checkFirstTopicIfCreated(anyString());
         Assert.assertNull(hookResultCompletableFuture.get().getRemark());
         Assert.assertNotNull(hookResultCompletableFuture.get().getData());

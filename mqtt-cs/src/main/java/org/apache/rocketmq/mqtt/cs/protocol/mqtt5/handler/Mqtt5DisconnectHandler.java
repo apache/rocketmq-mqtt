@@ -66,7 +66,7 @@ public class Mqtt5DisconnectHandler implements MqttPacketHandler<MqttMessage> {
             if (channelSessionExpiryInterval != null && disconnectSessionExpiryInterval != null) {
                 if (channelSessionExpiryInterval == 0) {
                     // The Server uses DISCONNECT with Reason Code 0x82 (Protocol Error)
-                    ctx.channel().writeAndFlush(MqttMessageFactory.createDisconnectMessage(PROTOCOL_ERROR.byteValue()));
+                    ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5DisconnectMessage(PROTOCOL_ERROR.byteValue(), "SESSION_EXPIRY_INTERVAL is 0"));
                 } else {
                     ChannelInfo.setSessionExpiryInterval(ctx.channel(), disconnectSessionExpiryInterval);
                 }

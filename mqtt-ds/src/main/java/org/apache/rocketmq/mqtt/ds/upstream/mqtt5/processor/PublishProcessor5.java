@@ -20,8 +20,10 @@ package org.apache.rocketmq.mqtt.ds.upstream.mqtt5.processor;
 import com.alibaba.fastjson.JSON;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
+import org.apache.commons.lang.StringUtils;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
@@ -42,6 +44,8 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 
 @Component
 public class PublishProcessor5 implements UpstreamProcessor5 {
@@ -67,6 +71,19 @@ public class PublishProcessor5 implements UpstreamProcessor5 {
 
     public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
+
+        final MqttPublishVariableHeader variableHeaderTmp = mqttPublishMessage.variableHeader();
+        MqttProperties mqttProperties = variableHeaderTmp.properties();
+        if (mqttProperties != null && context.getClientTopicAliasMap() != null) {
+            MqttProperties.IntegerProperty topicAlias = (MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS.value());
+            if (topicAlias != null) {
+                if (StringUtils.isNotBlank(variableHeaderTmp.topicName())) {
+                    context.getClientTopicAliasMap().put(topicAlias.value(), variableHeaderTmp.topicName());
+                } else {
+                    mqttPublishMessage = MessageUtil.addTopicName(mqttPublishMessage, context.getClientTopicAliasMap().get(topicAlias.value()));
+                }
+            }
+        }
 
         boolean isEmpty = false;
         //deal empty payload

@@ -20,6 +20,8 @@ package org.apache.rocketmq.mqtt.cs.session.infly;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
@@ -39,7 +41,9 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static java.lang.Math.min;
+import static java.util.Objects.hash;
 
 
 @Component
@@ -158,8 +162,43 @@ public class PushAction {
             logger.error("UnWritable:{}", clientId);
             return;
         }
+        Object data = null;
 
-        Object data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, mqttId);
+        MqttVersion mqttVersion = ChannelInfo.getMqttVersion(channel);
+        MqttProperties mqttProperties = new MqttProperties();
+        switch (mqttVersion) {
+            case MQTT_3_1_1:
+            case MQTT_3_1:
+                data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, retained, mqttId);
+                break;
+            case MQTT_5:
+                // TODO retain flag should be set by subscription option
+                int topicAlias = ChannelInfo.getTopicAliasMaximum(channel);
+                if (topicAlias > 0) {
+                    String topicNameTmp = "";
+                    if (ChannelInfo.getServerTopicAlias(channel, topicName) == null) {
+                        // allocate topic alias
+                        int allocateAlias = genServerTopicAlias(topicName, topicAlias);
+
+                        if (ChannelInfo.getServerAliasTopic(channel, allocateAlias) != null) {
+                            // conflict, reset topic <-> alias
+                            topicNameTmp = topicName;
+                        }
+
+                        ChannelInfo.setServerTopicAlias(channel, topicName, allocateAlias);
+                        ChannelInfo.setServerAliasTopic(channel, allocateAlias, topicName);
+                    }
+
+                    mqttProperties.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), ChannelInfo.getServerTopicAlias(channel, topicName)));
+                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicNameTmp, message.getPayload(), qos, retained, mqttId, mqttProperties);
+                } else {
+                    // no alias
+                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, retained, mqttId, mqttProperties);
+                }
+                break;
+            default:
+                break;
+        }
 
         ChannelFuture writeFuture = session.getChannel().writeAndFlush(data);
         int bodySize = message.getPayload() != null ? message.getPayload().length : 0;
@@ -172,6 +211,10 @@ public class PushAction {
                 lmqQueueStore.popAck(lmqTopic, subscription.getSharedName(), message);
             }
         });
+    }
+
+    public int genServerTopicAlias(String topicName, int topicAliasMaximum) {
+        return hash(topicName) % topicAliasMaximum + 1;
     }
 
     public void rollNextByAck(Session session, int mqttId) {

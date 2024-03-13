@@ -27,6 +27,7 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.handler.codec.mqtt.MqttReasonCodes;
+import org.apache.commons.lang.StringUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -96,25 +97,28 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
                     }
                 }
 
-                if (mqttProperties.getProperty(TOPIC_ALIAS.value()) == null &&
-                        (variableHeader.topicName() == null || variableHeader.topicName().isEmpty())) {
-                    channelManager.closeConnectWithProtocolError(channel);
+                MqttProperties.IntegerProperty topicAlias = (MqttProperties.IntegerProperty) mqttProperties.getProperty(TOPIC_ALIAS.value());
+                if (topicAliasInvalid(channel, topicAlias, variableHeader)) {
+                    channelManager.closeConnectWithProtocolError(channel, "topicAliasInvalid");
+                    return false;
                 }
-            }
 
-            if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
-                    ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 1 &&
-                    !connectConf.isEnableRetain()) {
+                if (mqttProperties.getProperty(RETAIN_AVAILABLE.value()) != null &&
+                        ((MqttProperties.IntegerProperty) mqttProperties.getProperty(RETAIN_AVAILABLE.value())).value() == 1 &&
+                        !connectConf.isEnableRetain()) {
 
-                final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.createConnAckMessage(
-                        MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
-                        false,
-                        new MqttProperties());
-                channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
-                return false;
+                    final MqttConnAckMessage mqttConnAckMessageRetainNotSupport = MqttMessageFactory.buildMqtt5ConnAckMessage(
+                            MqttConnectReturnCode.CONNECTION_REFUSED_RETAIN_NOT_SUPPORTED,
+                            false,
+                            new MqttProperties());
+                    channel.writeAndFlush(mqttConnAckMessageRetainNotSupport);
+                    return false;
+                }
             }
         } catch (Throwable e) {
             logger.error("preHandler Mqtt5PublishHandler error", e);
+            channelManager.closeConnectWithProtocolError(ctx.channel(), e.toString());
+            return false;
         }
 
         return true;
@@ -155,10 +159,10 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
             case AT_MOST_ONCE:
                 break;
             case AT_LEAST_ONCE:
-                ctx.channel().writeAndFlush(MqttMessageFactory.createPubAckMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
+                ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubAckMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
                 break;
             case EXACTLY_ONCE:
-                ctx.channel().writeAndFlush(MqttMessageFactory.createPubRecMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
+                ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubRecMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
                 break;
             default:
                 throw new IllegalArgumentException("unknown qos:" + fixedHeader.qosLevel());
@@ -166,16 +170,23 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
     }
 
     private void sendPubAck(Channel channel, Integer messageId, MqttReasonCodes.PubAck reasonCode) {
-        channel.writeAndFlush(MqttMessageFactory.createPubAckMessage(
+        channel.writeAndFlush(MqttMessageFactory.buildMqtt5PubAckMessage(
                 messageId,
                 reasonCode.byteValue(),
                 MqttProperties.NO_PROPERTIES));
     }
 
     private void sendPubRec(Channel channel, Integer messageId, MqttReasonCodes.PubRec reasonCode) {
-        channel.writeAndFlush(MqttMessageFactory.createPubRecMessage(
+        channel.writeAndFlush(MqttMessageFactory.buildMqtt5PubRecMessage(
                 messageId,
                 reasonCode.byteValue(),
                 MqttProperties.NO_PROPERTIES));
+    }
+
+    private boolean topicAliasInvalid(Channel channel, MqttProperties.IntegerProperty topicAlias, MqttPublishVariableHeader variableHeader) {
+        logger.error("topicAliasInvalid, topicAlias:{}, topicName:{}, ChannelInfo.getClientTopicAlias {}", topicAlias, variableHeader.topicName(), ChannelInfo.getClientTopicAlias(channel, topicAlias.value()));
+        return (topicAlias == null && StringUtils.isBlank(variableHeader.topicName())) ||
+                (topicAlias != null && topicAlias.value() > connectConf.getTopicAliasMaximum()) ||
+                (topicAlias != null && StringUtils.isBlank(variableHeader.topicName()) && ChannelInfo.getClientTopicAlias(channel, topicAlias.value()) == null);
     }
 }

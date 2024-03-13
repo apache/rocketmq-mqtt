@@ -213,6 +213,7 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
         context.setChannelId(ChannelInfo.getId(channel));
         context.setNode(HostInfo.getInstall().getAddress());
         context.setNamespace(ChannelInfo.getNamespace(channel));
+        context.setClientTopicAliasMap(ChannelInfo.getClientTopicAliasMap(channel));
         return context;
     }
 

@@ -208,4 +208,18 @@ public class MessageUtil {
         return messageList;
     }
 
+    public static MqttPublishMessage removeTopicName(MqttPublishMessage mqttPublishMessage) {
+        MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader("", mqttPublishMessage.variableHeader().packetId(), mqttPublishMessage.variableHeader().properties());
+        return new MqttPublishMessage(mqttPublishMessage.fixedHeader(),
+                variableHeader,
+                mqttPublishMessage.payload());
+    }
+
+    public static MqttPublishMessage addTopicName(MqttPublishMessage mqttPublishMessage, String topicName) {
+        MqttPublishVariableHeader variableHeader = new MqttPublishVariableHeader(topicName, mqttPublishMessage.variableHeader().packetId(), mqttPublishMessage.variableHeader().properties());
+        mqttPublishMessage = new MqttPublishMessage(mqttPublishMessage.fixedHeader(),
+                variableHeader,
+                mqttPublishMessage.payload());
+        return mqttPublishMessage;
+    }
 }

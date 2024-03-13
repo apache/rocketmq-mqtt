@@ -48,7 +48,7 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
         String channelId = ChannelInfo.getId(ctx.channel());
 
         if (!inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId())) {
-            ctx.channel().writeAndFlush(MqttMessageFactory.createPubCompMessage(
+            ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubCompMessage(
                     variableHeader.messageId(),
                     MqttReasonCodes.PubComp.PACKET_IDENTIFIER_NOT_FOUND.byteValue(),
                     MqttProperties.NO_PROPERTIES));
@@ -56,7 +56,7 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
         }
 
         inFlyCache.remove(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId());
-        ctx.channel().writeAndFlush(MqttMessageFactory.createPubCompMessage(
+        ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubCompMessage(
                 variableHeader.messageId(),
                 MqttReasonCodes.PubComp.SUCCESS.byteValue(),
                 MqttProperties.NO_PROPERTIES));

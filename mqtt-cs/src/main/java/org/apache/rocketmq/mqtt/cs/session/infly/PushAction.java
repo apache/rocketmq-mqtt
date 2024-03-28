@@ -22,7 +22,9 @@ import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
@@ -190,8 +192,6 @@ public class PushAction {
                     data = MqttMessageFactory.buildMqtt5PublishMessage("", message.getPayload(), qos, retained, mqttId, mqttProperties);
                     break;
                 }
-
-                data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, retained, mqttId, mqttProperties);
                 break;
             default:
                 break;

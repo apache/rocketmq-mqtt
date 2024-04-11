@@ -56,6 +56,12 @@ public class SslFactory {
             return;
         }
 
+        SslProvider sslProvider = OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
+        if (OpenSsl.isAvailable()) {
+            LOG.info("OpenSSL is available");
+        } else {
+            LOG.warn("OpenSSL is NOT available, falling back to JDK SslEngine");
+        }
         try {
             File sslCertFile = new File(connectConf.getSslServerCertFile());
             File sslKeyFile = new File(connectConf.getSslServerKeyFile());
@@ -64,7 +70,7 @@ public class SslFactory {
             SslContextBuilder contextBuilder = SslContextBuilder.forServer(sslCertFile, sslKeyFile,
                     StringUtils.isBlank(password) ? null : password);
             contextBuilder.clientAuth(ClientAuth.OPTIONAL);
-            contextBuilder.sslProvider(OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+            contextBuilder.sslProvider(sslProvider);
             if (connectConf.isNeedClientAuth()) {
                 LOG.info("client tls authentication is required.");
                 contextBuilder.clientAuth(ClientAuth.REQUIRE);

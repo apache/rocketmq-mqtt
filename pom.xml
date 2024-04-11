@@ -47,7 +47,8 @@
         <rpc-grpc-impl.version>1.3.8</rpc-grpc-impl.version>
         <guava.version>32.0.0-jre</guava.version>
         <jraft-core.version>1.3.11</jraft-core.version>
-
+        <netty.version>4.1.43.Final</netty.version>
+        <netty.tcnative.version>2.0.26.Final</netty.tcnative.version>
     </properties>
 
     <dependencyManagement>
@@ -95,12 +96,12 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>4.1.43.Final</version>
+                <version>${netty.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-tcnative-boringssl-static</artifactId>
-                <version>2.0.26.Final</version>
+                <version>${netty.tcnative.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>

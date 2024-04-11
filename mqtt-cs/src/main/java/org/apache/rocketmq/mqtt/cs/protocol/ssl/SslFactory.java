@@ -55,12 +55,18 @@ public class SslFactory {
             return;
         }
 
+        SslProvider sslProvider = OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
+        if (OpenSsl.isAvailable()) {
+            LOG.info("OpenSSL is available");
+        } else {
+            LOG.warn("OpenSSL is NOT available, falling back to JDK SslEngine");
+        }
         try {
             InputStream certStream = new ClassPathResource(CERT_FILE_NAME).getInputStream();
             InputStream keyStream = new ClassPathResource(KEY_FILE_NAME).getInputStream();
             SslContextBuilder contextBuilder = SslContextBuilder.forServer(certStream, keyStream);
             contextBuilder.clientAuth(ClientAuth.OPTIONAL);
-            contextBuilder.sslProvider(OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+            contextBuilder.sslProvider(sslProvider);
             if (connectConf.isNeedClientAuth()) {
                 LOG.info("client tls authentication is required.");
                 contextBuilder.clientAuth(ClientAuth.REQUIRE);

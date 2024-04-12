@@ -17,14 +17,19 @@
 
 package org.apache.rocketmq.mqtt.cs.starter;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
@@ -33,8 +38,13 @@ import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import javax.annotation.PreDestroy;
-import org.apache.rocketmq.mqtt.cs.channel.AdaptiveTlsHandler;
+import io.netty.incubator.codec.quic.InsecureQuicTokenHandler;
+import io.netty.incubator.codec.quic.QuicChannel;
+import io.netty.incubator.codec.quic.QuicServerCodecBuilder;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
+import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
+import org.apache.rocketmq.mqtt.cs.channel.AdaptiveTlsHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
@@ -56,6 +66,8 @@ public class MqttServer {
     private final ServerBootstrap serverBootstrap = new ServerBootstrap();
     private final ServerBootstrap wsServerBootstrap = new ServerBootstrap();
     private final ServerBootstrap tlsServerBootstrap = new ServerBootstrap();
+
+    private final Bootstrap quicBootstrap = new Bootstrap();
 
     @Resource
     private ConnectHandler connectHandler;
@@ -86,8 +98,12 @@ public class MqttServer {
         adaptiveTlsHandler = new AdaptiveTlsHandler(TlsMode.PERMISSIVE, sslFactory);
 
         start();
-        startWs();
         startTls();
+
+        startWs();
+
+        // QUIC over DTLS
+        startQuic();
     }
 
     @PreDestroy
@@ -113,7 +129,7 @@ public class MqttServer {
             .localAddress(new InetSocketAddress(port))
             .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                public void initChannel(SocketChannel ch) throws Exception {
+                public void initChannel(SocketChannel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
                     assembleHandlerPipeline(pipeline);
                 }
@@ -138,7 +154,7 @@ public class MqttServer {
             .localAddress(new InetSocketAddress(tlsPort))
             .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                public void initChannel(SocketChannel ch) throws Exception {
+                public void initChannel(SocketChannel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast("sslHandler", new SslHandler(sslFactory.buildSslEngine(ch)));
                     assembleHandlerPipeline(pipeline);
@@ -181,7 +197,7 @@ public class MqttServer {
             .localAddress(new InetSocketAddress(port))
             .childHandler(new ChannelInitializer<SocketChannel>() {
                 @Override
-                public void initChannel(SocketChannel ch) throws Exception {
+                public void initChannel(SocketChannel ch) {
                     ChannelPipeline pipeline = ch.pipeline();
                     pipeline.addLast(AdaptiveTlsHandler.class.getSimpleName(), adaptiveTlsHandler);
                     pipeline.addLast("connectHandler", connectHandler);
@@ -197,6 +213,60 @@ public class MqttServer {
             });
         wsServerBootstrap.bind();
         LOGGER.info("MQTT server for WebSocket started, listening: {}", port);
+    }
+
+    private void startQuic() throws InterruptedException {
+        ChannelHandler channelHandler = new QuicServerCodecBuilder()
+            .sslContext(sslFactory.getQuicSslContext())
+            .maxIdleTimeout(5000, TimeUnit.SECONDS)
+            // Configure some limits for the maximal number of streams (and the data) that we want to handle.
+            .initialMaxData(10000000)
+            .initialMaxStreamDataBidirectionalLocal(1000000)
+            .initialMaxStreamDataBidirectionalRemote(1000000)
+            .initialMaxStreamsBidirectional(100)
+            .initialMaxStreamsUnidirectional(100)
+            .activeMigration(true)
+
+            // Setup a token handler. In a production system you would want to implement and provide your custom
+            // one.
+            .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
+            // ChannelHandler that is added into QuicChannel pipeline.
+            .handler(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) {
+                    QuicChannel channel = (QuicChannel) ctx.channel();
+                    LOGGER.debug("QUIC Connection Established: remote={}", channel.remoteAddress());
+                    // Create streams etc..
+                }
+
+                public void channelInactive(ChannelHandlerContext ctx) {
+                    ((QuicChannel) ctx.channel()).collectStats().addListener(f -> {
+                        if (f.isSuccess()) {
+                            LOGGER.info("Connection closed: {}", f.getNow());
+                        }
+                    });
+                }
+
+                @Override
+                public boolean isSharable() {
+                    return true;
+                }
+            })
+            .streamHandler(new ChannelInitializer<QuicStreamChannel>() {
+                @Override
+                protected void initChannel(QuicStreamChannel ch) {
+                    ChannelPipeline pipeline = ch.pipeline();
+                    assembleHandlerPipeline(pipeline);
+                }
+            })
+            .build();
+
+        quicBootstrap.group(workerEventLoopGroup)
+            .channel(NioDatagramChannel.class)
+            .handler(channelHandler)
+            .bind(new InetSocketAddress(connectConf.getQuicPort()))
+            .sync();
+        LOGGER.info("MQTT server for QUIC over DTLS started, listening: {}", connectConf.getQuicPort());
     }
 
 }

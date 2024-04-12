@@ -32,9 +32,24 @@ public class ConnectConf {
     private File confFile;
     private int nettySelectorThreadNum = 1;
     private int nettyWorkerThreadNum = Runtime.getRuntime().availableProcessors() * 2;
+
+    /**
+     * TCP ports 8883 and 1883 are registered with IANA for MQTT TLS and non-TLS communication respectively.
+     */
     private int mqttPort = 1883;
+
+    /**
+     * TCP ports 8883 and 1883 are registered with IANA for MQTT TLS and non-TLS communication respectively.
+     */
     private int mqttTlsPort = 8883;
+
+    /**
+     * Uses this port for both normal WebSocket connections and WebSocket connections over TLS as well.
+     */
     private int mqttWsPort = 8888;
+
+    private int quicPort = 14567;
+
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
     private String sslCaCertFile;
@@ -275,5 +290,13 @@ public class ConnectConf {
 
     public void setMaxTransferCountOnMessageInDisk(int maxTransferCountOnMessageInDisk) {
         this.maxTransferCountOnMessageInDisk = maxTransferCountOnMessageInDisk;
+    }
+
+    public int getQuicPort() {
+        return quicPort;
+    }
+
+    public void setQuicPort(int quicPort) {
+        this.quicPort = quicPort;
     }
 }

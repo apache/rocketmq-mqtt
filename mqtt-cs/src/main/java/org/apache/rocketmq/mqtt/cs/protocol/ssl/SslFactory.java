@@ -24,6 +24,10 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import org.apache.commons.lang3.StringUtils;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import java.security.cert.CertificateException;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.srvutil.FileWatchService;
 import org.slf4j.Logger;
@@ -49,6 +53,8 @@ public class SslFactory {
     private volatile SslContext sslContext;
 
     private FileWatchService fileWatchService;
+
+    private QuicSslContext quicSslContext;
 
     @PostConstruct
     private void initSslContext() {
@@ -78,7 +84,13 @@ public class SslFactory {
                 contextBuilder.trustManager(new File(connectConf.getSslCaCertFile()));
             }
             sslContext = contextBuilder.build();
-        } catch (IOException e) {
+
+            SelfSignedCertificate selfSignedCertificate = new SelfSignedCertificate();
+            quicSslContext = QuicSslContextBuilder.forServer(
+                    selfSignedCertificate.privateKey(), null, selfSignedCertificate.certificate())
+                .applicationProtocols("mqtt")
+                .build();
+        } catch (IOException | CertificateException e) {
             throw new RuntimeException("failed to initialize ssl context.", e);
         }
     }
@@ -142,6 +154,10 @@ public class SslFactory {
 
     public SslContext getSslContext() {
         return sslContext;
+    }
+
+    public QuicSslContext getQuicSslContext() {
+        return quicSslContext;
     }
 }
 

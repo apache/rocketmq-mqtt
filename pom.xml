@@ -49,6 +49,7 @@
         <jraft-core.version>1.3.11</jraft-core.version>
         <netty.version>4.1.43.Final</netty.version>
         <netty.tcnative.version>2.0.26.Final</netty.tcnative.version>
+        <netty.quic.version>0.0.62.Final</netty.quic.version>
     </properties>
 
     <dependencyManagement>
@@ -102,6 +103,12 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty-tcnative-boringssl-static</artifactId>
                 <version>${netty.tcnative.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty.incubator</groupId>
+                <artifactId>netty-incubator-codec-native-quic</artifactId>
+                <version>${netty.quic.version}</version>
+                <classifier>${os.detected.classifier}</classifier>
             </dependency>
             <dependency>
                 <groupId>org.springframework</groupId>
@@ -262,6 +269,13 @@
     </dependencyManagement>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.0</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>

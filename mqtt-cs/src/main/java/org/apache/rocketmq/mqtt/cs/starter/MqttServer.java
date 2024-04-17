@@ -135,7 +135,7 @@ public class MqttServer {
             .group(new NioEventLoopGroup(connectConf.getNettySelectorThreadNum()), new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
             .channel(NioServerSocketChannel.class)
             .option(ChannelOption.SO_BACKLOG, 8 * 1024)
-            .option(ChannelOption.SO_KEEPALIVE, true)
+            .childOption(ChannelOption.SO_KEEPALIVE, true)
             .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
             .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
             .childOption(ChannelOption.TCP_NODELAY, true)

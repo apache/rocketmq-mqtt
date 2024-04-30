@@ -53,6 +53,7 @@ public class SslFactory {
     @PostConstruct
     private void initSslContext() {
         if (!connectConf.isEnableTlsSever()) {
+            LOG.info("SSL/TLS is disabled");
             return;
         }
 
@@ -139,5 +140,8 @@ public class SslFactory {
         return sslEngine;
     }
 
+    public SslContext getSslContext() {
+        return sslContext;
+    }
 }
 

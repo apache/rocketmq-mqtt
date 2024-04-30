@@ -32,12 +32,14 @@ import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import org.apache.rocketmq.mqtt.cs.channel.AdaptiveTlsHandler;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
+import org.apache.rocketmq.remoting.common.TlsMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -69,8 +71,12 @@ public class MqttServer {
     @Resource
     private SslFactory sslFactory;
 
+    private AdaptiveTlsHandler adaptiveTlsHandler;
+
     @PostConstruct
     public void init() throws Exception {
+        adaptiveTlsHandler = new AdaptiveTlsHandler(TlsMode.PERMISSIVE, sslFactory);
+
         start();
         startWs();
         startTls();
@@ -129,6 +135,19 @@ public class MqttServer {
         logger.warn("start mqtt tls server , port:{}", tlsPort);
     }
 
+    /**
+     * Support Web Socket Transport.
+     * </p>
+     *
+     * Both WebSocket and WebSocket-Over-TLS/SSL are supported.
+     * </p>
+     *
+     * Clients are supposed to use one of the following Server URIs to connect:
+     * <ul>
+     *     <li>ws://host:port/mqtt</li>
+     *     <li>wss://host:port/mqtt</li>
+     * </ul>
+     */
     private void startWs() {
         int port = connectConf.getMqttWsPort();
         wsServerBootstrap
@@ -144,6 +163,7 @@ public class MqttServer {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ChannelPipeline pipeline = ch.pipeline();
+                    pipeline.addLast(AdaptiveTlsHandler.class.getSimpleName(), adaptiveTlsHandler);
                     pipeline.addLast("connectHandler", connectHandler);
                     pipeline.addLast("http-codec", new HttpServerCodec(1024, 32 * 1024, connectConf.getMaxPacketSizeInByte() * 2, true));
                     pipeline.addLast("aggregator", new HttpObjectAggregator(connectConf.getMaxPacketSizeInByte() * 2));

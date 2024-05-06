@@ -27,6 +27,8 @@ import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
+import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -83,6 +85,7 @@ public class DefaultChannelManager implements ChannelManager {
         ChannelInfo.touch(channel);
         channelMap.put(ChannelInfo.getId(channel), channel);
         hashedWheelTimer.newTimeout(timeout -> doPing(timeout, channel), minBlankChannelSeconds, TimeUnit.SECONDS);
+        collectConnectionsSize();
     }
 
     private void doPing(Timeout timeout, Channel channel) {
@@ -134,6 +137,7 @@ public class DefaultChannelManager implements ChannelManager {
             channel.close();
         }
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+        collectConnectionsSize();
     }
 
     @Override
@@ -155,4 +159,11 @@ public class DefaultChannelManager implements ChannelManager {
         return channelMap.size();
     }
 
+    private void collectConnectionsSize() {
+        try {
+            MqttMetricsCollector.collectConnectionsSize(totalConn());
+        } catch (PrometheusException e) {
+            logger.error("", e);
+        }
+    }
 }

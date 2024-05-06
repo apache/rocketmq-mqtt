@@ -35,7 +35,9 @@ public enum MqttMetricsInfo {
     PULL_CACHE_STATUS_TPS(Type.COUNTER, SubSystem.CS, "pull_cache_status_tps_total", "ds pull cache status tps.", null,
         "hostName", "hostIp", "pullCacheStatus"),
     READ_WRITE_MATCH_ACTION_RT(Type.GAUGE, SubSystem.DS, "read_write_match_action_rt", "lmq read write match action rt.", null,
-        "hostName", "hostIp", "action", "status");
+        "hostName", "hostIp", "action", "status"),
+    CONNECTIONS_SIZE(Type.GAUGE, SubSystem.CS, "connections_size", "server connections size.", null,
+            "hostName", "hostIp");
 
 
     private final Type type;

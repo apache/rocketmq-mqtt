@@ -165,6 +165,10 @@ public class MqttMetricsCollector {
         collect(MqttMetricsInfo.READ_WRITE_MATCH_ACTION_RT, val, labels);
     }
 
+    public static void collectConnectionsSize(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.CONNECTIONS_SIZE, val, labels);
+    }
+
     private static String labels2String(String... labels) {
         StringBuilder sb = new StringBuilder(128);
         for (String label : labels) {

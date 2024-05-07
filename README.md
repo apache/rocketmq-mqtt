@@ -36,6 +36,27 @@ git clone https://github.com/apache/rocketmq-mqtt
 cd rocketmq-mqtt
 mvn -Prelease-all -DskipTests clean install -U 
 ```
+For building on Apple M1/M2, please use the following command:
+```shell
+mvn -Prelease-all -DskipTests clean install -U -Dos.detected.classifier=osx-x86_64
+```
+or specify the profile in the `~/.m2/settings.xml` file:
+```xml
+<profiles>
+    <profile>
+        <id>osx-x86_64</id>
+        <activation>
+            <os>
+                <name>osx</name>
+                <arch>x86_64</arch>
+            </os>
+        </activation>
+        <properties>
+            <os.detected.classifier>osx-x86_64</os.detected.classifier>
+        </properties>
+    </profile>
+</profiles>
+```
 3. Config
 ```shell
 cd distribution/target/

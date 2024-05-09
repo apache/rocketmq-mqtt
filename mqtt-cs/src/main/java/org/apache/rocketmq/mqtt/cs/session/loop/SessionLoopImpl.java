@@ -115,7 +115,7 @@ public class SessionLoopImpl implements SessionLoop {
 
     private AtomicLong rid = new AtomicLong();
     private long pullIntervalMillis = 10;
-    private int maxTransferCountOnMessageInDisk = 8;
+
 
     @PostConstruct
     public void init() {
@@ -503,7 +503,7 @@ public class SessionLoopImpl implements SessionLoop {
                 }
                 if (PullResult.PULL_SUCCESS == pullResult.getCode()) {
                     if (pullResult.getMessageList() != null &&
-                            pullResult.getMessageList().size() >= Math.min(count, maxTransferCountOnMessageInDisk)) {
+                            pullResult.getMessageList().size() >= Math.min(count, connectConf.getMaxTransferCountOnMessageInDisk())) {
                         scheduler.schedule(() -> pullMessage(session, subscription, queue), pullIntervalMillis, TimeUnit.MILLISECONDS);
                     }
                     boolean add = session.addSendingMessages(subscription, queue, pullResult.getMessageList());

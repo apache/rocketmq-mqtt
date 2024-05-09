@@ -19,10 +19,13 @@ package org.apache.rocketmq.mqtt.ds.test.meta;
 
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample;
 import org.apache.rocketmq.remoting.exception.RemotingException;
+import org.apache.rocketmq.remoting.protocol.body.Connection;
+import org.apache.rocketmq.remoting.protocol.body.ConsumerConnection;
 import org.apache.rocketmq.tools.admin.DefaultMQAdminExt;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,7 +33,9 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashSet;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,19 +43,26 @@ import static org.mockito.Mockito.when;
 public class TestMetaPersistManagerSample {
     private static final String RMQ_NAMESPACE = "LMQ";
     private static final String KEY_LMQ_ALL_FIRST_TOPICS = "ALL_FIRST_TOPICS";
-    private static final String KEY_LMQ_CONNECT_NODES = "LMQ_CONNECT_NODES";
 
     @Test
-    public void refreshMeta() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException, InvocationTargetException, NoSuchMethodException {
+    public void refreshMeta() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException,
+        InvocationTargetException, NoSuchMethodException, MQBrokerException {
         MetaPersistManagerSample metaPersistManagerSample = new MetaPersistManagerSample();
         DefaultMQAdminExt defaultMQAdminExt = mock(DefaultMQAdminExt.class);
         FieldUtils.writeDeclaredField(metaPersistManagerSample, "defaultMQAdminExt", defaultMQAdminExt, true);
         String firstTopic = "test";
         String wildcards = "test/2/#";
         String node = "localhost";
+        Connection connection = new Connection();
+        connection.setClientAddr(node);
+        HashSet<Connection> connectNodeSet = new HashSet<>();
+        connectNodeSet.add(connection);
+        ConsumerConnection consumerConnection = new ConsumerConnection();
+        consumerConnection.setConnectionSet(connectNodeSet);
+
         when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,KEY_LMQ_ALL_FIRST_TOPICS)).thenReturn(firstTopic);
         when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,firstTopic)).thenReturn(wildcards);
-        when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,KEY_LMQ_CONNECT_NODES)).thenReturn(node);
+        when(defaultMQAdminExt.examineConsumerConnectionInfo(anyString())).thenReturn(consumerConnection);
         MethodUtils.invokeMethod(metaPersistManagerSample, true, "refreshMeta");
         Assert.assertTrue(firstTopic.equals(metaPersistManagerSample.getAllFirstTopics().iterator().next()));
         Assert.assertTrue(TopicUtils.normalizeTopic(wildcards).equals(metaPersistManagerSample.getWildcards(firstTopic).iterator().next()));

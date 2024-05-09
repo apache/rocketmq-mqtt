@@ -57,6 +57,8 @@ public class ConnectConf {
     private boolean enablePrometheus = false;
     private boolean exportJvmInfo = true;
 
+    private int maxTransferCountOnMessageInDisk = 8;
+
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -265,5 +267,13 @@ public class ConnectConf {
 
     public void setSslServerKeyPassword(String sslServerKeyPassword) {
         this.sslServerKeyPassword = sslServerKeyPassword;
+    }
+
+    public int getMaxTransferCountOnMessageInDisk() {
+        return maxTransferCountOnMessageInDisk;
+    }
+
+    public void setMaxTransferCountOnMessageInDisk(int maxTransferCountOnMessageInDisk) {
+        this.maxTransferCountOnMessageInDisk = maxTransferCountOnMessageInDisk;
     }
 }

@@ -255,6 +255,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                     StatUtil.addPv(pullResult.getPullStatus().name(), 1);
                     try {
                         MqttMetricsCollector.collectPullStatusTps(1, pullResult.getPullStatus().name());
+                        collectReadBytes(pullResult.getMsgFoundList());
                     } catch (Throwable e) {
                         logger.error("collect prometheus error", e);
                     }
@@ -506,6 +507,7 @@ public class LmqQueueStoreManager implements LmqQueueStore {
                 StatUtil.addPv(popResult.getPopStatus().name(), 1);
                 try {
                     MqttMetricsCollector.collectPullStatusTps(1, popResult.getPopStatus().name());
+                    collectReadBytes(popResult.getMsgFoundList());
                 } catch (Throwable e) {
                     logger.error("collect prometheus error", e);
                 }
@@ -635,5 +637,17 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         ackMessageRequestHeader.setExtraInfo(extraInfo);
 
         mQClientFactory.getMQClientAPIImpl().ackMessageAsync(findBrokerResult.getBrokerAddr(), timeoutMillis, ackCallback, ackMessageRequestHeader);
+    }
+
+    private void collectReadBytes(List<MessageExt> msgFoundList) throws PrometheusException {
+        if (null == msgFoundList || msgFoundList.isEmpty()) {
+            return;
+        }
+        Map<String, Integer> maps = msgFoundList.stream()
+                .collect(Collectors.groupingBy(MessageExt::getTopic,
+                        Collectors.summingInt(msg -> msg.getBody().length)));
+        for (Map.Entry<String, Integer> entry : maps.entrySet()) {
+            MqttMetricsCollector.collectReadWriteMatchActionBytes(entry.getValue(), entry.getKey(), "pull");
+        }
     }
 }

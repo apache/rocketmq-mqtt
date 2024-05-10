@@ -30,6 +30,7 @@ import org.apache.rocketmq.mqtt.ds.upstream.processor.DisconnectProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.PublishProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.SubscribeProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.processor.UnSubscribeProcessor;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -66,6 +67,7 @@ public class UpstreamProcessorManager extends AbstractUpstreamHook {
 
     @Override
     public CompletableFuture<HookResult> processMqttMessage(MqttMessageUpContext context, MqttMessage message) {
+        collectProcessRequestTps(message.fixedHeader().messageType().name());
         switch (message.fixedHeader().messageType()) {
             case CONNECT:
                 return connectProcessor.process(context, message);
@@ -84,4 +86,11 @@ public class UpstreamProcessorManager extends AbstractUpstreamHook {
         return hookResult;
     }
 
+    private void collectProcessRequestTps(String name) {
+        try {
+            MqttMetricsCollector.collectProcessRequestTps(1, name);
+        } catch (Throwable e) {
+            logger.error("Collect prometheus error", e);
+        }
+    }
 }

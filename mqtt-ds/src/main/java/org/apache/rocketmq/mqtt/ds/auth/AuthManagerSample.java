@@ -31,6 +31,7 @@ import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.common.util.HmacSHA1Util;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 
 import javax.annotation.Resource;
 import java.util.Objects;
@@ -89,10 +90,18 @@ public class AuthManagerSample extends AbstractUpstreamHook implements AuthManag
                 logger.error("", e);
             }
             if (!Objects.equals(username, serviceConf.getUsername()) || !validateSign) {
+                collectAuthFailedTps();
                 return new HookResult(HookResult.FAIL, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
             }
         }
         return new HookResult(HookResult.SUCCESS, null, null);
     }
 
+    private void collectAuthFailedTps() {
+        try {
+            MqttMetricsCollector.collectProcessRequestTps(1, Remark.AUTH_FAILED);
+        } catch (Throwable e) {
+            logger.error("Collect prometheus error", e);
+        }
+    }
 }

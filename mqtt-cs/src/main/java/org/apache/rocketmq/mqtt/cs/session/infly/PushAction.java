@@ -192,6 +192,7 @@ public class PushAction {
                     data = MqttMessageFactory.buildMqtt5PublishMessage("", message.getPayload(), qos, retained, mqttId, mqttProperties);
                     break;
                 }
+                data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, retained, mqttId, mqttProperties);
                 break;
             default:
                 break;

@@ -36,6 +36,7 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -105,7 +106,7 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         message.setMsgId(msgId);
         message.setBornTimestamp(bornTime);
         message.setEmpty(isEmpty);
-
+        collectWriteBytes(message.getFirstTopic(), message.getPayload().length);
         return lmqQueueStore.putMessage(queueNames, message);
     }
 
@@ -115,5 +116,13 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         MqttMessageUpContext ctx = new MqttMessageUpContext();
         ctx.setClientId(clientId);
         return put(ctx, message);
+    }
+
+    private void collectWriteBytes(String topic, int length) {
+        try {
+            MqttMetricsCollector.collectReadWriteMatchActionBytes(length, topic, "put");
+        } catch (Throwable e) {
+            logger.error("Collect prometheus error", e);
+        }
     }
 }

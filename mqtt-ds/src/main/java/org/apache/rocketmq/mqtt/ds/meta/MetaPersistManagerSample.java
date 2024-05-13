@@ -17,7 +17,6 @@
 
 package org.apache.rocketmq.mqtt.ds.meta;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.common.MixAll;
@@ -64,7 +63,6 @@ public class MetaPersistManagerSample implements MetaPersistManager {
     public void init() throws MQClientException, RemotingException, InterruptedException, MQBrokerException {
         defaultMQAdminExt = MqFactory.buildDefaultMQAdminExt("MetaLoad", serviceConf.getProperties());
         defaultMQAdminExt.start();
-        refreshMeta();
         scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("refreshMeta"));
         scheduler.scheduleWithFixedDelay(() -> {
             try {
@@ -72,7 +70,7 @@ public class MetaPersistManagerSample implements MetaPersistManager {
             } catch (Throwable t) {
                 logger.error("", t);
             }
-        }, 5, 5, TimeUnit.SECONDS);
+        }, 0, 5, TimeUnit.SECONDS);
     }
 
     private void refreshMeta() throws RemotingException, InterruptedException, MQClientException, MQBrokerException {

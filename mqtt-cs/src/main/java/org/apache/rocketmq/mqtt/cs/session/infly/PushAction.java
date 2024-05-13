@@ -186,13 +186,15 @@ public class PushAction {
                     mqttProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), message.getUserProperty(Message.propertyContentType)));
                 }
 
-                // process topic alias
                 // TODO retain flag should be set by subscription option
+                boolean isRetained = message.isRetained();
+
+                // process topic alias
                 if (!processTopicAlias(channel, topicName, mqttProperties)) {
-                    data = MqttMessageFactory.buildMqtt5PublishMessage("", message.getPayload(), qos, retained, mqttId, mqttProperties);
-                    break;
+                    data = MqttMessageFactory.buildMqtt5PublishMessage("", message.getPayload(), qos, isRetained, mqttId, mqttProperties);
+                } else {
+                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, isRetained, mqttId, mqttProperties);
                 }
-                data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, retained, mqttId, mqttProperties);
                 break;
             default:
                 break;
@@ -222,8 +224,16 @@ public class PushAction {
         }
     }
 
+    /**
+     * process topic alias
+     * @param channel
+     * @param topicName
+     * @param mqttProperties
+     * @return true: conflict when allocated topic alias
+     */
     public boolean processTopicAlias(Channel channel, String topicName, MqttProperties mqttProperties) {
         int topicAlias = ChannelInfo.getTopicAliasMaximum(channel);
+        boolean conflict = false;
 
         if (topicAlias > 0) {
             if (ChannelInfo.getServerTopicAlias(channel, topicName) == null) {
@@ -231,17 +241,18 @@ public class PushAction {
                 int allocateAlias = genServerTopicAlias(topicName, topicAlias);
 
                 if (ChannelInfo.getServerAliasTopic(channel, allocateAlias) != null) {
-                    // conflict, reset topic <-> alias
-                    return true;
+                    // conflict, client will reset topic <-> alias
+                    conflict = true;
                 }
 
                 ChannelInfo.setServerTopicAlias(channel, topicName, allocateAlias);
                 ChannelInfo.setServerAliasTopic(channel, allocateAlias, topicName);
             }
 
+            // topic has allocated topic alias,just set to mqttProperties
             mqttProperties.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), ChannelInfo.getServerTopicAlias(channel, topicName)));
         }
-        return false;
+        return conflict;
     }
 
     public int genServerTopicAlias(String topicName, int topicAliasMaximum) {

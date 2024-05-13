@@ -48,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,9 +72,7 @@ public class NotifyManager {
     private NettyRemotingClient remotingClient;
     private DefaultMQProducer defaultMQProducer;
 
-
-    @Resource
-    private ServiceConf serviceConf;
+    private final ServiceConf serviceConf;
 
     @Resource
     private MetaPersistManager metaPersistManager;
@@ -83,8 +80,12 @@ public class NotifyManager {
     @Resource
     private FirstTopicManager firstTopicManager;
 
-    @PostConstruct
-    public void init() throws MQClientException {
+    public NotifyManager(ServiceConf serviceConf) {
+        this.serviceConf = serviceConf;
+        init();
+    }
+
+    private void init() {
         defaultMQPushConsumer = MqFactory.buildDefaultMQPushConsumer(dispatcherConsumerGroup, serviceConf.getProperties(), new Dispatcher());
         defaultMQPushConsumer.setPullInterval(1);
         defaultMQPushConsumer.setConsumeMessageBatchMaxSize(64);

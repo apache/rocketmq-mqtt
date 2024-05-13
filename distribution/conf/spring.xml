@@ -35,7 +35,7 @@
 
     <bean id="authManager" class="org.apache.rocketmq.mqtt.ds.auth.AuthManagerSample" init-method="init"/>
 
-    <bean id="metaPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample" init-method="init"/>
+    <bean id="metaPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.MetaPersistManagerSample" init-method="init" depends-on="notifyManager"/>
 
     <bean id="RetainedPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.RetainedPersistManagerImpl" init-method="init"/>
     <bean id="willMsgPersistManager" class="org.apache.rocketmq.mqtt.ds.meta.WillMsgPersistManagerImpl" init-method="init"/>

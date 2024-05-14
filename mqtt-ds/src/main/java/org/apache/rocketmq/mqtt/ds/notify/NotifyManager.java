@@ -46,6 +46,7 @@ import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -80,6 +81,7 @@ public class NotifyManager {
     @Resource
     private FirstTopicManager firstTopicManager;
 
+    @Autowired
     public NotifyManager(ServiceConf serviceConf) {
         this.serviceConf = serviceConf;
         init();

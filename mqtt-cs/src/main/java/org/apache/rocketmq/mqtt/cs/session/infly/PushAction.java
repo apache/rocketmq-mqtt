@@ -47,6 +47,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static java.lang.Math.min;
 import static java.util.Objects.hash;
@@ -178,12 +181,27 @@ public class PushAction {
                 data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, retained, mqttId);
                 break;
             case MQTT_5:
-                // process publish user properties
-                processUserProperties(message, mqttProperties);
-
                 // add content type
                 if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyContentType))) {
                     mqttProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), message.getUserProperty(Message.propertyContentType)));
+                }
+
+                // add Response Topic
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyResponseTopic))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(RESPONSE_TOPIC.value(), message.getUserProperty(Message.propertyResponseTopic)));
+                }
+
+                // add Correlation Data
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyCorrelationData))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(CORRELATION_DATA.value(), message.getUserProperty(Message.propertyCorrelationData)));
+                }
+
+                // process publish user properties
+                processUserProperties(message, mqttProperties);
+
+                // process subscription identifier
+                if (subscription.getSubscriptionIdentifier() > 0) {
+                    mqttProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), subscription.getSubscriptionIdentifier()));
                 }
 
                 // TODO retain flag should be set by subscription option

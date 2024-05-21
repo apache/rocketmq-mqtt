@@ -69,12 +69,23 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
             Channel channel = ctx.channel();
             String channelId = ChannelInfo.getId(channel);
 
+            // Flow control
+            if (isQos1Message(mqttMessage) || isQos2Message(mqttMessage)) {
+                if (!channelManager.publishReceiveTryAcquire(channel)) {
+                    logger.error("publishReceiveTryAcquire failed, trigger the flow control, channelId:{}, message:{}", channelId, mqttMessage);
+                    sendDisconnect(channel);
+                    return false;
+                }
+            }
+
             if (inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.packetId())) {
                 if (isQos1Message(mqttMessage)) {
                     sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PACKET_IDENTIFIER_IN_USE);
+                    channelManager.publishReceiveRefill(channel);
                     return false;
                 } else if (isQos2Message(mqttMessage)) {
                     sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PACKET_IDENTIFIER_IN_USE);
+                    channelManager.publishReceiveRefill(channel);
                     return false;
                 }
             }
@@ -89,8 +100,10 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
                         } catch (Exception e) {
                             if (isQos1Message(mqttMessage)) {
                                 sendPubAck(channel, variableHeader.packetId(), MqttReasonCodes.PubAck.PAYLOAD_FORMAT_INVALID);
+                                channelManager.publishReceiveRefill(channel);
                             } else if (isQos2Message(mqttMessage)) {
                                 sendPubRec(channel, variableHeader.packetId(), MqttReasonCodes.PubRec.PAYLOAD_FORMAT_INVALID);
+                                channelManager.publishReceiveRefill(channel);
                             }
                             return false;
                         }
@@ -160,9 +173,11 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
                 break;
             case AT_LEAST_ONCE:
                 ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubAckMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
+                channelManager.publishReceiveRefill(ctx.channel());
                 break;
             case EXACTLY_ONCE:
                 ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubRecMessage(messageId, MqttReasonCodes.PubAck.SUCCESS.byteValue(), MqttProperties.NO_PROPERTIES));
+                // No need to refill when success, waiting for the PUBREL message
                 break;
             default:
                 throw new IllegalArgumentException("unknown qos:" + fixedHeader.qosLevel());
@@ -181,6 +196,13 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
                 messageId,
                 reasonCode.byteValue(),
                 MqttProperties.NO_PROPERTIES));
+    }
+
+    private void sendDisconnect(Channel channel) {
+        channelManager.closeConnect(channel,
+            ChannelCloseFrom.SERVER,
+            "RECEIVE_MAXIMUM_EXCEEDED",
+            MqttReasonCodes.Disconnect.RECEIVE_MAXIMUM_EXCEEDED.byteValue());
     }
 
     private boolean topicAliasInvalid(Channel channel, MqttProperties.IntegerProperty topicAlias, MqttPublishVariableHeader variableHeader) {

@@ -19,19 +19,34 @@
 
 package org.apache.rocketmq.mqtt.cs.test.channel;
 
+import io.netty.channel.Channel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.DefaultChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 
 
 @RunWith(MockitoJUnitRunner.class)
@@ -39,6 +54,8 @@ public class TestDefaultChannelManager {
     private DefaultChannelManager defaultChannelManager;
     private final String clientId = "clientId";
     private final String channelId = "channelId";
+    private Map<String, AtomicInteger> pubReceiveQuotaMap = new ConcurrentHashMap<>(1024);
+    private Map<String, AtomicInteger> pubSendQuotaMap = new ConcurrentHashMap<>(1024);
 
     @Mock
     private SessionLoop sessionLoop;
@@ -49,6 +66,9 @@ public class TestDefaultChannelManager {
     @Mock
     private RetryDriver retryDriver;
 
+    @Mock
+    private WillLoop willLoop;
+
     @Spy
     private NioSocketChannel channel;
 
@@ -58,7 +78,12 @@ public class TestDefaultChannelManager {
         FieldUtils.writeDeclaredField(defaultChannelManager, "sessionLoop", sessionLoop, true);
         FieldUtils.writeDeclaredField(defaultChannelManager, "connectConf", connectConf, true);
         FieldUtils.writeDeclaredField(defaultChannelManager, "retryDriver", retryDriver, true);
+        FieldUtils.writeDeclaredField(defaultChannelManager, "willLoop", willLoop, true);
         FieldUtils.writeStaticField(DefaultChannelManager.class, "minBlankChannelSeconds", 0, true);
+        FieldUtils.writeDeclaredField(defaultChannelManager, "pubReceiveQuotaMap", pubReceiveQuotaMap, true);
+        FieldUtils.writeDeclaredField(defaultChannelManager, "pubSendQuotaMap", pubSendQuotaMap, true);
+
+        doReturn(65535).when(connectConf).getServerReceiveMaximum();
         defaultChannelManager.init();
     }
 
@@ -70,66 +95,108 @@ public class TestDefaultChannelManager {
     }
 
     @Test
-    public void trivialTest() {
+    public void testAddChannel() {
+        ChannelInfo.setClientId(channel, clientId);
+        ChannelInfo.setChannelLifeCycle(channel, 1000L);
+        defaultChannelManager.addChannel(channel);
+
+        // waiting the execution of the 'doPing' TimerTask
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException ignored) {}
+
+        // verify 'doPing' and 'closeConnect'
+        verify(willLoop).closeConnect(eq(channel), eq(clientId), anyString());
+        verify(sessionLoop).unloadSession(eq(clientId), anyString());
+        verify(retryDriver).unloadSession(Mockito.any());
     }
 
-//    @Test
-//    public void testAddChannel() {
-//        ChannelInfo.setClientId(channel, clientId);
-//        ChannelInfo.setChannelLifeCycle(channel, 1000L);
-//        defaultChannelManager.addChannel(channel);
-//
-//        // waiting the execution of the 'doPing' TimerTask
-//        try {
-//            Thread.sleep(2000);
-//        } catch (InterruptedException ignored) {}
-//
-//        // verify 'doPing' and 'closeConnect'
-//        verify(sessionLoop).unloadSession(Mockito.eq(clientId), anyString());
-//        verify(retryDriver).unloadSession(Mockito.any());
-//    }
-//
-//    @Test
-//    public void testKeepLive() throws InterruptedException {
-//        ChannelInfo.setClientId(channel, clientId);
-//        defaultChannelManager.addChannel(channel);
-//        ChannelInfo.setKeepLive(channel, 1);
-//        Thread.sleep(1000);
-//        Assert.assertFalse(0 == defaultChannelManager.totalConn());
-//        Thread.sleep(4000);
-//        Assert.assertTrue(0 == defaultChannelManager.totalConn());
-//    }
-//
-//    @Test
-//    public void testCloseConnectNullClientId() {
-//        defaultChannelManager.closeConnect(channel, ChannelCloseFrom.CLIENT, "ForTest");
-//        verify(sessionLoop).unloadSession(Mockito.isNull(), anyString());
-//    }
-//
-//    @Test
-//    public void testCloseConnect() {
-//        ChannelInfo.setClientId(channel, clientId);
-//        defaultChannelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "ForTest");
-//        verify(sessionLoop).unloadSession(Mockito.eq(clientId), anyString());
-//        verify(retryDriver).unloadSession(Mockito.any());
-//    }
-//
-//    @Test
-//    public void testCloseConnectNoFrom() throws IllegalAccessException {
-//        defaultChannelManager.closeConnect(channelId, "ForTest");
-//        Object channelMap = FieldUtils.readDeclaredField(defaultChannelManager, "channelMap", true);
-//        Assert.assertEquals(0, ((Map<String, Channel>) channelMap).size());
-//    }
-//
-//    @Test
-//    public void testGetChannelById() {
-//        Assert.assertNull(defaultChannelManager.getChannelById(channelId));
-//    }
-//
-//    @Test
-//    public void testTotalConn() {
-//        Assert.assertEquals(0, defaultChannelManager.totalConn());
-//        defaultChannelManager.addChannel(channel);
-//        Assert.assertEquals(1, defaultChannelManager.totalConn());
-//    }
+    @Test
+    public void testKeepLive() throws InterruptedException {
+        defaultChannelManager.addChannel(channel);
+        ChannelInfo.setKeepLive(channel, 1);
+        Thread.sleep(1000);
+        Assert.assertFalse(0 == defaultChannelManager.totalConn());
+        Thread.sleep(3000);
+        Assert.assertTrue(0 == defaultChannelManager.totalConn());
+    }
+
+    @Test
+    public void testCloseConnectNullClientId() {
+        defaultChannelManager.closeConnect(channel, ChannelCloseFrom.CLIENT, "ForTest");
+        verify(sessionLoop).unloadSession(Mockito.isNull(), anyString());
+    }
+
+    @Test
+    public void testCloseConnect() {
+        ChannelInfo.setClientId(channel, clientId);
+        defaultChannelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "ForTest");
+        verify(willLoop).closeConnect(eq(channel), eq(clientId), anyString());
+        verify(sessionLoop).unloadSession(eq(clientId), anyString());
+        verify(retryDriver).unloadSession(Mockito.any());
+    }
+
+    @Test
+    public void testCloseConnectNoExist() throws IllegalAccessException {
+        defaultChannelManager.closeConnect(channelId, "ForTest");
+        Object channelMap = FieldUtils.readDeclaredField(defaultChannelManager, "channelMap", true);
+        Assert.assertEquals(0, ((Map<String, Channel>) channelMap).size());
+    }
+
+    @Test
+    public void testGetChannelById() {
+        Assert.assertNull(defaultChannelManager.getChannelById(channelId));
+    }
+
+    @Test
+    public void testTotalConn() {
+        Assert.assertEquals(0, defaultChannelManager.totalConn());
+        defaultChannelManager.addChannel(channel);
+        Assert.assertEquals(1, defaultChannelManager.totalConn());
+    }
+
+    @Test
+    public void testPublishReceiveTryAcquireAndRefill() {
+        String channelId = ChannelInfo.getId(channel);
+        Assert.assertNull(pubReceiveQuotaMap.get(channelId));
+
+        Assert.assertFalse(defaultChannelManager.publishReceiveRefill(channel));
+
+        // acquire the quota
+        Assert.assertTrue(defaultChannelManager.publishReceiveTryAcquire(channel));
+        Assert.assertEquals(1, pubReceiveQuotaMap.size());
+        Assert.assertEquals(65534, pubReceiveQuotaMap.get(channelId).get());
+
+        pubReceiveQuotaMap.get(channelId).set(0);
+        Assert.assertFalse(defaultChannelManager.publishReceiveTryAcquire(channel));
+
+        // refill the quota
+        Assert.assertTrue(defaultChannelManager.publishReceiveRefill(channel));
+        Assert.assertEquals(1, pubReceiveQuotaMap.get(channelId).get());
+        pubReceiveQuotaMap.get(channelId).set(65535);
+        Assert.assertFalse(defaultChannelManager.publishReceiveRefill(channel));
+    }
+
+    @Test
+    public void testPublishSendTryAcquireAndRefill() {
+        ChannelInfo.setReceiveMaximum(channel, 65535);
+        String channelId = ChannelInfo.getId(channel);
+        Assert.assertNull(pubSendQuotaMap.get(channelId));
+
+        Assert.assertFalse(defaultChannelManager.publishSendRefill(channel));
+
+        // acquire the quota
+        Assert.assertTrue(defaultChannelManager.publishSendTryAcquire(channel));
+        Assert.assertEquals(1, pubSendQuotaMap.size());
+        Assert.assertEquals(65534, pubSendQuotaMap.get(channelId).get());
+
+        pubSendQuotaMap.get(channelId).set(0);
+        Assert.assertFalse(defaultChannelManager.publishSendTryAcquire(channel));
+
+        // refill the quota
+        Assert.assertTrue(defaultChannelManager.publishSendRefill(channel));
+        Assert.assertEquals(1, pubSendQuotaMap.get(channelId).get());
+        pubSendQuotaMap.get(channelId).set(65535);
+        Assert.assertFalse(defaultChannelManager.publishSendRefill(channel));
+    }
 }

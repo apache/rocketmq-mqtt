@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class DefaultChannelManager implements ChannelManager {
@@ -47,6 +48,12 @@ public class DefaultChannelManager implements ChannelManager {
     private HashedWheelTimer hashedWheelTimer;
     private static int minBlankChannelSeconds = 10;
     private ScheduledThreadPoolExecutor scheduler;
+    // using to control publish-client's PUBLISH rate by MQTT-Server Receive Maximum
+    private Map<String, AtomicInteger> pubReceiveQuotaMap = new ConcurrentHashMap<>(1024);
+    // using to control MQTT-Server's PUBLISH rate by subscribe-client Receive Maximum
+    private Map<String, AtomicInteger> pubSendQuotaMap = new ConcurrentHashMap<>(1024);
+
+    private int serverReceiveMaximum = 65535;
 
     @Resource
     private ConnectConf connectConf;
@@ -65,6 +72,7 @@ public class DefaultChannelManager implements ChannelManager {
 
     @PostConstruct
     public void init() {
+        serverReceiveMaximum = connectConf.getServerReceiveMaximum();
         sessionLoop.setChannelManager(this);
         hashedWheelTimer = new HashedWheelTimer(1, TimeUnit.SECONDS);
         hashedWheelTimer.start();
@@ -156,6 +164,9 @@ public class DefaultChannelManager implements ChannelManager {
             channelMap.remove(channelId);
             ChannelInfo.clear(channel);
         }
+        // clear channel receive and send quota
+        pubReceiveQuotaMap.remove(channelId);
+        pubSendQuotaMap.remove(channelId);
     }
 
     @Override
@@ -177,4 +188,71 @@ public class DefaultChannelManager implements ChannelManager {
         return channelMap.size();
     }
 
+    public boolean publishReceiveRefill(Channel channel) {
+        String publishClientId = ChannelInfo.getId(channel);
+        AtomicInteger atomicInteger = pubReceiveQuotaMap.get(publishClientId);
+
+        /*
+         * The quota 'atomicInteger' cannot be null at this point because according to the MQTT protocol,
+         * a publish operation must be performed before a publish acknowledgement or other scenarios that refill the quota.
+         * If the quota is not be initialized, there must be some error in the logic.
+         */
+        if (atomicInteger == null || atomicInteger.get() >= serverReceiveMaximum) {
+            logger.error("publish receive quota:{} occurs null or full error for clientId:{}", atomicInteger, publishClientId);
+            return false;
+        }
+
+        atomicInteger.incrementAndGet();
+        return true;
+    }
+
+    public boolean publishReceiveTryAcquire(Channel channel) {
+        String publishClientId = ChannelInfo.getId(channel);
+        if (!pubReceiveQuotaMap.containsKey(publishClientId)) {
+            pubReceiveQuotaMap.put(publishClientId, new AtomicInteger(serverReceiveMaximum));
+        }
+
+        AtomicInteger atomicInteger = pubReceiveQuotaMap.get(publishClientId);
+        if (atomicInteger.get() <= 0) {
+            logger.error("MQTT client:{} publish exceeds server ReceiveMaximum, receiveQuota:{}",
+                publishClientId, atomicInteger.get());
+            return false;
+        }
+        atomicInteger.decrementAndGet();
+        return true;
+    }
+
+    public boolean publishSendRefill(Channel channel) {
+        String subscribeClient = ChannelInfo.getId(channel);
+        AtomicInteger atomicInteger = pubSendQuotaMap.get(subscribeClient);
+
+        /*
+         * The quota 'atomicInteger' cannot be null at this point because according to the MQTT protocol,
+         * a publish operation must be performed before a publish acknowledgement or other scenarios that refill the quota.
+         * If the quota is not be initialized, there must be some error in the logic.
+         */
+        if (atomicInteger == null || atomicInteger.get() >= ChannelInfo.getReceiveMaximum(channel)) {
+            logger.error("publish send quota:{} occurs null or full error for clientId:{}", atomicInteger, subscribeClient);
+            return false;
+        }
+
+        atomicInteger.incrementAndGet();
+        return true;
+    }
+
+    public boolean publishSendTryAcquire(Channel channel) {
+        String subscribeClient = ChannelInfo.getId(channel);
+        if (!pubSendQuotaMap.containsKey(subscribeClient)) {
+            pubSendQuotaMap.put(subscribeClient, new AtomicInteger(ChannelInfo.getReceiveMaximum(channel)));
+        }
+
+        AtomicInteger atomicInteger = pubSendQuotaMap.get(subscribeClient);
+        if (atomicInteger.get() <= 0) {
+            logger.error("MQTT server publishing to:{} exceeds client ReceiveMaximum, sendQuota:{}",
+                subscribeClient, atomicInteger.get());
+            return false;
+        }
+        atomicInteger.decrementAndGet();
+        return true;
+    }
 }

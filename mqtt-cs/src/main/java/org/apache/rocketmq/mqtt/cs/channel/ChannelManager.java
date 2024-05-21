@@ -63,4 +63,35 @@ public interface ChannelManager {
      */
     int totalConn();
 
+    /**
+     * Refills the publish receive quota for the given channel.
+     * This method is typically called after a publish acknowledgement or other scenarios that refill the quota.
+     * @param channel The channel for which the quota needs to be refilled.
+     * @return true if the quota was successfully refilled, false otherwise.
+     */
+    boolean publishReceiveRefill(Channel channel);
+
+    /**
+     * Tries to acquire the publish receive quota for the given channel.
+     * This method is typically called before a publish operation.
+     * @param channel The channel for which the quota needs to be acquired.
+     * @return true if the quota was successfully acquired, false otherwise.
+     */
+    boolean publishReceiveTryAcquire(Channel channel);
+
+    /**
+     * Refills the publish send quota for the given channel.
+     * This method is typically called after a publish acknowledgement or other scenarios that refill the quota.
+     * @param channel The channel for which the quota needs to be refilled.
+     * @return true if the quota was successfully refilled, false otherwise.
+     */
+    boolean publishSendRefill(Channel channel);
+
+    /**
+     * Tries to acquire the publish send quota for the given channel.
+     * This method is typically called before a publish operation.
+     * @param channel The channel for which the quota needs to be acquired.
+     * @return true if the quota was successfully acquired, false otherwise.
+     */
+    boolean publishSendTryAcquire(Channel channel);
 }

@@ -61,6 +61,7 @@ public class ConnectConf {
     private boolean enableRetain = false;
     private boolean enableSubscriptionIdentifier = false;
     private int topicAliasMaximum = 10;
+    private int serverReceiveMaximum = 65535;
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -302,5 +303,13 @@ public class ConnectConf {
 
     public void setTopicAliasMaximum(int topicAliasMaximum) {
         this.topicAliasMaximum = topicAliasMaximum;
+    }
+
+    public int getServerReceiveMaximum() {
+        return serverReceiveMaximum;
+    }
+
+    public void setServerReceiveMaximum(int serverReceiveMaximum) {
+        this.serverReceiveMaximum = serverReceiveMaximum;
     }
 }

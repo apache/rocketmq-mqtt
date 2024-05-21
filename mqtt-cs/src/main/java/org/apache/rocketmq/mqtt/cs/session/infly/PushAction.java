@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
@@ -31,6 +32,7 @@ import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.Session;
@@ -64,6 +66,9 @@ public class PushAction {
 
     @Resource
     private LmqQueueStore lmqQueueStore;
+
+    @Resource
+    private ChannelManager channelManager;
 
     public void messageArrive(Session session, Subscription subscription, Queue queue) {
         if (session == null) {
@@ -173,6 +178,12 @@ public class PushAction {
                 break;
             case MQTT_5:
                 // TODO retain flag should be set by subscription option
+
+                // Server send PublishMessage flow control
+                if (qos > 0 && !channelManager.publishSendTryAcquire(channel)) {
+                    logger.error("publishSendTryAcquire failed, client:{}, message:{}", clientId, message);
+                    return;
+                }
                 int topicAlias = ChannelInfo.getTopicAliasMaximum(channel);
                 if (topicAlias > 0) {
                     String topicNameTmp = "";

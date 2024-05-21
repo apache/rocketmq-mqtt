@@ -22,6 +22,7 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
@@ -43,6 +44,9 @@ public class Mqtt5PubCompHandler implements MqttPacketHandler<MqttMessage> {
     @Resource
     private SessionLoop sessionLoop;
 
+    @Resource
+    private ChannelManager channelManager;
+
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         return true;
@@ -50,6 +54,9 @@ public class Mqtt5PubCompHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        // Refill the PUBLISH send quota
+        channelManager.publishSendRefill(ctx.channel());
+
         final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
         String channelId = ChannelInfo.getId(ctx.channel());
 

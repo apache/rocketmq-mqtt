@@ -24,6 +24,7 @@ import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
 import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
@@ -36,6 +37,9 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
 
     @Resource
     private InFlyCache inFlyCache;
+
+    @Resource
+    private ChannelManager channelManager;
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
@@ -52,6 +56,7 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
                     variableHeader.messageId(),
                     MqttReasonCodes.PubComp.PACKET_IDENTIFIER_NOT_FOUND.byteValue(),
                     MqttProperties.NO_PROPERTIES));
+            channelManager.publishReceiveRefill(ctx.channel());
             return;
         }
 
@@ -60,5 +65,6 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
                 variableHeader.messageId(),
                 MqttReasonCodes.PubComp.SUCCESS.byteValue(),
                 MqttProperties.NO_PROPERTIES));
+        channelManager.publishReceiveRefill(ctx.channel());
     }
 }

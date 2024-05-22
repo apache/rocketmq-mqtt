@@ -32,7 +32,9 @@ import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashSet;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -45,26 +47,27 @@ public class TestMetaPersistManagerSample {
     private static final String KEY_LMQ_ALL_FIRST_TOPICS = "ALL_FIRST_TOPICS";
 
     @Test
-    public void refreshMeta() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException, InvocationTargetException, NoSuchMethodException, MQBrokerException {
+    public void refreshMeta() throws IllegalAccessException, RemotingException, InterruptedException, MQClientException,
+        InvocationTargetException, NoSuchMethodException, MQBrokerException {
         MetaPersistManagerSample metaPersistManagerSample = new MetaPersistManagerSample();
         DefaultMQAdminExt defaultMQAdminExt = mock(DefaultMQAdminExt.class);
         FieldUtils.writeDeclaredField(metaPersistManagerSample, "defaultMQAdminExt", defaultMQAdminExt, true);
         String firstTopic = "test";
         String wildcards = "test/2/#";
+        String node = "localhost";
+        Connection connection = new Connection();
+        connection.setClientAddr(node);
+        HashSet<Connection> connectNodeSet = new HashSet<>();
+        connectNodeSet.add(connection);
+        ConsumerConnection consumerConnection = new ConsumerConnection();
+        consumerConnection.setConnectionSet(connectNodeSet);
+
         when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,KEY_LMQ_ALL_FIRST_TOPICS)).thenReturn(firstTopic);
         when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,firstTopic)).thenReturn(wildcards);
-        when(defaultMQAdminExt.examineConsumerConnectionInfo("CID_RMQ_SYS_mqtt_event")).thenReturn(createConsumerConnection());
+        when(defaultMQAdminExt.examineConsumerConnectionInfo(anyString())).thenReturn(consumerConnection);
         MethodUtils.invokeMethod(metaPersistManagerSample, true, "refreshMeta");
         assertEquals(firstTopic, metaPersistManagerSample.getAllFirstTopics().iterator().next());
         assertEquals(TopicUtils.normalizeTopic(wildcards), metaPersistManagerSample.getWildcards(firstTopic).iterator().next());
         assertEquals("localhost", metaPersistManagerSample.getConnectNodeSet().iterator().next());
-    }
-
-    private ConsumerConnection createConsumerConnection() {
-        ConsumerConnection result = new ConsumerConnection();
-        Connection connection = new Connection();
-        connection.setClientAddr("localhost");
-        result.getConnectionSet().add(connection);
-        return result;
     }
 }

@@ -27,12 +27,15 @@ import org.eclipse.paho.mqttv5.client.persist.MemoryPersistence;
 import org.eclipse.paho.mqttv5.common.MqttException;
 import org.eclipse.paho.mqttv5.common.MqttMessage;
 import org.eclipse.paho.mqttv5.common.packet.MqttProperties;
+import org.eclipse.paho.mqttv5.common.packet.UserProperty;
 
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class Mqtt5Producer {
     public static void main(String[] args) throws InterruptedException, MqttException, NoSuchAlgorithmException, InvalidKeyException {
@@ -82,6 +85,18 @@ public class Mqtt5Producer {
         for (int i = 0; i < 1000; i++) {
             String msg = "r1_" + System.currentTimeMillis() + "_" + i;
             MqttMessage message = new MqttMessage(msg.getBytes(StandardCharsets.UTF_8));
+
+            // user properties
+            MqttProperties mqttProperties = new MqttProperties();
+            List<UserProperty> userProperties = new ArrayList<>();
+            userProperties.add(new UserProperty("tag", "r1"));
+            userProperties.add(new UserProperty("tag", "r11"));
+            mqttProperties.setUserProperties(userProperties);
+
+            // content type
+            mqttProperties.setContentType("text/plain");
+            message.setProperties(mqttProperties);
+
             message.setQos(1);
             String mqttSendTopic = firstTopic + "/r1";
             mqttClient.publish(mqttSendTopic, message);

@@ -17,10 +17,14 @@
 
 package org.apache.rocketmq.mqtt.cs.session.infly;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.codec.mqtt.MqttProperties;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
@@ -39,8 +43,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
 import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_ALIAS;
 import static java.lang.Math.min;
 import static java.util.Objects.hash;
@@ -95,9 +104,9 @@ public class PushAction {
         try {
             if (session.isClean()) {
                 if (message.getStoreTimestamp() > 0 &&
-                    message.getStoreTimestamp() < session.getStartTime()) {
+                        message.getStoreTimestamp() < session.getStartTime()) {
                     logger.warn("old msg:{},{},{},{}", session.getClientId(), message.getMsgId(),
-                        message.getStoreTimestamp(), session.getStartTime());
+                            message.getStoreTimestamp(), session.getStartTime());
                     rollNext(session, mqttId);
                     return;
                 }
@@ -172,28 +181,37 @@ public class PushAction {
                 data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, retained, mqttId);
                 break;
             case MQTT_5:
+                // add content type
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyContentType))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), message.getUserProperty(Message.propertyContentType)));
+                }
+
+                // add Response Topic
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyResponseTopic))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(RESPONSE_TOPIC.value(), message.getUserProperty(Message.propertyResponseTopic)));
+                }
+
+                // add Correlation Data
+                if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyCorrelationData))) {
+                    mqttProperties.add(new MqttProperties.StringProperty(CORRELATION_DATA.value(), message.getUserProperty(Message.propertyCorrelationData)));
+                }
+
+                // process publish user properties
+                processUserProperties(message, mqttProperties);
+
+                // process subscription identifier
+                if (subscription.getSubscriptionIdentifier() > 0) {
+                    mqttProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), subscription.getSubscriptionIdentifier()));
+                }
+
                 // TODO retain flag should be set by subscription option
-                int topicAlias = ChannelInfo.getTopicAliasMaximum(channel);
-                if (topicAlias > 0) {
-                    String topicNameTmp = "";
-                    if (ChannelInfo.getServerTopicAlias(channel, topicName) == null) {
-                        // allocate topic alias
-                        int allocateAlias = genServerTopicAlias(topicName, topicAlias);
+                boolean isRetained = message.isRetained();
 
-                        if (ChannelInfo.getServerAliasTopic(channel, allocateAlias) != null) {
-                            // conflict, reset topic <-> alias
-                            topicNameTmp = topicName;
-                        }
-
-                        ChannelInfo.setServerTopicAlias(channel, topicName, allocateAlias);
-                        ChannelInfo.setServerAliasTopic(channel, allocateAlias, topicName);
-                    }
-
-                    mqttProperties.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), ChannelInfo.getServerTopicAlias(channel, topicName)));
-                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicNameTmp, message.getPayload(), qos, retained, mqttId, mqttProperties);
+                // process topic alias
+                if (!processTopicAlias(channel, topicName, mqttProperties)) {
+                    data = MqttMessageFactory.buildMqtt5PublishMessage("", message.getPayload(), qos, isRetained, mqttId, mqttProperties);
                 } else {
-                    // no alias
-                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, retained, mqttId, mqttProperties);
+                    data = MqttMessageFactory.buildMqtt5PublishMessage(topicName, message.getPayload(), qos, isRetained, mqttId, mqttProperties);
                 }
                 break;
             default:
@@ -207,10 +225,52 @@ public class PushAction {
                 message.setRetry(message.getRetry() + 1);
                 logger.warn("retryPush:{},{},{}", session.getClientId(), message.getMsgId(), message.getRetry());
             } else if (subscription.isShare()) {
-                String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(message.getOriginTopic(), "/","%");
+                String lmqTopic = MixAll.LMQ_PREFIX + StringUtils.replace(message.getOriginTopic(), "/", "%");
                 lmqQueueStore.popAck(lmqTopic, subscription.getSharedName(), message);
             }
         });
+    }
+
+    public void processUserProperties(Message message, MqttProperties mqttProperties) {
+        String mqtt5UserProperties = message.getUserProperty(Message.propertyMqtt5UserProperty);
+        if (StringUtils.isNotBlank(mqtt5UserProperties)) {
+            ArrayList<MqttProperties.StringPair> userProperties = JSON.parseObject(mqtt5UserProperties,
+                    new TypeReference<ArrayList<MqttProperties.StringPair>>() {
+                    }
+            );
+            mqttProperties.add(new MqttProperties.UserProperties(userProperties));
+        }
+    }
+
+    /**
+     * process topic alias
+     * @param channel
+     * @param topicName
+     * @param mqttProperties
+     * @return true: conflict when allocated topic alias
+     */
+    public boolean processTopicAlias(Channel channel, String topicName, MqttProperties mqttProperties) {
+        int topicAlias = ChannelInfo.getTopicAliasMaximum(channel);
+        boolean conflict = false;
+
+        if (topicAlias > 0) {
+            if (ChannelInfo.getServerTopicAlias(channel, topicName) == null) {
+                // allocate topic alias
+                int allocateAlias = genServerTopicAlias(topicName, topicAlias);
+
+                if (ChannelInfo.getServerAliasTopic(channel, allocateAlias) != null) {
+                    // conflict, client will reset topic <-> alias
+                    conflict = true;
+                }
+
+                ChannelInfo.setServerTopicAlias(channel, topicName, allocateAlias);
+                ChannelInfo.setServerAliasTopic(channel, allocateAlias, topicName);
+            }
+
+            // topic has allocated topic alias,just set to mqttProperties
+            mqttProperties.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS.value(), ChannelInfo.getServerTopicAlias(channel, topicName)));
+        }
+        return conflict;
     }
 
     public int genServerTopicAlias(String topicName, int topicAliasMaximum) {

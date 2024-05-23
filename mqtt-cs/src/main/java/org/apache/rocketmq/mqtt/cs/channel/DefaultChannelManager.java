@@ -136,6 +136,10 @@ public class DefaultChannelManager implements ChannelManager {
         if (channel.isActive()) {
             channel.close();
         }
+
+        // add client offline event
+
+
         logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
         collectConnectionsSize();
     }

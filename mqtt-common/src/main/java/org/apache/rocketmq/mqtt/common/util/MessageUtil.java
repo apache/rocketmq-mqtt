@@ -108,7 +108,7 @@ public class MessageUtil {
                 message.putUserProperty(Message.propertyCorrelationData, new String(correlationData.value(), StandardCharsets.UTF_8));
             }
 
-            // User Properties
+            // The user properties of publish packets need to be stored, and when pushing, they need to be brought with them
             List<MqttProperties.UserProperty> userProperties = (List<MqttProperties.UserProperty>) mqttProperties.getProperties(USER_PROPERTY.value());
             List<MqttProperties.StringPair> userPropertyList = new ArrayList<>();
             for (MqttProperties.UserProperty userProperty : userProperties) {

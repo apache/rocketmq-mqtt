@@ -62,7 +62,7 @@ public class Mqtt5Consumer {
                 try {
                     String payload = new String(message.getPayload());
                     String[] ss = payload.split("_");
-                    System.out.println(now() + "receive:" + topic + "," + payload);
+                    System.out.println(now() + "receive:" + topic + "," + payload + ", properties: " + message.getProperties());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

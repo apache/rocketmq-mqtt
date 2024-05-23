@@ -185,6 +185,12 @@ public class PushAction {
                 data = MqttMessageFactory.buildPublishMessage(topicName, message.getPayload(), qos, retained, mqttId);
                 break;
             case MQTT_5:
+                // Server send PublishMessage flow control
+                if (qos > 0 && !channelManager.publishSendTryAcquire(channel)) {
+                    logger.error("publishSendTryAcquire failed, client:{}, message:{}", clientId, message);
+                    return;
+                }
+
                 // add content type
                 if (StringUtils.isNotBlank(message.getUserProperty(Message.propertyContentType))) {
                     mqttProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), message.getUserProperty(Message.propertyContentType)));
@@ -210,12 +216,6 @@ public class PushAction {
 
                 // TODO retain flag should be set by subscription option
                 boolean isRetained = message.isRetained();
-
-                // Server send PublishMessage flow control
-                if (qos > 0 && !channelManager.publishSendTryAcquire(channel)) {
-                    logger.error("publishSendTryAcquire failed, client:{}, message:{}", clientId, message);
-                    return;
-                }
 
                 // process topic alias
                 if (!processTopicAlias(channel, topicName, mqttProperties)) {

@@ -22,7 +22,6 @@ import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.mqtt.common.hook.ClientEventHookManager;
-import org.apache.rocketmq.mqtt.common.model.ClientEventMessage;
 import org.apache.rocketmq.mqtt.common.model.ClientEventType;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;

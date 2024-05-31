@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.ClientEventType;
 public interface ClientEventHookManager {
     /**
      * add a hook
+     *
      * @param clientEventHook
      * @return
      */
@@ -30,6 +31,7 @@ public interface ClientEventHookManager {
 
     /**
      * put client event
+     *
      * @param channel
      * @param eventType
      * @return

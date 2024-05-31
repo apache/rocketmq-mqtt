@@ -18,6 +18,6 @@
 package org.apache.rocketmq.mqtt.common.model;
 
 public enum ClientEventType {
-  CONNECT,
-  DISCONNECT
+    CONNECT,
+    DISCONNECT
 }

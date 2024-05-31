@@ -48,60 +48,60 @@ import static org.apache.rocketmq.mqtt.common.model.Constants.PROPERTY_NAMESPACE
 
 @Component
 public class ClientEventProcessor extends ClientEventHook {
-  private static Logger logger = LoggerFactory.getLogger(ClientEventProcessor.class);
+    private static Logger logger = LoggerFactory.getLogger(ClientEventProcessor.class);
 
-  @Resource
-  private ClientEventHookManager clientEventHookManager;
+    @Resource
+    private ClientEventHookManager clientEventHookManager;
 
-  @Resource
-  private LmqQueueStore lmqQueueStore;
+    @Resource
+    private LmqQueueStore lmqQueueStore;
 
-  @Resource
-  private FirstTopicManager firstTopicManager;
+    @Resource
+    private FirstTopicManager firstTopicManager;
 
-  @Resource
-  private WildcardManager wildcardManager;
+    @Resource
+    private WildcardManager wildcardManager;
 
-  @PostConstruct
-  @Override
-  public void register() {
-    clientEventHookManager.addHook(this);
-  }
-
-  @Override
-  public CompletableFuture<HookResult> process(List<MqttPublishMessage> eventPublishMessages) {
-    CompletableFuture<StoreResult> r = put(eventPublishMessages);
-    return r.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
-        JSON.toJSONBytes(storeResult)));
-  }
-
-  private CompletableFuture<StoreResult> put(List<MqttPublishMessage> eventPublishMessages) {
-    firstTopicManager.checkFirstTopicIfCreated(CLIENT_EVENT_FIRST_TOPIC);
-    String pubTopic = TopicUtils.normalizeTopic(CLIENT_EVENT_ORIGIN_TOPIC);
-    Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, PROPERTY_NAMESPACE);
-
-    List<Message> messageList = new ArrayList<>(eventPublishMessages.size());
-    for (MqttPublishMessage eventPubMsg : eventPublishMessages) {
-      String msgId = MessageClientIDSetter.createUniqID();
-      long bornTime = System.currentTimeMillis();
-
-      Message message = MessageUtil.toMessage(eventPubMsg);
-      message.setMsgId(msgId);
-      message.setBornTimestamp(bornTime);
-      message.setEmpty(false);
-      messageList.add(message);
-      collectWriteBytes(message.getFirstTopic(), message.getPayload().length);
+    @PostConstruct
+    @Override
+    public void register() {
+        clientEventHookManager.addHook(this);
     }
 
-    return lmqQueueStore.putMessage(queueNames, messageList);
-  }
-
-  private void collectWriteBytes(String topic, int length) {
-    try {
-      MqttMetricsCollector.collectEventReadWriteBytes(length, topic, "put");
-    } catch (Throwable e) {
-      logger.error("Collect prometheus error", e);
+    @Override
+    public CompletableFuture<HookResult> process(List<MqttPublishMessage> eventPublishMessages) {
+        CompletableFuture<StoreResult> r = put(eventPublishMessages);
+        return r.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
+                JSON.toJSONBytes(storeResult)));
     }
-  }
+
+    private CompletableFuture<StoreResult> put(List<MqttPublishMessage> eventPublishMessages) {
+        firstTopicManager.checkFirstTopicIfCreated(CLIENT_EVENT_FIRST_TOPIC);
+        String pubTopic = TopicUtils.normalizeTopic(CLIENT_EVENT_ORIGIN_TOPIC);
+        Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, PROPERTY_NAMESPACE);
+
+        List<Message> messageList = new ArrayList<>(eventPublishMessages.size());
+        for (MqttPublishMessage eventPubMsg : eventPublishMessages) {
+            String msgId = MessageClientIDSetter.createUniqID();
+            long bornTime = System.currentTimeMillis();
+
+            Message message = MessageUtil.toMessage(eventPubMsg);
+            message.setMsgId(msgId);
+            message.setBornTimestamp(bornTime);
+            message.setEmpty(false);
+            messageList.add(message);
+            collectWriteBytes(message.getFirstTopic(), message.getPayload().length);
+        }
+
+        return lmqQueueStore.putMessage(queueNames, messageList);
+    }
+
+    private void collectWriteBytes(String topic, int length) {
+        try {
+            MqttMetricsCollector.collectEventReadWriteBytes(length, topic, "put");
+        } catch (Throwable e) {
+            logger.error("Collect prometheus error", e);
+        }
+    }
 
 }

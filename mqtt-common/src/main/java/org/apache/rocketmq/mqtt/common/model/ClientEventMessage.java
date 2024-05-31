@@ -20,94 +20,94 @@ package org.apache.rocketmq.mqtt.common.model;
 import com.alibaba.fastjson.JSON;
 
 public class ClientEventMessage {
-  private String clientId;
-  private String channelId;
-  private ClientEventType eventType;
-  private long eventTime;
-  private String host;
-  private String ip;
-  private int port;
-  private int packetId;
+    private String clientId;
+    private String channelId;
+    private ClientEventType eventType;
+    private long eventTime;
+    private String host;
+    private String ip;
+    private int port;
+    private int packetId;
 
-  public ClientEventMessage(ClientEventType eventType) {
-    this.eventType = eventType;
-    this.eventTime = System.currentTimeMillis();
-  }
+    public ClientEventMessage(ClientEventType eventType) {
+        this.eventType = eventType;
+        this.eventTime = System.currentTimeMillis();
+    }
 
-  public String getClientId() {
-    return clientId;
-  }
+    public String getClientId() {
+        return clientId;
+    }
 
-  public ClientEventMessage setClientId(String clientId) {
-    this.clientId = clientId;
-    return this;
-  }
+    public ClientEventMessage setClientId(String clientId) {
+        this.clientId = clientId;
+        return this;
+    }
 
-  public String getChannelId() {
-    return channelId;
-  }
+    public String getChannelId() {
+        return channelId;
+    }
 
-  public ClientEventMessage setChannelId(String channelId) {
-    this.channelId = channelId;
-    return this;
-  }
+    public ClientEventMessage setChannelId(String channelId) {
+        this.channelId = channelId;
+        return this;
+    }
 
-  public int getPacketId() {
-    return packetId;
-  }
+    public int getPacketId() {
+        return packetId;
+    }
 
-  public ClientEventMessage setPacketId(int packetId) {
-    this.packetId = packetId;
-    return this;
-  }
+    public ClientEventMessage setPacketId(int packetId) {
+        this.packetId = packetId;
+        return this;
+    }
 
-  public ClientEventType getEventType() {
-    return eventType;
-  }
+    public ClientEventType getEventType() {
+        return eventType;
+    }
 
-  public ClientEventMessage setEventType(ClientEventType eventType) {
-    this.eventType = eventType;
-    return this;
-  }
+    public ClientEventMessage setEventType(ClientEventType eventType) {
+        this.eventType = eventType;
+        return this;
+    }
 
-  public long getEventTime() {
-    return eventTime;
-  }
+    public long getEventTime() {
+        return eventTime;
+    }
 
-  public ClientEventMessage setEventTime(long eventTime) {
-    this.eventTime = eventTime;
-    return this;
-  }
+    public ClientEventMessage setEventTime(long eventTime) {
+        this.eventTime = eventTime;
+        return this;
+    }
 
-  public String getHost() {
-    return host;
-  }
+    public String getHost() {
+        return host;
+    }
 
-  public ClientEventMessage setHost(String host) {
-    this.host = host;
-    return this;
-  }
+    public ClientEventMessage setHost(String host) {
+        this.host = host;
+        return this;
+    }
 
-  public String getIp() {
-    return ip;
-  }
+    public String getIp() {
+        return ip;
+    }
 
-  public ClientEventMessage setIp(String ip) {
-    this.ip = ip;
-    return this;
-  }
+    public ClientEventMessage setIp(String ip) {
+        this.ip = ip;
+        return this;
+    }
 
-  public int getPort() {
-    return port;
-  }
+    public int getPort() {
+        return port;
+    }
 
-  public ClientEventMessage setPort(int port) {
-    this.port = port;
-    return this;
-  }
+    public ClientEventMessage setPort(int port) {
+        this.port = port;
+        return this;
+    }
 
-  @Override
-  public String toString() {
-    return JSON.toJSONString(this);
-  }
+    @Override
+    public String toString() {
+        return JSON.toJSONString(this);
+    }
 }

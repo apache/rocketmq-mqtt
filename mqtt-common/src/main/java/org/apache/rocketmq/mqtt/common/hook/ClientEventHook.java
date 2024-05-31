@@ -25,20 +25,21 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class ClientEventHook {
-  public static Logger logger = LoggerFactory.getLogger(ClientEventHook.class);
+    public static Logger logger = LoggerFactory.getLogger(ClientEventHook.class);
 
-  public CompletableFuture<HookResult> doHook(List<MqttPublishMessage> eventPublishMessages) {
-    try {
-      return process(eventPublishMessages);
-    } catch (Throwable t) {
-      logger.error("ClientEventHook doHook error: ", t);
-      CompletableFuture<HookResult> result = new CompletableFuture<>();
-      result.completeExceptionally(t);
-      return result;
+    public CompletableFuture<HookResult> doHook(List<MqttPublishMessage> eventPublishMessages) {
+        try {
+            return process(eventPublishMessages);
+        } catch (Throwable t) {
+            logger.error("ClientEventHook doHook error: ", t);
+            CompletableFuture<HookResult> result = new CompletableFuture<>();
+            result.completeExceptionally(t);
+            return result;
+        }
     }
-  }
 
-  public abstract void register();
-  public abstract CompletableFuture<HookResult> process(List<MqttPublishMessage> eventPublishMessages);
+    public abstract void register();
+
+    public abstract CompletableFuture<HookResult> process(List<MqttPublishMessage> eventPublishMessages);
 
 }

@@ -63,6 +63,6 @@ public class Constants {
     public static final String CLIENT_EVENT_FIRST_TOPIC = "mqtt_client_event_topic";
     public static final String CLIENT_EVENT_SECOND_TOPIC = "online_offline_event";
     public static final String CLIENT_EVENT_ORIGIN_TOPIC = CLIENT_EVENT_FIRST_TOPIC
-        + MQTT_TOPIC_DELIMITER + CLIENT_EVENT_SECOND_TOPIC;
+            + MQTT_TOPIC_DELIMITER + CLIENT_EVENT_SECOND_TOPIC;
     public static final int CLIENT_EVENT_BATCH_SIZE = 100;
 }

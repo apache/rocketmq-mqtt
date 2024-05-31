@@ -53,82 +53,83 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class TestClientEventHookManagerImpl {
 
-  private ClientEventHookManagerImpl clientEventHookManager;
-  private final String clientId = "clientId";
-  private final String channelId = "channelId";
-  private final int packetId = 9641;
-  private final String host = "localhost";
-  private final int port = 1988;
-  private final String ip = "10.0.0.10";
+    private ClientEventHookManagerImpl clientEventHookManager;
+    private final String clientId = "clientId";
+    private final String channelId = "channelId";
+    private final int packetId = 9641;
+    private final String host = "localhost";
+    private final int port = 1988;
+    private final String ip = "10.0.0.10";
 
-  @Mock
-  private ClientEventHook clientEventHook;
+    @Mock
+    private ClientEventHook clientEventHook;
 
-  @Mock
-  private MqttMsgId mqttMsgId;
+    @Mock
+    private MqttMsgId mqttMsgId;
 
-  @Spy
-  private NioSocketChannel channel;
+    @Spy
+    private NioSocketChannel channel;
 
-  @Before
-  public void Before() throws IllegalAccessException {
-    clientEventHookManager = new ClientEventHookManagerImpl();
-    FieldUtils.writeDeclaredField(clientEventHookManager, "clientEventHook", clientEventHook, true);
-    FieldUtils.writeDeclaredField(clientEventHookManager, "mqttMsgId", mqttMsgId, true);
-  }
+    @Before
+    public void Before() throws IllegalAccessException {
+        clientEventHookManager = new ClientEventHookManagerImpl();
+        FieldUtils.writeDeclaredField(clientEventHookManager, "clientEventHook", clientEventHook, true);
+        FieldUtils.writeDeclaredField(clientEventHookManager, "mqttMsgId", mqttMsgId, true);
+    }
 
-  @After
-  public void After() {}
+    @After
+    public void After() {
+    }
 
-  @Test
-  public void testAddHookIllegalArgException() {
-    clientEventHookManager.addHook(clientEventHook);
-    assertThrows(IllegalArgumentException.class, () -> clientEventHookManager.addHook(clientEventHook));
-  }
+    @Test
+    public void testAddHookIllegalArgException() {
+        clientEventHookManager.addHook(clientEventHook);
+        assertThrows(IllegalArgumentException.class, () -> clientEventHookManager.addHook(clientEventHook));
+    }
 
-  @Test
-  public void testToMqttMessage() {
-    ClientEventMessage eventMessage = new ClientEventMessage(ClientEventType.CONNECT);
-    eventMessage.setChannelId(channelId)
-        .setClientId(clientId)
-        .setPacketId(packetId)
-        .setHost(host)
-        .setIp(ip)
-        .setPort(port);
+    @Test
+    public void testToMqttMessage() {
+        ClientEventMessage eventMessage = new ClientEventMessage(ClientEventType.CONNECT);
+        eventMessage.setChannelId(channelId)
+                .setClientId(clientId)
+                .setPacketId(packetId)
+                .setHost(host)
+                .setIp(ip)
+                .setPort(port);
 
-    List<ClientEventMessage> eventMessages = new ArrayList<>();
-    eventMessages.add(eventMessage);
+        List<ClientEventMessage> eventMessages = new ArrayList<>();
+        eventMessages.add(eventMessage);
 
-    List<MqttPublishMessage> publishMessages = clientEventHookManager.toMqttMessage(eventMessages);
-    MqttPublishMessage publishMessage = publishMessages.get(0);
+        List<MqttPublishMessage> publishMessages = clientEventHookManager.toMqttMessage(eventMessages);
+        MqttPublishMessage publishMessage = publishMessages.get(0);
 
-    assertEquals(publishMessage.fixedHeader().messageType(), MqttMessageType.PUBLISH);
-    assertEquals(publishMessage.variableHeader().packetId(), packetId);
-    assertEquals(publishMessage.variableHeader().topicName(), CLIENT_EVENT_ORIGIN_TOPIC);
-    assertEquals(publishMessage.payload().toString(StandardCharsets.UTF_8), eventMessage.toString());
-  }
+        assertEquals(publishMessage.fixedHeader().messageType(), MqttMessageType.PUBLISH);
+        assertEquals(publishMessage.variableHeader().packetId(), packetId);
+        assertEquals(publishMessage.variableHeader().topicName(), CLIENT_EVENT_ORIGIN_TOPIC);
+        assertEquals(publishMessage.payload().toString(StandardCharsets.UTF_8), eventMessage.toString());
+    }
 
-  @Test
-  public void testPutClientEvent() throws IllegalAccessException {
-    clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
-    Object eventQueue = FieldUtils.readDeclaredField(clientEventHookManager, "eventQueue", true);
-    assertEquals(1, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).size());
-    assertEquals(ClientEventType.CONNECT, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).poll().getEventType());
-  }
+    @Test
+    public void testPutClientEvent() throws IllegalAccessException {
+        clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
+        Object eventQueue = FieldUtils.readDeclaredField(clientEventHookManager, "eventQueue", true);
+        assertEquals(1, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).size());
+        assertEquals(ClientEventType.CONNECT, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).poll().getEventType());
+    }
 
-  @Test
-  public void testClientEventHookExecution() throws InterruptedException {
-    clientEventHookManager.init();
+    @Test
+    public void testClientEventHookExecution() throws InterruptedException {
+        clientEventHookManager.init();
 
-    when(clientEventHook.doHook(any())).thenReturn(new CompletableFuture<>());
-    doNothing().when(mqttMsgId).releaseId(anyInt(), any());
+        when(clientEventHook.doHook(any())).thenReturn(new CompletableFuture<>());
+        doNothing().when(mqttMsgId).releaseId(anyInt(), any());
 
-    clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
-    clientEventHookManager.putClientEvent(channel, ClientEventType.DISCONNECT);
+        clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
+        clientEventHookManager.putClientEvent(channel, ClientEventType.DISCONNECT);
 
-    Thread.sleep(2000);
+        Thread.sleep(2000);
 
-    verify(clientEventHook, times(1)).doHook(any());
-    verify(mqttMsgId, times(2)).releaseId(anyInt(), any());
-  }
+        verify(clientEventHook, times(1)).doHook(any());
+        verify(mqttMsgId, times(2)).releaseId(anyInt(), any());
+    }
 }

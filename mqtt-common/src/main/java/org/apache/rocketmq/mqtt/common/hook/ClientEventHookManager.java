@@ -15,7 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.cs.hook;
+package org.apache.rocketmq.mqtt.common.hook;
 
-public class ClientEventHookManager {
+import io.netty.channel.Channel;
+import org.apache.rocketmq.mqtt.common.model.ClientEventType;
+
+public interface ClientEventHookManager {
+    /**
+     * add a hook
+     * @param clientEventHook
+     * @return
+     */
+    void addHook(ClientEventHook clientEventHook);
+
+    /**
+     * put client event
+     * @param channel
+     * @param eventType
+     * @return
+     */
+    void putClientEvent(Channel channel, ClientEventType eventType);
+
 }

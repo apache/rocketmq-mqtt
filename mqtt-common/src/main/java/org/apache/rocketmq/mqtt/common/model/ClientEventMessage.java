@@ -17,6 +17,8 @@
 
 package org.apache.rocketmq.mqtt.common.model;
 
+import com.alibaba.fastjson.JSON;
+
 public class ClientEventMessage {
   private String clientId;
   private String channelId;
@@ -25,6 +27,7 @@ public class ClientEventMessage {
   private String host;
   private String ip;
   private int port;
+  private int packetId;
 
   public ClientEventMessage(ClientEventType eventType) {
     this.eventType = eventType;
@@ -46,6 +49,15 @@ public class ClientEventMessage {
 
   public ClientEventMessage setChannelId(String channelId) {
     this.channelId = channelId;
+    return this;
+  }
+
+  public int getPacketId() {
+    return packetId;
+  }
+
+  public ClientEventMessage setPacketId(int packetId) {
+    this.packetId = packetId;
     return this;
   }
 
@@ -92,5 +104,10 @@ public class ClientEventMessage {
   public ClientEventMessage setPort(int port) {
     this.port = port;
     return this;
+  }
+
+  @Override
+  public String toString() {
+    return JSON.toJSONString(this);
   }
 }

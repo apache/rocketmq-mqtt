@@ -17,42 +17,21 @@
 
 package org.apache.rocketmq.mqtt.common.hook;
 
-import org.apache.rocketmq.mqtt.common.model.ClientEventMessage;
+import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public abstract class ClientEventHook implements Hook {
+public abstract class ClientEventHook {
   public static Logger logger = LoggerFactory.getLogger(ClientEventHook.class);
-  public ClientEventHook nextClientEventHook;
 
-  @Override
-  public void setNextHook(Hook hook) {
-    this.nextClientEventHook = (ClientEventHook) hook;
-  }
-
-  @Override
-  public Hook getNextHook() {
-    return this.nextClientEventHook;
-  }
-
-  public CompletableFuture<HookResult> doHook(ClientEventMessage clientEventMessage) {
+  public CompletableFuture<HookResult> doHook(List<MqttPublishMessage> eventPublishMessages) {
     try {
-      CompletableFuture<HookResult> result = processClientEvent(clientEventMessage);
-      if (nextClientEventHook == null) {
-        return result;
-      }
-      return result.thenCompose(hookResult -> {
-        if (!hookResult.isSuccess()) {
-          CompletableFuture<HookResult> nextHookResult = new CompletableFuture<>();
-          nextHookResult.complete(hookResult);
-          return nextHookResult;
-        }
-        return nextClientEventHook.doHook(clientEventMessage);
-      });
+      return process(eventPublishMessages);
     } catch (Throwable t) {
-      logger.error("", t);
+      logger.error("ClientEventHook doHook error: ", t);
       CompletableFuture<HookResult> result = new CompletableFuture<>();
       result.completeExceptionally(t);
       return result;
@@ -60,7 +39,6 @@ public abstract class ClientEventHook implements Hook {
   }
 
   public abstract void register();
-
-  public abstract CompletableFuture<HookResult> processClientEvent(ClientEventMessage clientEventMessage);
+  public abstract CompletableFuture<HookResult> process(List<MqttPublishMessage> eventPublishMessages);
 
 }

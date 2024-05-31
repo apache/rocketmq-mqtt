@@ -36,11 +36,14 @@ public enum MqttMetricsInfo {
         "hostName", "hostIp", "pullCacheStatus"),
     READ_WRITE_MATCH_ACTION_RT(Type.GAUGE, SubSystem.DS, "read_write_match_action_rt", "lmq read write match action rt.", null,
         "hostName", "hostIp", "action", "status"),
+    READ_WRITE_EVENT_RT(Type.GAUGE, SubSystem.DS, "read_write_event_rt", "client event read write lmq rt.", null,
+        "hostName", "hostIp", "action", "status"),
     CONNECTIONS_SIZE(Type.GAUGE, SubSystem.CS, "connections_size", "server connections size.", null,
         "hostName", "hostIp"),
     READ_WRITE_MATCH_ACTION_BYTES(Type.COUNTER, SubSystem.DS, "read_write_match_action_bytes", "lmq read write match action bytes.", null,
+        "hostName", "hostIp", "topic", "action"),
+    READ_WRITE_EVENT_BYTES(Type.COUNTER, SubSystem.DS, "read_write_event_bytes", "client event read write lmq bytes.", null,
         "hostName", "hostIp", "topic", "action");
-
 
     private final Type type;
     private final SubSystem subSystem;

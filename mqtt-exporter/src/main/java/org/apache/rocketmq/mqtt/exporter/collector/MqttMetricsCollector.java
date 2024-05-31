@@ -165,6 +165,14 @@ public class MqttMetricsCollector {
         collect(MqttMetricsInfo.READ_WRITE_MATCH_ACTION_RT, val, labels);
     }
 
+    public static void collectEventReadWriteRt(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_EVENT_RT, val, labels);
+    }
+
+    public static void collectEventReadWriteBytes(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_EVENT_BYTES, val, labels);
+    }
+
     public static void collectConnectionsSize(long val, String... labels) throws PrometheusException {
         collect(MqttMetricsInfo.CONNECTIONS_SIZE, val, labels);
     }

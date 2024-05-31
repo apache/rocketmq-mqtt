@@ -26,7 +26,9 @@ import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.hook.ClientEventHookManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.ClientEventType;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -51,6 +53,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private ClientEventHookManager clientEventHookManager;
 
     @Resource
     private SessionLoop sessionLoop;
@@ -81,6 +86,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
         ChannelInfo.setCleanSessionFlag(channel, variableHeader.isCleanSession());
 
         // add client online event
+        clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
 
         String remark = upstreamHookResult.getRemark();
         if (!upstreamHookResult.isSuccess()) {

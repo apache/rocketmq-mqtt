@@ -1,32 +1,37 @@
 /*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.rocketmq.mqtt.cs.test.session;
 
+import io.netty.channel.socket.nio.NioSocketChannel;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.ArrayList;
@@ -36,6 +41,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.mockito.Mockito.doReturn;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestSession {
@@ -44,11 +52,34 @@ public class TestSession {
     final String brokerName = "localhost";
     final int firstMsgOffset = 1;
     final int secondMsgOffset = 2;
+    private Session session;
+
+    @Spy
+    private NioSocketChannel channel;
+    @Mock
+    private ConnectConf connectConf;
+
+    private AtomicInteger pubReceiveQuota = new AtomicInteger(65535);
+    private AtomicInteger pubSendQuota = new AtomicInteger(65535);
+
+    @Before
+    public void setUp() throws IllegalAccessException {
+        session = new Session();
+        doReturn(65535).when(connectConf).getServerReceiveMaximum();
+
+        session.setConnectConf(connectConf);
+        FieldUtils.writeDeclaredField(session, "channel", channel, true);
+        FieldUtils.writeDeclaredField(session, "pubReceiveQuota", pubReceiveQuota, true);
+        FieldUtils.writeDeclaredField(session, "pubSendQuota", pubSendQuota, true);
+    }
+
+    @After
+    public void tearDown() {
+        session.destroy();
+    }
 
     @Test
     public void test() {
-        Session session = new Session();
-
         Set<Subscription> subscriptions = new HashSet<>();
         Subscription subscription = new Subscription(topicFilter);
         subscriptions.add(subscription);
@@ -105,5 +136,41 @@ public class TestSession {
         session.removeSubscription(subscription);
         Assert.assertEquals(0, session.subscriptionSnapshot().size());
         session.destroy();
+    }
+
+    @Test
+    public void testPublishReceiveTryAcquireAndRefill() {
+        Assert.assertFalse(session.publishReceiveRefill());
+
+        // acquire the quota
+        Assert.assertTrue(session.publishReceiveTryAcquire());
+        Assert.assertEquals(65534, pubReceiveQuota.get());
+
+        pubReceiveQuota.set(0);
+        Assert.assertFalse(session.publishReceiveTryAcquire());
+
+        // refill the quota
+        Assert.assertTrue(session.publishReceiveRefill());
+        Assert.assertEquals(1, pubReceiveQuota.get());
+        pubReceiveQuota.set(65535);
+        Assert.assertFalse(session.publishReceiveRefill());
+    }
+
+    @Test
+    public void testPublishSendTryAcquireAndRefill() {
+        Assert.assertFalse(session.publishSendRefill());
+
+        // acquire the quota
+        Assert.assertTrue(session.publishSendTryAcquire());
+        Assert.assertEquals(65534, pubSendQuota.get());
+
+        pubSendQuota.set(0);
+        Assert.assertFalse(session.publishSendTryAcquire());
+
+        // refill the quota
+        Assert.assertTrue(session.publishSendRefill());
+        Assert.assertEquals(1, pubSendQuota.get());
+        pubSendQuota.set(65535);
+        Assert.assertFalse(session.publishSendRefill());
     }
 }

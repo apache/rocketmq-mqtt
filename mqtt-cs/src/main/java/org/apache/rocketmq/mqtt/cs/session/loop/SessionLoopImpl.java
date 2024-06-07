@@ -166,6 +166,7 @@ public class SessionLoopImpl implements SessionLoop {
             return;
         }
         Session session = new Session();
+        session.setConnectConf(connectConf);
         session.setClientId(clientId);
         session.setChannelId(channelId);
         session.setChannel(channel);

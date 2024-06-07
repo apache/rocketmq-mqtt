@@ -1,20 +1,18 @@
 /*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- *  * Licensed to the Apache Software Foundation (ASF) under one or more
- *  * contributor license agreements.  See the NOTICE file distributed with
- *  * this work for additional information regarding copyright ownership.
- *  * The ASF licenses this file to You under the Apache License, Version 2.0
- *  * (the "License"); you may not use this file except in compliance with
- *  * the License.  You may obtain a copy of the License at
- *  *
- *  *     http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  * Unless required by applicable law or agreed to in writing, software
- *  * distributed under the License is distributed on an "AS IS" BASIS,
- *  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  * See the License for the specific language governing permissions and
- *  * limitations under the License.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.rocketmq.mqtt.cs.test.channel;
@@ -40,12 +38,9 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 
 
@@ -54,9 +49,6 @@ public class TestDefaultChannelManager {
     private DefaultChannelManager defaultChannelManager;
     private final String clientId = "clientId";
     private final String channelId = "channelId";
-    private Map<String, AtomicInteger> pubReceiveQuotaMap = new ConcurrentHashMap<>(1024);
-    private Map<String, AtomicInteger> pubSendQuotaMap = new ConcurrentHashMap<>(1024);
-
     @Mock
     private SessionLoop sessionLoop;
 
@@ -80,10 +72,7 @@ public class TestDefaultChannelManager {
         FieldUtils.writeDeclaredField(defaultChannelManager, "retryDriver", retryDriver, true);
         FieldUtils.writeDeclaredField(defaultChannelManager, "willLoop", willLoop, true);
         FieldUtils.writeStaticField(DefaultChannelManager.class, "minBlankChannelSeconds", 0, true);
-        FieldUtils.writeDeclaredField(defaultChannelManager, "pubReceiveQuotaMap", pubReceiveQuotaMap, true);
-        FieldUtils.writeDeclaredField(defaultChannelManager, "pubSendQuotaMap", pubSendQuotaMap, true);
 
-        doReturn(65535).when(connectConf).getServerReceiveMaximum();
         defaultChannelManager.init();
     }
 
@@ -115,7 +104,7 @@ public class TestDefaultChannelManager {
     public void testKeepLive() throws InterruptedException {
         defaultChannelManager.addChannel(channel);
         ChannelInfo.setKeepLive(channel, 1);
-        Thread.sleep(1000);
+        Thread.sleep(200);
         Assert.assertFalse(0 == defaultChannelManager.totalConn());
         Thread.sleep(3000);
         Assert.assertTrue(0 == defaultChannelManager.totalConn());
@@ -155,48 +144,4 @@ public class TestDefaultChannelManager {
         Assert.assertEquals(1, defaultChannelManager.totalConn());
     }
 
-    @Test
-    public void testPublishReceiveTryAcquireAndRefill() {
-        String channelId = ChannelInfo.getId(channel);
-        Assert.assertNull(pubReceiveQuotaMap.get(channelId));
-
-        Assert.assertFalse(defaultChannelManager.publishReceiveRefill(channel));
-
-        // acquire the quota
-        Assert.assertTrue(defaultChannelManager.publishReceiveTryAcquire(channel));
-        Assert.assertEquals(1, pubReceiveQuotaMap.size());
-        Assert.assertEquals(65534, pubReceiveQuotaMap.get(channelId).get());
-
-        pubReceiveQuotaMap.get(channelId).set(0);
-        Assert.assertFalse(defaultChannelManager.publishReceiveTryAcquire(channel));
-
-        // refill the quota
-        Assert.assertTrue(defaultChannelManager.publishReceiveRefill(channel));
-        Assert.assertEquals(1, pubReceiveQuotaMap.get(channelId).get());
-        pubReceiveQuotaMap.get(channelId).set(65535);
-        Assert.assertFalse(defaultChannelManager.publishReceiveRefill(channel));
-    }
-
-    @Test
-    public void testPublishSendTryAcquireAndRefill() {
-        ChannelInfo.setReceiveMaximum(channel, 65535);
-        String channelId = ChannelInfo.getId(channel);
-        Assert.assertNull(pubSendQuotaMap.get(channelId));
-
-        Assert.assertFalse(defaultChannelManager.publishSendRefill(channel));
-
-        // acquire the quota
-        Assert.assertTrue(defaultChannelManager.publishSendTryAcquire(channel));
-        Assert.assertEquals(1, pubSendQuotaMap.size());
-        Assert.assertEquals(65534, pubSendQuotaMap.get(channelId).get());
-
-        pubSendQuotaMap.get(channelId).set(0);
-        Assert.assertFalse(defaultChannelManager.publishSendTryAcquire(channel));
-
-        // refill the quota
-        Assert.assertTrue(defaultChannelManager.publishSendRefill(channel));
-        Assert.assertEquals(1, pubSendQuotaMap.get(channelId).get());
-        pubSendQuotaMap.get(channelId).set(65535);
-        Assert.assertFalse(defaultChannelManager.publishSendRefill(channel));
-    }
 }

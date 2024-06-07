@@ -22,7 +22,6 @@ import io.netty.handler.codec.mqtt.MqttMessage;
 import io.netty.handler.codec.mqtt.MqttPubReplyMessageVariableHeader;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
-import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
@@ -44,9 +43,6 @@ public class Mqtt5PubAckHandler implements MqttPacketHandler<MqttMessage> {
     @Resource
     private SessionLoop sessionLoop;
 
-    @Resource
-    private ChannelManager channelManager;
-
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         return true;
@@ -54,13 +50,13 @@ public class Mqtt5PubAckHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
         // Refill the PUBLISH send quota
-        channelManager.publishSendRefill(ctx.channel());
+        session.publishSendRefill();
 
         final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
         int messageId = variableHeader.messageId();
         retryDriver.unMountPublish(messageId, ChannelInfo.getId(ctx.channel()));
-        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
         pushAction.rollNextByAck(session, messageId);
     }
 }

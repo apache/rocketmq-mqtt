@@ -45,7 +45,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.rocketmq.mqtt.common.model.Constants.CLIENT_EVENT_FIRST_TOPIC;
+import static org.apache.rocketmq.mqtt.common.model.Constants.MQTT_SYSTEM_TOPIC;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -87,7 +87,7 @@ public class TestClientEventProcessor {
 
     CompletableFuture<HookResult> hookResultCompletableFuture = eventProcessor.process(eventPublishMessages);
 
-    verify(firstTopicManager).checkFirstTopicIfCreated(eq(CLIENT_EVENT_FIRST_TOPIC));
+    verify(firstTopicManager).checkFirstTopicIfCreated(eq(MQTT_SYSTEM_TOPIC));
     verify(wildcardManager).matchQueueSetByMsgTopic(anyString(), anyString());
     verify(lmqQueueStore).putMessage(anySet(), anyList());
     Assert.assertTrue(hookResultCompletableFuture.get().isSuccess());

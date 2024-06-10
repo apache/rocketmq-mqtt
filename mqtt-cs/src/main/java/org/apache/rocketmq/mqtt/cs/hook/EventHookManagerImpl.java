@@ -27,11 +27,11 @@ import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHook;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHookManager;
+import org.apache.rocketmq.mqtt.common.hook.EventHook;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.common.model.ClientEventMessage;
-import org.apache.rocketmq.mqtt.common.model.ClientEventType;
+import org.apache.rocketmq.mqtt.common.model.ClientEvent;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.slf4j.Logger;
@@ -55,13 +55,13 @@ import static org.apache.rocketmq.mqtt.common.model.Constants.CLIENT_EVENT_BATCH
 import static org.apache.rocketmq.mqtt.common.model.Constants.CLIENT_EVENT_ORIGIN_TOPIC;
 
 @Component
-public class ClientEventHookManagerImpl implements ClientEventHookManager {
+public class EventHookManagerImpl implements EventHookManager {
     @Resource
     private MqttMsgId mqttMsgId;
-    private static Logger logger = LoggerFactory.getLogger(ClientEventHookManagerImpl.class);
-    private ClientEventHook clientEventHook;
+    private static Logger logger = LoggerFactory.getLogger(EventHookManagerImpl.class);
+    private EventHook eventHook;
     private AtomicBoolean isAssembled = new AtomicBoolean(false);
-    private LinkedBlockingQueue<ClientEventMessage> eventQueue = new LinkedBlockingQueue<>(10000);
+    private LinkedBlockingQueue<ClientEvent> eventQueue = new LinkedBlockingQueue<>(10000);
     private ExecutorService executorService;
 
     @PostConstruct
@@ -72,16 +72,16 @@ public class ClientEventHookManagerImpl implements ClientEventHookManager {
                 1,
                 TimeUnit.MINUTES,
                 new LinkedBlockingQueue<>(5000),
-                new ThreadFactoryImpl("ClientEventHookManager_"));
+                new ThreadFactoryImpl("EventHookManager_"));
         executorService.submit(new ClientEventHookExecution());
     }
 
     @Override
-    public void addHook(ClientEventHook clientEventHook) {
+    public void addHook(EventHook eventHook) {
         if (isAssembled.get()) {
-            throw new IllegalArgumentException("ClientEventHook Was Assembled");
+            throw new IllegalArgumentException("EventHook Was Assembled");
         }
-        this.clientEventHook = clientEventHook;
+        this.eventHook = eventHook;
         isAssembled.set(true);
     }
 
@@ -90,24 +90,24 @@ public class ClientEventHookManagerImpl implements ClientEventHookManager {
         public void run() {
             while (true) {
                 int eventBatchSize = CLIENT_EVENT_BATCH_SIZE;
-                List<ClientEventMessage> eventMessages = new ArrayList<>(eventBatchSize);
+                List<ClientEvent> clientEvents = new ArrayList<>(eventBatchSize);
 
                 try {
                     // batch online offline events
                     while (eventBatchSize-- > 0) {
-                        ClientEventMessage eventMessage = eventQueue.poll(10, TimeUnit.MILLISECONDS);
-                        if (eventMessage != null) {
-                            eventMessages.add(eventMessage);
+                        ClientEvent clientEvent = eventQueue.poll(10, TimeUnit.MILLISECONDS);
+                        if (clientEvent != null) {
+                            clientEvents.add(clientEvent);
                         }
                     }
-                    if (eventMessages.isEmpty()) {
+                    if (clientEvents.isEmpty()) {
                         continue;
                     }
 
                     // covert to mqtt message
-                    List<MqttPublishMessage> eventPublishMessages = toMqttMessage(eventMessages);
-                    CompletableFuture<HookResult> eventHookResult = clientEventHook.doHook(eventPublishMessages);
-                    Preconditions.checkNotNull(eventHookResult, "Put client events to LMQ error by Null hook result.");
+                    List<MqttPublishMessage> eventPublishMessages = toMqttMessage(clientEvents);
+                    CompletableFuture<HookResult> eventHookResult = eventHook.doHook(eventPublishMessages);
+                    Preconditions.checkNotNull(eventHookResult, "Put client events to LMQ error by null hook result.");
 
                     eventHookResult.whenComplete((hookResult, throwable) -> {
                         if (throwable != null) {
@@ -121,21 +121,21 @@ public class ClientEventHookManagerImpl implements ClientEventHookManager {
                     logger.error("ClientEventHookExecution error: ", t);
                 } finally {
                     // release msgId
-                    releaseMsgId(eventMessages);
+                    releaseMsgId(clientEvents);
                 }
             }
         }
     }
 
-    public List<MqttPublishMessage> toMqttMessage(List<ClientEventMessage> eventMessages) {
-        List<MqttPublishMessage> eventPublishMessages = new ArrayList<>(eventMessages.size());
+    public List<MqttPublishMessage> toMqttMessage(List<ClientEvent> clientEvents) {
+        List<MqttPublishMessage> eventPublishMessages = new ArrayList<>(clientEvents.size());
 
-        for (ClientEventMessage eventMessage : eventMessages) {
+        for (ClientEvent clientEvent : clientEvents) {
             MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.PUBLISH,
                     false, MqttQoS.AT_LEAST_ONCE, false, 0);
             MqttPublishVariableHeader mqttPublishVariableHeader = new MqttPublishVariableHeader(
-                    CLIENT_EVENT_ORIGIN_TOPIC, eventMessage.getPacketId());
-            ByteBuf payload = Unpooled.wrappedBuffer(eventMessage.toString().getBytes(StandardCharsets.UTF_8));
+                    CLIENT_EVENT_ORIGIN_TOPIC, clientEvent.getPacketId());
+            ByteBuf payload = Unpooled.wrappedBuffer(clientEvent.toString().getBytes(StandardCharsets.UTF_8));
             MqttPublishMessage eventPublishMessage = new MqttPublishMessage(mqttFixedHeader, mqttPublishVariableHeader, payload);
 
             eventPublishMessages.add(eventPublishMessage);
@@ -143,28 +143,29 @@ public class ClientEventHookManagerImpl implements ClientEventHookManager {
         return eventPublishMessages;
     }
 
-    private void releaseMsgId(List<ClientEventMessage> eventMessages) {
-        for (ClientEventMessage eventMessage : eventMessages) {
-            mqttMsgId.releaseId(eventMessage.getPacketId(), eventMessage.getClientId());
+    private void releaseMsgId(List<ClientEvent> clientEvents) {
+        for (ClientEvent clientEvent : clientEvents) {
+            mqttMsgId.releaseId(clientEvent.getPacketId(), clientEvent.getClientId());
         }
     }
 
     @Override
-    public void putClientEvent(Channel channel, ClientEventType eventType) {
-        ClientEventMessage eventMessage = new ClientEventMessage(eventType);
-        eventMessage.setChannelId(ChannelInfo.getId(channel))
+    public void putEvent(Channel channel, EventType eventType, String eventInfo) {
+        ClientEvent clientEvent = new ClientEvent(eventType);
+        clientEvent.setChannelId(ChannelInfo.getId(channel))
                 .setClientId(ChannelInfo.getClientId(channel))
-                .setPacketId(mqttMsgId.nextId(ChannelInfo.getClientId(channel)));
+                .setPacketId(mqttMsgId.nextId(ChannelInfo.getClientId(channel)))
+                .setEventInfo(eventInfo);
 
         if (channel.remoteAddress() instanceof InetSocketAddress) {
             InetSocketAddress clientAddress = (InetSocketAddress) channel.remoteAddress();
-            eventMessage.setHost(clientAddress.getHostName())
+            clientEvent.setHost(clientAddress.getHostName())
                     .setIp(clientAddress.getAddress().getHostAddress())
                     .setPort(clientAddress.getPort());
         }
 
-        if (!eventQueue.offer(eventMessage)) {
-            logger.error("ClientEventQueue is full, putClientEvent failed: {}", eventMessage);
+        if (!eventQueue.offer(clientEvent)) {
+            logger.error("EventQueue is full, putEvent failed: {}", clientEvent);
         }
     }
 }

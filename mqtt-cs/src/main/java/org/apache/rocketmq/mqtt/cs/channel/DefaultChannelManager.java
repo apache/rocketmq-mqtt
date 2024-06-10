@@ -21,8 +21,8 @@ import io.netty.channel.Channel;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHookManager;
-import org.apache.rocketmq.mqtt.common.model.ClientEventType;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
@@ -66,7 +66,7 @@ public class DefaultChannelManager implements ChannelManager {
     private WillLoop willLoop;
 
     @Resource
-    private ClientEventHookManager clientEventHookManager;
+    private EventHookManager eventHookManager;
 
     @PostConstruct
     public void init() {
@@ -143,9 +143,10 @@ public class DefaultChannelManager implements ChannelManager {
         }
 
         // add client offline event
-        clientEventHookManager.putClientEvent(channel, ClientEventType.DISCONNECT);
+        eventHookManager.putEvent(channel, EventType.CLIENT_DISCONNECT,
+                "Event of CLIENT_DISCONNECT from " + from + " and the reason is " + reason);
 
-        logger.info("Close Connect of channel {} from {} by reason of {}", channel, from, reason);
+        logger.info("Close connect of channel {} from {} by reason of {}", channel, from, reason);
         collectConnectionsSize();
     }
 

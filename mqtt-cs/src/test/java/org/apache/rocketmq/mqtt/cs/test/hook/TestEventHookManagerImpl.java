@@ -21,10 +21,10 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHook;
-import org.apache.rocketmq.mqtt.common.model.ClientEventMessage;
-import org.apache.rocketmq.mqtt.common.model.ClientEventType;
-import org.apache.rocketmq.mqtt.cs.hook.ClientEventHookManagerImpl;
+import org.apache.rocketmq.mqtt.common.hook.EventHook;
+import org.apache.rocketmq.mqtt.common.model.ClientEvent;
+import org.apache.rocketmq.mqtt.common.model.EventType;
+import org.apache.rocketmq.mqtt.cs.hook.EventHookManagerImpl;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.junit.After;
 import org.junit.Before;
@@ -51,9 +51,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestClientEventHookManagerImpl {
+public class TestEventHookManagerImpl {
 
-    private ClientEventHookManagerImpl clientEventHookManager;
+    private EventHookManagerImpl eventHookManager;
     private final String clientId = "clientId";
     private final String channelId = "channelId";
     private final int packetId = 9641;
@@ -62,7 +62,7 @@ public class TestClientEventHookManagerImpl {
     private final String ip = "10.0.0.10";
 
     @Mock
-    private ClientEventHook clientEventHook;
+    private EventHook eventHook;
 
     @Mock
     private MqttMsgId mqttMsgId;
@@ -72,9 +72,9 @@ public class TestClientEventHookManagerImpl {
 
     @Before
     public void Before() throws IllegalAccessException {
-        clientEventHookManager = new ClientEventHookManagerImpl();
-        FieldUtils.writeDeclaredField(clientEventHookManager, "clientEventHook", clientEventHook, true);
-        FieldUtils.writeDeclaredField(clientEventHookManager, "mqttMsgId", mqttMsgId, true);
+        eventHookManager = new EventHookManagerImpl();
+        FieldUtils.writeDeclaredField(eventHookManager, "eventHook", eventHook, true);
+        FieldUtils.writeDeclaredField(eventHookManager, "mqttMsgId", mqttMsgId, true);
     }
 
     @After
@@ -83,53 +83,53 @@ public class TestClientEventHookManagerImpl {
 
     @Test
     public void testAddHookIllegalArgException() {
-        clientEventHookManager.addHook(clientEventHook);
-        assertThrows(IllegalArgumentException.class, () -> clientEventHookManager.addHook(clientEventHook));
+        eventHookManager.addHook(eventHook);
+        assertThrows(IllegalArgumentException.class, () -> eventHookManager.addHook(eventHook));
     }
 
     @Test
     public void testToMqttMessage() {
-        ClientEventMessage eventMessage = new ClientEventMessage(ClientEventType.CONNECT);
-        eventMessage.setChannelId(channelId)
+        ClientEvent clientEvent = new ClientEvent(EventType.CLIENT_CONNECT);
+        clientEvent.setChannelId(channelId)
                 .setClientId(clientId)
                 .setPacketId(packetId)
                 .setHost(host)
                 .setIp(ip)
                 .setPort(port);
 
-        List<ClientEventMessage> eventMessages = new ArrayList<>();
-        eventMessages.add(eventMessage);
+        List<ClientEvent> clientEvents = new ArrayList<>();
+        clientEvents.add(clientEvent);
 
-        List<MqttPublishMessage> publishMessages = clientEventHookManager.toMqttMessage(eventMessages);
+        List<MqttPublishMessage> publishMessages = eventHookManager.toMqttMessage(clientEvents);
         MqttPublishMessage publishMessage = publishMessages.get(0);
 
         assertEquals(publishMessage.fixedHeader().messageType(), MqttMessageType.PUBLISH);
         assertEquals(publishMessage.variableHeader().packetId(), packetId);
         assertEquals(publishMessage.variableHeader().topicName(), CLIENT_EVENT_ORIGIN_TOPIC);
-        assertEquals(publishMessage.payload().toString(StandardCharsets.UTF_8), eventMessage.toString());
+        assertEquals(publishMessage.payload().toString(StandardCharsets.UTF_8), clientEvent.toString());
     }
 
     @Test
-    public void testPutClientEvent() throws IllegalAccessException {
-        clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
-        Object eventQueue = FieldUtils.readDeclaredField(clientEventHookManager, "eventQueue", true);
-        assertEquals(1, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).size());
-        assertEquals(ClientEventType.CONNECT, ((LinkedBlockingQueue<ClientEventMessage>) eventQueue).poll().getEventType());
+    public void testPutEvent() throws IllegalAccessException {
+        eventHookManager.putEvent(channel, EventType.CLIENT_CONNECT, null);
+        Object eventQueue = FieldUtils.readDeclaredField(eventHookManager, "eventQueue", true);
+        assertEquals(1, ((LinkedBlockingQueue<ClientEvent>) eventQueue).size());
+        assertEquals(EventType.CLIENT_CONNECT, ((LinkedBlockingQueue<ClientEvent>) eventQueue).poll().getEventType());
     }
 
     @Test
     public void testClientEventHookExecution() throws InterruptedException {
-        clientEventHookManager.init();
+        eventHookManager.init();
 
-        when(clientEventHook.doHook(any())).thenReturn(new CompletableFuture<>());
+        when(eventHook.doHook(any())).thenReturn(new CompletableFuture<>());
         doNothing().when(mqttMsgId).releaseId(anyInt(), any());
 
-        clientEventHookManager.putClientEvent(channel, ClientEventType.CONNECT);
-        clientEventHookManager.putClientEvent(channel, ClientEventType.DISCONNECT);
+        eventHookManager.putEvent(channel, EventType.CLIENT_CONNECT, null);
+        eventHookManager.putEvent(channel, EventType.CLIENT_DISCONNECT, "test");
 
         Thread.sleep(2000);
 
-        verify(clientEventHook, times(1)).doHook(any());
+        verify(eventHook, times(1)).doHook(any());
         verify(mqttMsgId, times(2)).releaseId(anyInt(), any());
     }
 }

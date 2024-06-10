@@ -17,13 +17,13 @@
 
 package org.apache.rocketmq.mqtt.common.test.model;
 
-import org.apache.rocketmq.mqtt.common.model.ClientEventMessage;
-import org.apache.rocketmq.mqtt.common.model.ClientEventType;
+import org.apache.rocketmq.mqtt.common.model.ClientEvent;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestClientEventMessage {
+public class TestClientEvent {
     final String clientId = "testClientId";
     final String channelId = "testChannelId";
     final int packetId = 123;
@@ -33,25 +33,25 @@ public class TestClientEventMessage {
 
     @Test
     public void test() {
-        ClientEventMessage clientEventMessage = new ClientEventMessage(ClientEventType.CONNECT);
-        clientEventMessage.setClientId(clientId);
-        clientEventMessage.setChannelId(channelId);
-        clientEventMessage.setPacketId(packetId);
-        clientEventMessage.setHost(host);
-        clientEventMessage.setIp(ip);
-        clientEventMessage.setPort(port);
+        ClientEvent clientEvent = new ClientEvent(EventType.CLIENT_CONNECT);
+        clientEvent.setClientId(clientId);
+        clientEvent.setChannelId(channelId);
+        clientEvent.setPacketId(packetId);
+        clientEvent.setHost(host);
+        clientEvent.setIp(ip);
+        clientEvent.setPort(port);
 
-        assertEquals(clientId, clientEventMessage.getClientId());
-        assertEquals(channelId, clientEventMessage.getChannelId());
-        assertEquals(packetId, clientEventMessage.getPacketId());
-        assertEquals(ClientEventType.CONNECT, clientEventMessage.getEventType());
-        assertEquals(host, clientEventMessage.getHost());
-        assertEquals(ip, clientEventMessage.getIp());
-        assertEquals(port, clientEventMessage.getPort());
+        assertEquals(clientId, clientEvent.getClientId());
+        assertEquals(channelId, clientEvent.getChannelId());
+        assertEquals(packetId, clientEvent.getPacketId());
+        assertEquals(EventType.CLIENT_CONNECT, clientEvent.getEventType());
+        assertEquals(host, clientEvent.getHost());
+        assertEquals(ip, clientEvent.getIp());
+        assertEquals(port, clientEvent.getPort());
 
         String expectedJson = "{\"channelId\":\"testChannelId\",\"clientId\":\"testClientId\",\"eventTime\":" +
-                clientEventMessage.getEventTime() +
-                ",\"eventType\":\"CONNECT\",\"host\":\"testHost\",\"ip\":\"testIp\",\"packetId\":123,\"port\":8080}";
-        assertEquals(expectedJson, clientEventMessage.toString());
+                clientEvent.getEventTime() +
+                ",\"eventType\":\"CLIENT_CONNECT\",\"host\":\"testHost\",\"ip\":\"testIp\",\"packetId\":123,\"port\":8080}";
+        assertEquals(expectedJson, clientEvent.toString());
     }
 }

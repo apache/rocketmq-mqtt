@@ -60,9 +60,9 @@ public class Constants {
     public static final String EMPTY_SHARE_NAME = "";
 
     public static final String CLIENT_EVENT_TAG = "CLIENT_EVENT";
-    public static final String CLIENT_EVENT_FIRST_TOPIC = "mqtt_client_event_topic";
+    public static final String MQTT_SYSTEM_TOPIC = "%SYS_MQTT";
     public static final String CLIENT_EVENT_SECOND_TOPIC = "online_offline_event";
-    public static final String CLIENT_EVENT_ORIGIN_TOPIC = CLIENT_EVENT_FIRST_TOPIC
+    public static final String CLIENT_EVENT_ORIGIN_TOPIC = MQTT_SYSTEM_TOPIC
             + MQTT_TOPIC_DELIMITER + CLIENT_EVENT_SECOND_TOPIC;
     public static final int CLIENT_EVENT_BATCH_SIZE = 100;
 }

@@ -21,8 +21,8 @@ import com.alibaba.fastjson.JSON;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import org.apache.rocketmq.common.message.MessageClientIDSetter;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHook;
-import org.apache.rocketmq.mqtt.common.hook.ClientEventHookManager;
+import org.apache.rocketmq.mqtt.common.hook.EventHook;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
@@ -42,16 +42,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.apache.rocketmq.mqtt.common.model.Constants.CLIENT_EVENT_FIRST_TOPIC;
 import static org.apache.rocketmq.mqtt.common.model.Constants.CLIENT_EVENT_ORIGIN_TOPIC;
+import static org.apache.rocketmq.mqtt.common.model.Constants.MQTT_SYSTEM_TOPIC;
 import static org.apache.rocketmq.mqtt.common.model.Constants.PROPERTY_NAMESPACE;
 
 @Component
-public class ClientEventProcessor extends ClientEventHook {
+public class ClientEventProcessor extends EventHook {
     private static Logger logger = LoggerFactory.getLogger(ClientEventProcessor.class);
 
     @Resource
-    private ClientEventHookManager clientEventHookManager;
+    private EventHookManager eventHookManager;
 
     @Resource
     private LmqQueueStore lmqQueueStore;
@@ -65,7 +65,7 @@ public class ClientEventProcessor extends ClientEventHook {
     @PostConstruct
     @Override
     public void register() {
-        clientEventHookManager.addHook(this);
+        eventHookManager.addHook(this);
     }
 
     @Override
@@ -76,7 +76,7 @@ public class ClientEventProcessor extends ClientEventHook {
     }
 
     private CompletableFuture<StoreResult> put(List<MqttPublishMessage> eventPublishMessages) {
-        firstTopicManager.checkFirstTopicIfCreated(CLIENT_EVENT_FIRST_TOPIC);
+        firstTopicManager.checkFirstTopicIfCreated(MQTT_SYSTEM_TOPIC);
         String pubTopic = TopicUtils.normalizeTopic(CLIENT_EVENT_ORIGIN_TOPIC);
         Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, PROPERTY_NAMESPACE);
 

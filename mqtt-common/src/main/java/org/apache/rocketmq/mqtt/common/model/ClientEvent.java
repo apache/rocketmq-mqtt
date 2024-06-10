@@ -19,17 +19,18 @@ package org.apache.rocketmq.mqtt.common.model;
 
 import com.alibaba.fastjson.JSON;
 
-public class ClientEventMessage {
+public class ClientEvent {
     private String clientId;
     private String channelId;
-    private ClientEventType eventType;
+    private EventType eventType;
     private long eventTime;
     private String host;
     private String ip;
     private int port;
     private int packetId;
+    private String eventInfo;
 
-    public ClientEventMessage(ClientEventType eventType) {
+    public ClientEvent(EventType eventType) {
         this.eventType = eventType;
         this.eventTime = System.currentTimeMillis();
     }
@@ -38,7 +39,7 @@ public class ClientEventMessage {
         return clientId;
     }
 
-    public ClientEventMessage setClientId(String clientId) {
+    public ClientEvent setClientId(String clientId) {
         this.clientId = clientId;
         return this;
     }
@@ -47,7 +48,7 @@ public class ClientEventMessage {
         return channelId;
     }
 
-    public ClientEventMessage setChannelId(String channelId) {
+    public ClientEvent setChannelId(String channelId) {
         this.channelId = channelId;
         return this;
     }
@@ -56,16 +57,16 @@ public class ClientEventMessage {
         return packetId;
     }
 
-    public ClientEventMessage setPacketId(int packetId) {
+    public ClientEvent setPacketId(int packetId) {
         this.packetId = packetId;
         return this;
     }
 
-    public ClientEventType getEventType() {
+    public EventType getEventType() {
         return eventType;
     }
 
-    public ClientEventMessage setEventType(ClientEventType eventType) {
+    public ClientEvent setEventType(EventType eventType) {
         this.eventType = eventType;
         return this;
     }
@@ -74,7 +75,7 @@ public class ClientEventMessage {
         return eventTime;
     }
 
-    public ClientEventMessage setEventTime(long eventTime) {
+    public ClientEvent setEventTime(long eventTime) {
         this.eventTime = eventTime;
         return this;
     }
@@ -83,7 +84,7 @@ public class ClientEventMessage {
         return host;
     }
 
-    public ClientEventMessage setHost(String host) {
+    public ClientEvent setHost(String host) {
         this.host = host;
         return this;
     }
@@ -92,7 +93,7 @@ public class ClientEventMessage {
         return ip;
     }
 
-    public ClientEventMessage setIp(String ip) {
+    public ClientEvent setIp(String ip) {
         this.ip = ip;
         return this;
     }
@@ -101,8 +102,17 @@ public class ClientEventMessage {
         return port;
     }
 
-    public ClientEventMessage setPort(int port) {
+    public ClientEvent setPort(int port) {
         this.port = port;
+        return this;
+    }
+
+    public String getEventInfo() {
+        return eventInfo;
+    }
+
+    public ClientEvent setEventInfo(String eventInfo) {
+        this.eventInfo = eventInfo;
         return this;
     }
 

@@ -15,9 +15,28 @@
  * limitations under the License.
  */
 
-package org.apache.rocketmq.mqtt.common.model;
+package org.apache.rocketmq.mqtt.common.hook;
 
-public enum ClientEventType {
-    CONNECT,
-    DISCONNECT
+import io.netty.channel.Channel;
+import org.apache.rocketmq.mqtt.common.model.EventType;
+
+public interface EventHookManager {
+    /**
+     * add a hook
+     *
+     * @param eventHook
+     * @return
+     */
+    void addHook(EventHook eventHook);
+
+    /**
+     * put event
+     *
+     * @param channel
+     * @param eventType
+     * @param eventInfo
+     * @return
+     */
+    void putEvent(Channel channel, EventType eventType, String eventInfo);
+
 }

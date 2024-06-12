@@ -31,6 +31,7 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
@@ -70,7 +71,8 @@ public class MqttClientEventConsumer {
         System.out.printf("RocketMQ Consumer Started.%n");
     }
 
-    private static void subscribeWithMQTTConsumer() throws NoSuchAlgorithmException, InvalidKeyException {
+    private static void subscribeWithMQTTConsumer()
+            throws NoSuchAlgorithmException, InvalidKeyException, MqttException {
         String brokerUrl = "tcp://" + System.getenv("host") + ":1883";
         MemoryPersistence memoryPersistence = new MemoryPersistence();
         String recvClientId = "recv01";
@@ -135,7 +137,7 @@ public class MqttClientEventConsumer {
     }
 
     public static void main(String[] args)
-            throws MQClientException, NoSuchAlgorithmException, InvalidKeyException {
+            throws MQClientException, NoSuchAlgorithmException, InvalidKeyException, MqttException {
         subscribeWithRocketMQConsumer();
         subscribeWithMQTTConsumer();
     }

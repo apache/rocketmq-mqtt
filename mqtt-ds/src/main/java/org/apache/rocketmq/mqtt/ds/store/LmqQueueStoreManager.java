@@ -230,9 +230,60 @@ public class LmqQueueStoreManager implements LmqQueueStore {
         return result;
     }
 
+    @Override
+    public CompletableFuture<StoreResult> putMessage(Set<String> queues, List<Message> messageList) {
+        CompletableFuture<StoreResult> result = new CompletableFuture<>();
+
+        // Covert to RocketMQ Message
+        List<org.apache.rocketmq.common.message.Message> mqMessages = new ArrayList<>(messageList.size());
+        for (Message message : messageList) {
+            org.apache.rocketmq.common.message.Message mqMessage = toMQMessage(message);
+            mqMessage.setTags(Constants.CLIENT_EVENT_TAG);
+            mqMessage.putUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH,
+                StringUtils.join(
+                    queues.stream().map(s -> MixAll.LMQ_PREFIX + StringUtils.replace(s, "/", "%")).collect(Collectors.toSet()),
+                    MixAll.MULTI_DISPATCH_QUEUE_SPLITTER));
+            mqMessages.add(mqMessage);
+        }
+
+        try {
+            long start = System.currentTimeMillis();
+            defaultMQProducer.send(mqMessages,
+                new SendCallback() {
+                    @Override
+                    public void onSuccess(SendResult sendResult) {
+                        result.complete(toStoreResult(sendResult));
+                        long rt = System.currentTimeMillis() - start;
+                        StatUtil.addInvoke("eventBatchWrite", rt);
+                        collectEventReadWriteRt("eventBatchWrite", rt, true);
+                    }
+
+                    @Override
+                    public void onException(Throwable e) {
+                        logger.error("Put Client Events to RocketMQ LMQ error: ", e);
+                        result.completeExceptionally(e);
+                        long rt = System.currentTimeMillis() - start;
+                        StatUtil.addInvoke("eventBatchWrite", rt, false);
+                        collectEventReadWriteRt("eventBatchWrite", rt, false);
+                    }
+                });
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
+        }
+        return result;
+    }
+
     private void collectLmqReadWriteMatchActionRt(String action, long rt, boolean status) {
         try {
             MqttMetricsCollector.collectLmqReadWriteMatchActionRt(rt, action, String.valueOf(status));
+        } catch (PrometheusException e) {
+            logger.error("", e);
+        }
+    }
+
+    private void collectEventReadWriteRt(String action, long rt, boolean status) {
+        try {
+            MqttMetricsCollector.collectEventReadWriteRt(rt, action, String.valueOf(status));
         } catch (PrometheusException e) {
             logger.error("", e);
         }

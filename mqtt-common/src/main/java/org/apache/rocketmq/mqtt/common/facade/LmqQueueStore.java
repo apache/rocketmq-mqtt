@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.common.facade;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -36,6 +37,14 @@ public interface LmqQueueStore {
      * @return
      */
     CompletableFuture<StoreResult> putMessage(Set<String> queues, Message message);
+
+    /**
+     * put client event messages to RocketMQ LMQ
+     * @param queues
+     * @param messageList
+     * @return
+     */
+    CompletableFuture<StoreResult> putMessage(Set<String> queues, List<Message> messageList);
 
     /**
      * pull messages

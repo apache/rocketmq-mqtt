@@ -26,7 +26,9 @@ import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
@@ -51,6 +53,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private EventHookManager eventHookManager;
 
     @Resource
     private SessionLoop sessionLoop;
@@ -109,6 +114,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
                 channel.writeAndFlush(mqttConnAckMessage);
             });
             sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
+
+            // add client online event
+            eventHookManager.putEvent(channel, EventType.CLIENT_CONNECT, null);
 
             // save will message
             WillMessage willMessage = null;

@@ -26,7 +26,9 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
+import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.InFlyCache;
+import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -37,6 +39,9 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
     @Resource
     private InFlyCache inFlyCache;
 
+    @Resource
+    private SessionLoop sessionLoop;
+
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage) {
         return true;
@@ -46,12 +51,14 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
         final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
         String channelId = ChannelInfo.getId(ctx.channel());
+        Session session = sessionLoop.getSession(channelId);
 
         if (!inFlyCache.contains(InFlyCache.CacheType.PUB, channelId, variableHeader.messageId())) {
             ctx.channel().writeAndFlush(MqttMessageFactory.buildMqtt5PubCompMessage(
                     variableHeader.messageId(),
                     MqttReasonCodes.PubComp.PACKET_IDENTIFIER_NOT_FOUND.byteValue(),
                     MqttProperties.NO_PROPERTIES));
+            session.publishReceiveRefill();
             return;
         }
 
@@ -60,5 +67,6 @@ public class Mqtt5PubRelHandler implements MqttPacketHandler<MqttMessage> {
                 variableHeader.messageId(),
                 MqttReasonCodes.PubComp.SUCCESS.byteValue(),
                 MqttProperties.NO_PROPERTIES));
+        session.publishReceiveRefill();
     }
 }

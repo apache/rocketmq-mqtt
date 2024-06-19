@@ -217,6 +217,8 @@ public class Mqtt5ConnectHandler implements MqttPacketHandler<MqttConnectMessage
             props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER_AVAILABLE.value(), 0));
             props.add(new MqttProperties.IntegerProperty(SHARED_SUBSCRIPTION_AVAILABLE.value(), 0));
             props.add(new MqttProperties.IntegerProperty(TOPIC_ALIAS_MAXIMUM.value(), connectConf.getTopicAliasMaximum()));
+            // initial the server receive-maximum to the client by CONNACK
+            props.add(new MqttProperties.IntegerProperty(RECEIVE_MAXIMUM.value(), connectConf.getServerReceiveMaximum()));
 
             final MqttConnAckMessage mqttConnAckMessage = MqttMessageFactory.buildMqtt5ConnAckMessage(
                     MqttConnectReturnCode.CONNECTION_ACCEPTED,

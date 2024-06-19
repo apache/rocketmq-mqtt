@@ -19,7 +19,6 @@ package org.apache.rocketmq.mqtt.cs.channel;
 
 import io.netty.channel.Channel;
 
-
 public interface ChannelManager {
 
     /**
@@ -62,5 +61,4 @@ public interface ChannelManager {
      * @return
      */
     int totalConn();
-
 }

@@ -50,10 +50,13 @@ public class Mqtt5PubAckHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
+        // Refill the PUBLISH send quota
+        session.publishSendRefill();
+
         final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
         int messageId = variableHeader.messageId();
         retryDriver.unMountPublish(messageId, ChannelInfo.getId(ctx.channel()));
-        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
         pushAction.rollNextByAck(session, messageId);
     }
 }

@@ -176,5 +176,4 @@ public class DefaultChannelManager implements ChannelManager {
     public int totalConn() {
         return channelMap.size();
     }
-
 }

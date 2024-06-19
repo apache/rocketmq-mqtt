@@ -25,6 +25,7 @@ import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
@@ -40,6 +41,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Session {
     private static Logger logger = LoggerFactory.getLogger(Session.class);
@@ -57,6 +59,14 @@ public class Session {
     private Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
     private ConcurrentMap<Subscription, Map<Queue, LinkedHashSet<Message>>> sendingMessages = new ConcurrentHashMap<>(16);
     private ConcurrentMap<Subscription, Integer> loadStatusMap = new ConcurrentHashMap<>();
+    private ConnectConf connectConf;
+    // according to MQTT5.0 protocol, the Receive Maximum is 65535
+    private int serverReceiveMaximum = 65535;
+    // using to control Client's PUBLISH rate by MQTT-Server Receive Maximum
+    private AtomicInteger pubReceiveQuota = new AtomicInteger(serverReceiveMaximum);
+    private int clientReceiveMaximum = 65535;
+    // using to control MQTT-Server's PUBLISH rate by Subscribe-Client Receive Maximum
+    private AtomicInteger pubSendQuota = new AtomicInteger(clientReceiveMaximum);
 
     public Session() {
     }
@@ -75,6 +85,14 @@ public class Session {
 
     public void setChannel(Channel channel) {
         this.channel = channel;
+        // when loading channel, initial the pubSendQuota by Client Receive Maximum
+        initializePubSendQuota(this.channel);
+    }
+
+    public void setConnectConf(ConnectConf connectConf) {
+        this.connectConf = connectConf;
+        // allow users to configure the Server Receive Maximum
+        this.serverReceiveMaximum = connectConf.getServerReceiveMaximum();
     }
 
     public boolean isClean() {
@@ -485,6 +503,87 @@ public class Session {
 
     public boolean getPersistOffsetFlag() {
         return needPersistOffset.get();
+    }
+
+    private void initializePubSendQuota(Channel channel) {
+        this.clientReceiveMaximum = ChannelInfo.getReceiveMaximum(channel);
+        this.pubSendQuota.set(clientReceiveMaximum);
+    }
+
+    /**
+     * Refills the publish receive quota for the session.
+     * This method is typically called after a publish acknowledgement or other scenarios that refill the quota.
+     * @return true if the quota was successfully refilled, false otherwise.
+     */
+    public boolean publishReceiveRefill() {
+        /*
+         * Checking if the server's receive quota has reached the server's receive maximum limit.
+         * Considering the quota will be decremented by 1 in the publish operation,
+         * which is before the publish acknowledgement or other scenarios that refill the quota,
+         * if the quota has reached the maximum, there must be some error in the logic.
+         */
+        if (pubReceiveQuota.get() >= serverReceiveMaximum) {
+            logger.error("publish receive quota:{} occurs full error for clientId:{}",
+                    pubReceiveQuota, ChannelInfo.getId(channel));
+            return false;
+        }
+
+        pubReceiveQuota.incrementAndGet();
+        return true;
+    }
+
+    /**
+     * Tries to acquire the publish receive quota for the session.
+     * This method is typically called before a publish operation.
+     * @return true if the quota was successfully acquired, false otherwise.
+     */
+    public boolean publishReceiveTryAcquire() {
+        if (pubReceiveQuota.get() <= 0) {
+            logger.error("MQTT client:{} publish exceeds server ReceiveMaximum, receiveQuota:{}",
+                    ChannelInfo.getId(channel), pubReceiveQuota.get());
+            return false;
+        }
+
+        pubReceiveQuota.decrementAndGet();
+        return true;
+    }
+
+    /**
+     * Refills the publish send quota for the session.
+     * This method is typically called after a publish acknowledgement or other scenarios that refill the quota.
+     * @return true if the quota was successfully refilled, false otherwise.
+     */
+    public boolean publishSendRefill() {
+        /*
+         * Checking if the server's send quota has reached the client's receive maximum limit.
+         * Considering the quota will be decremented by 1 in the publish operation,
+         * which is before the publish acknowledgement or other scenarios that refill the quota,
+         * if the quota has reached the maximum, there must be some error in the logic.
+         */
+        if (pubSendQuota.get() >= clientReceiveMaximum) {
+            logger.error("publish send quota:{} occurs full error for clientId:{}",
+                    pubSendQuota, ChannelInfo.getId(channel));
+            return false;
+        }
+
+        pubSendQuota.incrementAndGet();
+        return true;
+    }
+
+    /**
+     * Tries to acquire the publish send quota for the session.
+     * This method is typically called before a publish operation.
+     * @return true if the quota was successfully acquired, false otherwise.
+     */
+    public boolean publishSendTryAcquire() {
+        if (pubSendQuota.get() <= 0) {
+            logger.error("MQTT server publishing to:{} exceeds client ReceiveMaximum, sendQuota:{}",
+                    ChannelInfo.getId(channel), pubSendQuota.get());
+            return false;
+        }
+
+        pubSendQuota.decrementAndGet();
+        return true;
     }
 }
 

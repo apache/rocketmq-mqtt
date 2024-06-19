@@ -50,13 +50,14 @@ public class Mqtt5PubCompHandler implements MqttPacketHandler<MqttMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, MqttMessage mqttMessage, HookResult upstreamHookResult) {
-        final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
-        String channelId = ChannelInfo.getId(ctx.channel());
+        Session session = sessionLoop.getSession(ChannelInfo.getId(ctx.channel()));
+        // Refill the PUBLISH send quota
+        session.publishSendRefill();
 
+        final MqttPubReplyMessageVariableHeader variableHeader = (MqttPubReplyMessageVariableHeader) mqttMessage.variableHeader();
         retryDriver.unMountPubRel(variableHeader.messageId(), ChannelInfo.getId(ctx.channel()));
 
         //The Packet Identifier becomes available for reuse once the Sender has received the PUBCOMP Packet.
-        Session session = sessionLoop.getSession(channelId);
         pushAction.rollNextByAck(session, variableHeader.messageId());
     }
 }

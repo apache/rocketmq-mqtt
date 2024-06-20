@@ -43,7 +43,11 @@ public enum MqttMetricsInfo {
     READ_WRITE_MATCH_ACTION_BYTES(Type.COUNTER, SubSystem.DS, "read_write_match_action_bytes", "lmq read write match action bytes.", null,
         "hostName", "hostIp", "topic", "action"),
     READ_WRITE_EVENT_BYTES(Type.COUNTER, SubSystem.DS, "read_write_event_bytes", "client event read write lmq bytes.", null,
-        "hostName", "hostIp", "topic", "action");
+        "hostName", "hostIp", "topic", "action"),
+    PROCESS_REQUEST_TPS(Type.COUNTER, SubSystem.DS, "process_request_tps", "ds process request tps.", null,
+        "hostName", "hostIp", "messageType"),
+    PUT_REQUEST_TPS(Type.COUNTER, SubSystem.DS, "put_request_tps", "ds topic put request tps.", null,
+        "hostName", "hostIp", "topic");
 
     private final Type type;
     private final SubSystem subSystem;

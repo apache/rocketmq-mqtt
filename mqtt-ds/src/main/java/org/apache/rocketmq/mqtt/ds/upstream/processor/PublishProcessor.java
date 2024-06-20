@@ -106,7 +106,7 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         message.setMsgId(msgId);
         message.setBornTimestamp(bornTime);
         message.setEmpty(isEmpty);
-        collectWriteBytes(message.getFirstTopic(), message.getPayload().length);
+        collectWriteBytesAndTps(message.getFirstTopic(), message.getPayload().length);
         return lmqQueueStore.putMessage(queueNames, message);
     }
 
@@ -118,9 +118,10 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         return put(ctx, message);
     }
 
-    private void collectWriteBytes(String topic, int length) {
+    private void collectWriteBytesAndTps(String topic, int length) {
         try {
             MqttMetricsCollector.collectReadWriteMatchActionBytes(length, topic, "put");
+            MqttMetricsCollector.collectPutRequestTps(1, topic);
         } catch (Throwable e) {
             logger.error("Collect prometheus error", e);
         }

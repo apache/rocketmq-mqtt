@@ -10,7 +10,7 @@ import java.util.List;
 
 public class CoAPDecoder extends ByteToMessageDecoder {
     @Override
-    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> list) throws Exception {
+    protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) throws Exception {
 
         // The length of CoAP message is at least 4 bytes.
         if (in.readableBytes() < 4) {
@@ -88,7 +88,7 @@ public class CoAPDecoder extends ByteToMessageDecoder {
             byte[] optionValue = new byte[optionLength];
             in.readBytes(optionValue);  // TODO: 这里再确认一下readBytes会不会出问题
 
-            list.add(new CoAPOption(optionNumber, optionValue));
+            options.add(new CoAPOption(optionNumber, optionValue));
         }
 
         // Handle payload
@@ -99,6 +99,6 @@ public class CoAPDecoder extends ByteToMessageDecoder {
         }
 
         CoAPMessage coAPMessage = new CoAPMessage(version, type, tokenLength, code, messageId, token, options, payload);
-
+        out.add(coAPMessage);
     }
 }

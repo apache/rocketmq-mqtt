@@ -85,6 +85,7 @@ public class MqttServer {
         start();
         startWs();
         startTls();
+        startCoap();
     }
 
     private void start() {
@@ -178,6 +179,10 @@ public class MqttServer {
             });
         wsServerBootstrap.bind();
         logger.warn("start mqtt ws server , port:{}", port);
+    }
+
+    private void startCoap() {
+        logger.warn("start mqtt coap server , port:{}", 5683);
     }
 
 }

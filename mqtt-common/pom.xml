@@ -73,6 +73,11 @@
             <artifactId>netty-all</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.netty.incubator</groupId>
+            <artifactId>netty-incubator-codec-native-quic</artifactId>
+            <classifier>${os.detected.classifier}</classifier>
+        </dependency>
+        <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-client</artifactId>
         </dependency>

@@ -28,7 +28,9 @@ import io.netty.handler.codec.mqtt.MqttFixedHeader;
 import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.DefaultChannelManager;
@@ -43,6 +45,7 @@ import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -66,6 +69,9 @@ public class TestMqttConnectHandler {
     @Mock
     private SessionLoop sessionLoop;
 
+    @Mock
+    private EventHookManager eventHookManager;
+
     @Before
     public void setUp() throws IllegalAccessException {
         MqttFixedHeader mqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNECT, false, MqttQoS.AT_MOST_ONCE, false, 0);
@@ -77,6 +83,7 @@ public class TestMqttConnectHandler {
         connectHandler = new MqttConnectHandler();
         FieldUtils.writeDeclaredField(connectHandler, "channelManager", channelManager, true);
         FieldUtils.writeDeclaredField(connectHandler, "sessionLoop", sessionLoop, true);
+        FieldUtils.writeDeclaredField(connectHandler, "eventHookManager", eventHookManager, true);
 
         when(ctx.channel()).thenReturn(channel);
     }
@@ -103,6 +110,7 @@ public class TestMqttConnectHandler {
         HookResult hookResult = new HookResult(HookResult.SUCCESS, Remark.SUCCESS, null);
         doReturn(false).when(channel).isActive();
         doNothing().when(sessionLoop).loadSession(any(), any());
+        doNothing().when(eventHookManager).putEvent(any(), eq(EventType.CLIENT_CONNECT), any());
 
         connectHandler.doHandler(ctx, connectMessage, hookResult);
 
@@ -120,6 +128,7 @@ public class TestMqttConnectHandler {
         HookResult hookResult = new HookResult(HookResult.SUCCESS, Remark.SUCCESS, null);
         doReturn(true).when(channel).isActive();
         doNothing().when(sessionLoop).loadSession(any(), any());
+        doNothing().when(eventHookManager).putEvent(any(), eq(EventType.CLIENT_CONNECT), any());
 
         connectHandler.doHandler(ctx, connectMessage, hookResult);
 

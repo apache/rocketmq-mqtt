@@ -27,7 +27,6 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.protocol.body.Connection;
 import org.apache.rocketmq.remoting.protocol.body.ConsumerConnection;
 import org.apache.rocketmq.tools.admin.DefaultMQAdminExt;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -36,12 +35,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestMetaPersistManagerSample {
+
     private static final String RMQ_NAMESPACE = "LMQ";
+
     private static final String KEY_LMQ_ALL_FIRST_TOPICS = "ALL_FIRST_TOPICS";
 
     @Test
@@ -64,8 +66,8 @@ public class TestMetaPersistManagerSample {
         when(defaultMQAdminExt.getKVConfig(RMQ_NAMESPACE,firstTopic)).thenReturn(wildcards);
         when(defaultMQAdminExt.examineConsumerConnectionInfo(anyString())).thenReturn(consumerConnection);
         MethodUtils.invokeMethod(metaPersistManagerSample, true, "refreshMeta");
-        Assert.assertTrue(firstTopic.equals(metaPersistManagerSample.getAllFirstTopics().iterator().next()));
-        Assert.assertTrue(TopicUtils.normalizeTopic(wildcards).equals(metaPersistManagerSample.getWildcards(firstTopic).iterator().next()));
-        Assert.assertTrue(node.equals(metaPersistManagerSample.getConnectNodeSet().iterator().next()));
+        assertEquals(firstTopic, metaPersistManagerSample.getAllFirstTopics().iterator().next());
+        assertEquals(TopicUtils.normalizeTopic(wildcards), metaPersistManagerSample.getWildcards(firstTopic).iterator().next());
+        assertEquals("localhost", metaPersistManagerSample.getConnectNodeSet().iterator().next());
     }
 }

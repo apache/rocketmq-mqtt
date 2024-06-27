@@ -2,16 +2,20 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToMessageDecoder;
 import org.apache.rocketmq.mqtt.cs.config.CoAPConf;
 import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CoAPDecoder extends ByteToMessageDecoder {
+public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
     @Override
-    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+    public void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
+
+        ByteBuf in = packet.content();
 
         // The length of CoAP message is at least 4 bytes.
         if (in.readableBytes() < 4) {

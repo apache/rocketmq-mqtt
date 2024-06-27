@@ -3,6 +3,7 @@ package org.apache.rocketmq.mqtt.cs.test.protocol.coap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPDecoder;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPMessage;
@@ -13,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,10 +44,11 @@ public class TestCoAPDecoder {
     public void testDecodeCompleteMessage() {
         ByteBuf in = Unpooled.buffer();
         in.writeBytes(new byte[]{(byte)0x44, (byte)0x01, (byte)0x04, (byte)0xD2, 1, 2, 3, 4, (byte)0x54, 5, 6, 7, 8, (byte)0xFF, 0, 1});
-
+        InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", 5683);
+        DatagramPacket packet = new DatagramPacket(in, remoteAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, in, out);
+            coAPDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -60,9 +64,11 @@ public class TestCoAPDecoder {
         ByteBuf in = Unpooled.buffer();
         // Less than 4 bytes, which is the minimum length for a CoAP message
         in.writeByte(0x40);
+        InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", 5683);
+        DatagramPacket packet = new DatagramPacket(in, remoteAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, in, out);
+            coAPDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -77,9 +83,11 @@ public class TestCoAPDecoder {
         ByteBuf in = Unpooled.buffer();
         // Invalid version field (assuming CoAP version must be 1 as per RFC 7252)
         in.writeBytes(new byte[]{(byte)0x80, 0x00, 0x00, 0x3C});
+        InetSocketAddress remoteAddress = new InetSocketAddress("127.0.0.1", 5683);
+        DatagramPacket packet = new DatagramPacket(in, remoteAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, in, out);
+            coAPDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }

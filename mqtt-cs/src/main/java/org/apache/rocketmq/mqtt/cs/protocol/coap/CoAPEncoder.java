@@ -2,7 +2,13 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.DatagramPacketDecoder;
+import io.netty.handler.codec.DatagramPacketEncoder;
 import io.netty.handler.codec.MessageToByteEncoder;
+
+import java.net.InetSocketAddress;
+
 
 public class CoAPEncoder extends MessageToByteEncoder<CoAPMessage> {
     @Override
@@ -48,6 +54,10 @@ public class CoAPEncoder extends MessageToByteEncoder<CoAPMessage> {
             out.writeByte((byte)0xFF);
             out.writeBytes(msg.getPayload());
         }
+
+        // Send Response
+//        DatagramPacket responsePacket = new DatagramPacket(out, ctx.channel().remoteAddress());
+//        ctx.writeAndFlush(responsePacket);
 
     }
 

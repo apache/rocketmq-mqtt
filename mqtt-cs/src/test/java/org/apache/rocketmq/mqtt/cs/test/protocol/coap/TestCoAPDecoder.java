@@ -40,7 +40,7 @@ public class TestCoAPDecoder {
     @Test
     public void testDecodeCompleteMessage() {
         ByteBuf in = Unpooled.buffer();
-        in.writeBytes(new byte[]{0x40, 0x01, 0x00, 0x3C, (byte)0xFF, 0x3E, 0x00, 0x08});
+        in.writeBytes(new byte[]{(byte)0x44, (byte)0x01, (byte)0x04, (byte)0xD2, 1, 2, 3, 4, (byte)0x54, 5, 6, 7, 8, (byte)0xFF, 0, 1});
 
 
         try {

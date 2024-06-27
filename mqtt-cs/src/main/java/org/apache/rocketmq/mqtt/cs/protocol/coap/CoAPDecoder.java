@@ -4,13 +4,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.rocketmq.mqtt.cs.config.CoAPConf;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class CoAPDecoder extends ByteToMessageDecoder {
     @Override
-    public void decode(ChannelHandlerContext channelHandlerContext, ByteBuf in, List<Object> out) throws Exception {
+    public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
         // The length of CoAP message is at least 4 bytes.
         if (in.readableBytes() < 4) {
@@ -75,6 +76,17 @@ public class CoAPDecoder extends ByteToMessageDecoder {
                 optionDelta += 255 + in.readUnsignedShort();
             } else if (optionDelta == 15) {
                 // TODO: optionDelta不应该为15，返回4.00客户端错误
+                CoAPMessage response = new CoAPMessage(
+                        CoAPConf.VERSION,
+                        CoAPConf.TYPE.RST.getValue(),
+                        tokenLength,
+                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        messageId,
+                        token,
+                        null,
+                        null
+                );
+                ctx.writeAndFlush(response);
                 return;
             }
 

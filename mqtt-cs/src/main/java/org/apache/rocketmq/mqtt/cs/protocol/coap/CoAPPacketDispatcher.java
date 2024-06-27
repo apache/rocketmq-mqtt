@@ -5,7 +5,13 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 public class CoAPPacketDispatcher extends SimpleChannelInboundHandler<CoAPMessage> {
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, CoAPMessage coAPMessage) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, CoAPMessage msg) throws Exception {
 
     }
+
+    // Type: CON/NON/ACK/RST
+    // Code: GET/POST/PUT/DELETE
+    // Handle Options
+    // Handle Payload
+
 }

@@ -24,6 +24,10 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import org.apache.commons.lang3.StringUtils;
+import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.incubator.codec.quic.QuicSslContext;
+import io.netty.incubator.codec.quic.QuicSslContextBuilder;
+import java.security.cert.CertificateException;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.srvutil.FileWatchService;
 import org.slf4j.Logger;
@@ -50,12 +54,21 @@ public class SslFactory {
 
     private FileWatchService fileWatchService;
 
+    private QuicSslContext quicSslContext;
+
     @PostConstruct
     private void initSslContext() {
         if (!connectConf.isEnableTlsSever()) {
+            LOG.info("SSL/TLS is disabled");
             return;
         }
 
+        SslProvider sslProvider = OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK;
+        if (OpenSsl.isAvailable()) {
+            LOG.info("OpenSSL is available");
+        } else {
+            LOG.warn("OpenSSL is NOT available, falling back to JDK SslEngine");
+        }
         try {
             File sslCertFile = new File(connectConf.getSslServerCertFile());
             File sslKeyFile = new File(connectConf.getSslServerKeyFile());
@@ -64,14 +77,20 @@ public class SslFactory {
             SslContextBuilder contextBuilder = SslContextBuilder.forServer(sslCertFile, sslKeyFile,
                     StringUtils.isBlank(password) ? null : password);
             contextBuilder.clientAuth(ClientAuth.OPTIONAL);
-            contextBuilder.sslProvider(OpenSsl.isAvailable() ? SslProvider.OPENSSL : SslProvider.JDK);
+            contextBuilder.sslProvider(sslProvider);
             if (connectConf.isNeedClientAuth()) {
                 LOG.info("client tls authentication is required.");
                 contextBuilder.clientAuth(ClientAuth.REQUIRE);
                 contextBuilder.trustManager(new File(connectConf.getSslCaCertFile()));
             }
             sslContext = contextBuilder.build();
-        } catch (IOException e) {
+
+            SelfSignedCertificate selfSignedCertificate = new SelfSignedCertificate();
+            quicSslContext = QuicSslContextBuilder.forServer(
+                    selfSignedCertificate.privateKey(), null, selfSignedCertificate.certificate())
+                .applicationProtocols("mqtt")
+                .build();
+        } catch (IOException | CertificateException e) {
             throw new RuntimeException("failed to initialize ssl context.", e);
         }
     }
@@ -133,5 +152,12 @@ public class SslFactory {
         return sslEngine;
     }
 
+    public SslContext getSslContext() {
+        return sslContext;
+    }
+
+    public QuicSslContext getQuicSslContext() {
+        return quicSslContext;
+    }
 }
 

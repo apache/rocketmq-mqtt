@@ -88,7 +88,7 @@ public class TestNotifyManager {
 
     @Before
     public void SetUp() throws IllegalAccessException {
-        notifyManager = new NotifyManager();
+        notifyManager = new NotifyManager(serviceConf);
         FieldUtils.writeDeclaredField(notifyManager, "metaPersistManager", metaPersistManager, true);
         FieldUtils.writeDeclaredField(notifyManager, "firstTopicManager", firstTopicManager, true);
         FieldUtils.writeDeclaredField(notifyManager, "defaultMQPushConsumer", defaultMQPushConsumer, true);

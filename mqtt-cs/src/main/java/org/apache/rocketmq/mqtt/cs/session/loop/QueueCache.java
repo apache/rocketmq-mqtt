@@ -33,6 +33,7 @@ import org.apache.rocketmq.mqtt.common.util.StatUtil;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
+import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -52,6 +53,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static org.apache.rocketmq.mqtt.cs.session.loop.PullResultStatus.DONE;
 import static org.apache.rocketmq.mqtt.cs.session.loop.PullResultStatus.LATER;
@@ -183,7 +185,7 @@ public class QueueCache {
                                         CompletableFuture<PullResult> callBackResult) {
         if (subscription.isP2p() || subscription.isRetry()) {
             StatUtil.addPv("NotPullCache", 1);
-            collectorPullCacheStatus("NotPullCache");
+            collectorPullCacheStatus("NotPullCache", null);
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -198,7 +200,7 @@ public class QueueCache {
         CacheEntry cacheEntry = cache.getIfPresent(queue);
         if (cacheEntry == null) {
             StatUtil.addPv("NoPullCache", 1);
-            collectorPullCacheStatus("NotPullCache");
+            collectorPullCacheStatus("NotPullCache", null);
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -206,7 +208,7 @@ public class QueueCache {
         if (cacheEntry.loading.get()) {
             if (System.currentTimeMillis() - cacheEntry.startLoadingT > 1000) {
                 StatUtil.addPv("LoadPullCacheTimeout", 1);
-                collectorPullCacheStatus("LoadPullCacheTimeout");
+                collectorPullCacheStatus("LoadPullCacheTimeout", null);
                 CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
                 callbackResult(pullResult, callBackResult);
                 return DONE;
@@ -217,12 +219,12 @@ public class QueueCache {
         List<Message> cacheMsgList = cacheEntry.messageList;
         if (cacheMsgList.isEmpty()) {
             if (loadEvent.get(queue) != null) {
-                collectorPullCacheStatus("EmptyPullCacheLATER");
+                collectorPullCacheStatus("EmptyPullCacheLATER", cacheMsgList);
                 StatUtil.addPv("EmptyPullCacheLATER", 1);
                 return LATER;
             }
             StatUtil.addPv("EmptyPullCache", 1);
-            collectorPullCacheStatus("EmptyPullCache");
+            collectorPullCacheStatus("EmptyPullCache", cacheMsgList);
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -230,7 +232,7 @@ public class QueueCache {
 
         if (queueOffset.getOffset() < cacheMsgList.get(0).getOffset()) {
             StatUtil.addPv("OutPullCache", 1);
-            collectorPullCacheStatus("OutPullCache");
+            collectorPullCacheStatus("OutPullCache", cacheMsgList);
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -249,11 +251,11 @@ public class QueueCache {
         if (resultMsgs.isEmpty()) {
             if (loadEvent.get(queue) != null) {
                 StatUtil.addPv("PullCacheLATER", 1);
-                collectorPullCacheStatus("PullCacheLATER");
+                collectorPullCacheStatus("PullCacheLATER", resultMsgs);
                 return LATER;
             }
             StatUtil.addPv("OutPullCache2", 1);
-            collectorPullCacheStatus("OutPullCache2");
+            collectorPullCacheStatus("OutPullCache2", resultMsgs);
             CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(toFirstTopic(subscription), queue, queueOffset, count);
             callbackResult(pullResult, callBackResult);
             return DONE;
@@ -262,18 +264,31 @@ public class QueueCache {
         pullResult.setMessageList(resultMsgs);
         callBackResult.complete(pullResult);
         StatUtil.addPv("PullFromCache", 1);
-        collectorPullCacheStatus("PullFromCache");
+        collectorPullCacheStatus("PullFromCache", resultMsgs);
         if (loadEvent.get(queue) != null) {
             return LATER;
         }
         return DONE;
     }
 
-    private void collectorPullCacheStatus(String pullCacheStatus) {
+    private void collectorPullCacheStatus(String pullCacheStatus, List<Message> resultMsgs) {
         try {
             MqttMetricsCollector.collectPullCacheStatusTps(1, pullCacheStatus);
+            collectReadBytes(resultMsgs);
         } catch (Throwable e) {
             logger.error("", e);
+        }
+    }
+
+    private void collectReadBytes(List<Message> msgFoundList) throws PrometheusException {
+        if (null == msgFoundList || msgFoundList.isEmpty()) {
+            return;
+        }
+        Map<String, Integer> maps = msgFoundList.stream()
+                .collect(Collectors.groupingBy(Message::getFirstTopic,
+                        Collectors.summingInt(msg -> msg.getPayload().length)));
+        for (Map.Entry<String, Integer> entry : maps.entrySet()) {
+            MqttMetricsCollector.collectReadWriteMatchActionBytes(entry.getValue(), entry.getKey(), "pullCache");
         }
     }
 

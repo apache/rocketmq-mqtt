@@ -30,6 +30,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
@@ -113,7 +114,7 @@ public class TestPublishProcessor {
         CompletableFuture<StoreResult> storeResultFuture = new CompletableFuture<>();
         StoreResult storeResult = new StoreResult();
         storeResultFuture.complete(storeResult);
-        when(lmqQueueStore.putMessage(anySet(), any())).thenReturn(storeResultFuture);
+        when(lmqQueueStore.putMessage(anySet(), (Message) any())).thenReturn(storeResultFuture);
 
     }
 

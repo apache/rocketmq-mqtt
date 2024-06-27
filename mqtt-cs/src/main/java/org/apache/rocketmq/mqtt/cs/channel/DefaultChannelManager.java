@@ -22,6 +22,8 @@ import io.netty.handler.codec.mqtt.MqttReasonCodes;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timeout;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.mqtt.common.hook.EventHookManager;
+import org.apache.rocketmq.mqtt.common.model.EventType;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.Session;
@@ -29,6 +31,8 @@ import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.apache.rocketmq.mqtt.cs.session.infly.RetryDriver;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
+import org.apache.rocketmq.mqtt.exporter.collector.MqttMetricsCollector;
+import org.apache.rocketmq.mqtt.exporter.exception.PrometheusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -63,6 +67,9 @@ public class DefaultChannelManager implements ChannelManager {
     @Resource
     private WillLoop willLoop;
 
+    @Resource
+    private EventHookManager eventHookManager;
+
     @PostConstruct
     public void init() {
         sessionLoop.setChannelManager(this);
@@ -85,6 +92,7 @@ public class DefaultChannelManager implements ChannelManager {
         ChannelInfo.touch(channel);
         channelMap.put(ChannelInfo.getId(channel), channel);
         hashedWheelTimer.newTimeout(timeout -> doPing(timeout, channel), minBlankChannelSeconds, TimeUnit.SECONDS);
+        collectConnectionsSize();
     }
 
     private void doPing(Timeout timeout, Channel channel) {
@@ -118,7 +126,7 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Override
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason) {
-        unloadResource(channel, reason);
+        unloadResource(channel, reason, from);
 
         if (channel.isActive()) {
             channel.close();
@@ -128,7 +136,7 @@ public class DefaultChannelManager implements ChannelManager {
 
     @Override
     public void closeConnect(Channel channel, ChannelCloseFrom from, String reason, byte reasonCode) {
-        unloadResource(channel, reason);
+        unloadResource(channel, reason, from);
 
         if (channel.isActive()) {
             channel.writeAndFlush(MqttMessageFactory.buildMqtt5DisconnectMessage(reasonCode, reason));
@@ -142,7 +150,7 @@ public class DefaultChannelManager implements ChannelManager {
         closeConnect(channel, ChannelCloseFrom.SERVER, reason, MqttReasonCodes.Disconnect.PROTOCOL_ERROR.byteValue());
     }
 
-    public void unloadResource(Channel channel, String reason) {
+    public void unloadResource(Channel channel, String reason, ChannelCloseFrom from) {
         String clientId = ChannelInfo.getClientId(channel);
         String channelId = ChannelInfo.getId(channel);
         willLoop.closeConnect(channel, clientId, reason);
@@ -156,6 +164,17 @@ public class DefaultChannelManager implements ChannelManager {
             channelMap.remove(channelId);
             ChannelInfo.clear(channel);
         }
+
+        if (channel.isActive()) {
+            channel.close();
+        }
+
+        // add client offline event
+        eventHookManager.putEvent(channel, EventType.CLIENT_DISCONNECT,
+                "Event of CLIENT_DISCONNECT from " + from + " and the reason is " + reason);
+
+        logger.info("Close connect of channel {} from {} by reason of {}", channel, from, reason);
+        collectConnectionsSize();
     }
 
     @Override
@@ -175,5 +194,13 @@ public class DefaultChannelManager implements ChannelManager {
     @Override
     public int totalConn() {
         return channelMap.size();
+    }
+
+    private void collectConnectionsSize() {
+        try {
+            MqttMetricsCollector.collectConnectionsSize(totalConn());
+        } catch (PrometheusException e) {
+            logger.error("Collect prometheus error", e);
+        }
     }
 }

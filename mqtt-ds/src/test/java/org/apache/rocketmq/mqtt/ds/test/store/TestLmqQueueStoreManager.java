@@ -66,10 +66,12 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -84,6 +86,7 @@ import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.TOPIC_
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -138,6 +141,20 @@ public class TestLmqQueueStoreManager {
                 org.apache.rocketmq.common.message.Message.class);
         verify(defaultMQProducer).send(argumentCaptor.capture(), any(SendCallback.class));
         Assert.assertTrue(null != argumentCaptor.getValue().getUserProperty(MessageConst.PROPERTY_INNER_MULTI_DISPATCH));
+    }
+
+    @Test
+    public void testPutEventMessage() throws MQBrokerException, RemotingException, InterruptedException, MQClientException {
+        Set<String> queues = new HashSet<>(Arrays.asList("client_event_test"));
+        Message message = new Message();
+        message.setOriginTopic("event");
+        message.putUserProperty(Message.extPropertyQoS, "1");
+        message.putUserProperty(Message.extPropertyClientId, "clientId");
+        List<Message> messageList = new ArrayList<>();
+        messageList.add(message);
+
+        lmqQueueStoreManager.putMessage(queues, messageList);
+        verify(defaultMQProducer, times(1)).send(anyList(), any(SendCallback.class));
     }
 
     @Test

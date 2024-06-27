@@ -165,6 +165,30 @@ public class MqttMetricsCollector {
         collect(MqttMetricsInfo.READ_WRITE_MATCH_ACTION_RT, val, labels);
     }
 
+    public static void collectEventReadWriteRt(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_EVENT_RT, val, labels);
+    }
+
+    public static void collectEventReadWriteBytes(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_EVENT_BYTES, val, labels);
+    }
+
+    public static void collectConnectionsSize(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.CONNECTIONS_SIZE, val, labels);
+    }
+
+    public static void collectReadWriteMatchActionBytes(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.READ_WRITE_MATCH_ACTION_BYTES, val, labels);
+    }
+
+    public static void collectProcessRequestTps(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.PROCESS_REQUEST_TPS, val, labels);
+    }
+
+    public static void collectPutRequestTps(long val, String... labels) throws PrometheusException {
+        collect(MqttMetricsInfo.PUT_REQUEST_TPS, val, labels);
+    }
+
     private static String labels2String(String... labels) {
         StringBuilder sb = new StringBuilder(128);
         for (String label : labels) {

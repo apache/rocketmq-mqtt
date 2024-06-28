@@ -49,6 +49,7 @@ public class ConnectConf {
     private int mqttWsPort = 8888;
 
     private int quicPort = 14567;
+    private boolean enableQuic = false;
 
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
@@ -343,5 +344,13 @@ public class ConnectConf {
 
     public void setQuicPort(int quicPort) {
         this.quicPort = quicPort;
+    }
+
+    public boolean isEnableQuic() {
+        return enableQuic;
+    }
+
+    public void setEnableQuic(boolean enableQuic) {
+        this.enableQuic = enableQuic;
     }
 }

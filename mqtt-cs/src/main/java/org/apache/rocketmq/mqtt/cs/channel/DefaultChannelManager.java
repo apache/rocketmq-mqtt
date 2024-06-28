@@ -170,8 +170,10 @@ public class DefaultChannelManager implements ChannelManager {
         }
 
         // add client offline event
-        eventHookManager.putEvent(channel, EventType.CLIENT_DISCONNECT,
-                "Event of CLIENT_DISCONNECT from " + from + " and the reason is " + reason);
+        if (!StringUtils.isBlank(ChannelInfo.getClientId(channel))) {
+            eventHookManager.putEvent(channel, EventType.CLIENT_DISCONNECT,
+                    "Event of CLIENT_DISCONNECT from " + from + " and the reason is " + reason);
+        }
 
         logger.info("Close connect of channel {} from {} by reason of {}", channel, from, reason);
         collectConnectionsSize();

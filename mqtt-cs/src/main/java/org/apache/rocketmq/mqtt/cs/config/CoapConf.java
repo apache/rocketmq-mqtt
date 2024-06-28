@@ -2,24 +2,24 @@ package org.apache.rocketmq.mqtt.cs.config;
 
 import java.util.EnumSet;
 
-public class CoAPConf {
+public class CoapConf {
     /**
-     * CoAP Version
+     * Coap Version
      */
     public static final int VERSION = 1;
 
     /**
-     * CoAP Division Marker for Payload
+     * Coap Division Marker for Payload
      */
     public static final int PAYLOAD_MARKER = 0xFF;
 
     /**
-     * CoAP Token Length must be 0~8
+     * Coap Token Length must be 0~8
      */
     public static final int MAX_TOKEN_LENGTH = 8;
 
     /**
-     * CoAP Type,
+     * Coap Type,
      * Four types: CON, NON, ACK, RST
      */
     public enum TYPE {
@@ -40,7 +40,7 @@ public class CoAPConf {
     }
 
     /**
-     * CoAP Request Code for 0.xx,
+     * Coap Request Code for 0.xx,
      * Four types: GET, POST, PUT, DELETE
      */
     public enum REQUEST_CODE {
@@ -61,7 +61,7 @@ public class CoAPConf {
     }
 
     /**
-     * CoAP Response Code for 2.xx Success:
+     * Coap Response Code for 2.xx Success:
      * 2.01: Created, 2.02: Deleted, 2.03: Valid, 2.04: Changed, 2.05: Content
      */
     public enum RESPONSE_CODE_SUCCESS {
@@ -83,7 +83,7 @@ public class CoAPConf {
     }
 
     /**
-     * CoAP Response Code for 4.xx Client Error:
+     * Coap Response Code for 4.xx Client Error:
      * 4.00: Bad Request, 4.01: Unauthorized, 4.02: Bad Option, 4.03: Forbidden, 4.04: Not Found, 4.05: Method Not Allowed, 4.06: Not Acceptable, 4.12: Precondition Failed, 4.13: Request Entity Too Large, 4.15: Unsupported Content-Format
      */
     public enum RESPONSE_CODE_CLIENT_ERROR {
@@ -110,7 +110,7 @@ public class CoAPConf {
     }
 
     /**
-     * CoAP Response Code for 5.xx Server Error:
+     * Coap Response Code for 5.xx Server Error:
      * 5.00: Internal Server Error, 5.01: Not Implemented, 5.02: Bad Gateway, 5.03: Service Unavailable, 5.04: Gateway Timeout, 5.05: Proxying Not Supported
      */
     public enum RESPONSE_CODE_SERVER_ERROR {
@@ -133,7 +133,7 @@ public class CoAPConf {
     }
 
     /**
-     * CoAP Option Number
+     * Coap Option Number
      */
     public enum OPTION_NUMBER {
         IF_MATCH(1),

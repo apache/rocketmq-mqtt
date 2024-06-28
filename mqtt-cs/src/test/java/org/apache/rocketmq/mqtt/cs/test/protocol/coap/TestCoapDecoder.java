@@ -4,9 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.ByteToMessageDecoder;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPDecoder;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPMessage;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapDecoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapMessage;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,13 +23,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestCoAPDecoder {
+public class TestCoapDecoder {
 
     @Mock
     private ChannelHandlerContext channelHandlerContext;
 
     @InjectMocks
-    private CoAPDecoder coAPDecoder;
+    private CoapDecoder coapDecoder;
 
     private List<Object> out;
 
@@ -50,28 +48,28 @@ public class TestCoAPDecoder {
         DatagramPacket packet = new DatagramPacket(in, recipientAddress, senderAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, packet, out);
+            coapDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         assertEquals(1, out.size());
         assertNotNull(out.get(0));
-        assertTrue(out.get(0) instanceof CoAPMessage);
+        assertTrue(out.get(0) instanceof CoapMessage);
 
     }
 
     @Test
     public void testDecodeInsufficientBytes() {
         ByteBuf in = Unpooled.buffer();
-        // Less than 4 bytes, which is the minimum length for a CoAP message
+        // Less than 4 bytes, which is the minimum length for a Coap message
         in.writeByte(0x40);
         InetSocketAddress senderAddress = new InetSocketAddress("195.0.30.1", 5683);
         InetSocketAddress recipientAddress = new InetSocketAddress("127.0.0.1", 5683);
         DatagramPacket packet = new DatagramPacket(in, recipientAddress, senderAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, packet, out);
+            coapDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -84,14 +82,14 @@ public class TestCoAPDecoder {
     @Test
     public void testDecodeInvalidVersion() {
         ByteBuf in = Unpooled.buffer();
-        // Invalid version field (assuming CoAP version must be 1 as per RFC 7252)
+        // Invalid version field (assuming Coap version must be 1 as per RFC 7252)
         in.writeBytes(new byte[]{(byte)0x80, 0x00, 0x00, 0x3C});
         InetSocketAddress senderAddress = new InetSocketAddress("195.0.30.1", 5683);
         InetSocketAddress recipientAddress = new InetSocketAddress("127.0.0.1", 5683);
         DatagramPacket packet = new DatagramPacket(in, recipientAddress, senderAddress);
 
         try {
-            coAPDecoder.decode(channelHandlerContext, packet, out);
+            coapDecoder.decode(channelHandlerContext, packet, out);
         } catch (Exception e) {
             e.printStackTrace();
         }

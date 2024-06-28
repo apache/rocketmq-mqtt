@@ -35,7 +35,7 @@ public class ConnectConf {
     private int mqttPort = 1883;
     private int mqttTlsPort = 8883;
     private int mqttWsPort = 8888;
-    private int coAPPort = 5683;
+    private int coapPort = 5683;
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
     private String sslCaCertFile;
@@ -110,8 +110,8 @@ public class ConnectConf {
         return mqttWsPort;
     }
 
-    public int getCoAPPort() {
-        return coAPPort;
+    public int getCoapPort() {
+        return coapPort;
     }
 
     public boolean isEnableTlsSever() {
@@ -134,8 +134,8 @@ public class ConnectConf {
         this.mqttWsPort = mqttWsPort;
     }
 
-    public void setCoAPPort(int coAPPort) {
-        this.coAPPort = coAPPort;
+    public void setCoapPort(int coapPort) {
+        this.coapPort = coapPort;
     }
 
     public int getMaxPacketSizeInByte() {

@@ -26,7 +26,6 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.DatagramPacketDecoder;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.mqtt.MqttDecoder;
@@ -35,14 +34,14 @@ import io.netty.handler.codec.mqtt.MqttVersion;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapHandler;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPDecoder;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapDecoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapEncoder;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.ChannelPipelineLazyInit;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttVersionHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPPacketDispatcher;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.Mqtt5PacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
@@ -63,7 +62,7 @@ public class MqttServer {
     private ServerBootstrap serverBootstrap = new ServerBootstrap();
     private ServerBootstrap wsServerBootstrap = new ServerBootstrap();
     private ServerBootstrap tlsServerBootstrap = new ServerBootstrap();
-    private Bootstrap coAPBootstrap = new Bootstrap();
+    private Bootstrap coapBootstrap = new Bootstrap();
 
     @Resource
     private ConnectHandler connectHandler;
@@ -91,7 +90,7 @@ public class MqttServer {
         start();
         startWs();
         startTls();
-        startCoAP();
+        startCoap();
     }
 
     private void start() {
@@ -187,11 +186,11 @@ public class MqttServer {
         logger.warn("start mqtt ws server , port:{}", port);
     }
 
-    private void startCoAP() {
-        int port = connectConf.getCoAPPort();
+    private void startCoap() {
+        int port = connectConf.getCoapPort();
 
-        // coAPServerBootStrap初始化
-        coAPBootstrap
+        // coapServerBootStrap初始化
+        coapBootstrap
                 .group(new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
                 .channel(NioDatagramChannel.class)
                 .option(ChannelOption.SO_BROADCAST, true)   // 广播设置
@@ -202,16 +201,16 @@ public class MqttServer {
                     @Override
                     protected void initChannel(DatagramChannel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast("coAP-handler", new CoAPHandler());
-                        pipeline.addLast("coAP-decoder", new CoAPDecoder());
-                        pipeline.addLast("coAP-encoder", new CoAPEncoder());
-                        pipeline.addLast("coAP-dispatcher", new CoAPPacketDispatcher());
+                        pipeline.addLast("coap-handler", new CoapHandler());
+                        pipeline.addLast("coap-decoder", new CoapDecoder());
+                        pipeline.addLast("coap-encoder", new CoapEncoder());
+                        pipeline.addLast("coap-dispatcher", new CoapPacketDispatcher());
                     }
                 });
 
         // bind
-        coAPBootstrap.bind();
-        logger.warn("start coAP server , port:{}", port);
+        coapBootstrap.bind();
+        logger.warn("start coap server , port:{}", port);
     }
 
 }

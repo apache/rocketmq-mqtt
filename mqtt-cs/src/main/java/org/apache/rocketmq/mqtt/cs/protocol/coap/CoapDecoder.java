@@ -3,23 +3,20 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
-import org.apache.rocketmq.mqtt.cs.config.CoAPConf;
-import org.checkerframework.checker.units.qual.C;
+import org.apache.rocketmq.mqtt.cs.config.CoapConf;
 
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
+public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
     @Override
     public void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) throws Exception {
 
         ByteBuf in = packet.content();
 
-        // The length of CoAP message is at least 4 bytes.
+        // The length of Coap message is at least 4 bytes.
         if (in.readableBytes() < 4) {
             // TODO: 包长度过小，返回4.00客户端错误
             return;
@@ -28,13 +25,13 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
         // Handle first byte, including version, type, and token length.
         int firstByte = in.readUnsignedByte();
         int version = (firstByte >> 6) & 0x03;
-        if (version != CoAPConf.VERSION) {
+        if (version != CoapConf.VERSION) {
             // TODO: 版本号不为1，，返回4.00客户端错误
             return;
         }
         int type = (firstByte >> 4) & 0x03;
         int tokenLength = firstByte & 0x0F;
-        if (tokenLength > CoAPConf.MAX_TOKEN_LENGTH) {
+        if (tokenLength > CoapConf.MAX_TOKEN_LENGTH) {
             // TODO: token长度过大，返回4.00客户端错误
             return;
         }
@@ -52,11 +49,11 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
         // Handle token
         if (in.readableBytes() < tokenLength) {
             // Return 4.00 Response
-            CoAPMessage response = new CoAPMessage(
-                    CoAPConf.VERSION,
-                    type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+            CoapMessage response = new CoapMessage(
+                    CoapConf.VERSION,
+                    type == CoapConf.TYPE.CON.getValue() ? CoapConf.TYPE.ACK.getValue() : CoapConf.TYPE.NON.getValue(),
                     tokenLength,
-                    CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                    CoapConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
                     messageId,
                     null,
                     null,
@@ -72,11 +69,11 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
         // Handle options
         int nextByte = 0;
         int optionNumber = 0;
-        List<CoAPOption> options = new ArrayList<CoAPOption>();
+        List<CoapOption> options = new ArrayList<CoapOption>();
         while (in.readableBytes() > 0) {
 
             nextByte = in.readUnsignedByte();
-            if (nextByte == CoAPConf.PAYLOAD_MARKER) {
+            if (nextByte == CoapConf.PAYLOAD_MARKER) {
                 break;
             }
 
@@ -89,11 +86,11 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 optionDelta += 255 + in.readUnsignedShort();
             } else if (optionDelta == 15) {
                 // Return 4.00 Response
-                CoAPMessage response = new CoAPMessage(
-                        CoAPConf.VERSION,
-                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                CoapMessage response = new CoapMessage(
+                        CoapConf.VERSION,
+                        type == CoapConf.TYPE.CON.getValue() ? CoapConf.TYPE.ACK.getValue() : CoapConf.TYPE.NON.getValue(),
                         tokenLength,
-                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        CoapConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
                         messageId,
                         token,
                         null,
@@ -107,13 +104,13 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
             optionNumber += optionDelta;    // current optionNumber = last optionNumber + optionDelta
 
-            if (!CoAPConf.OPTION_NUMBER.isValid(optionNumber)) {
+            if (!CoapConf.OPTION_NUMBER.isValid(optionNumber)) {
                 // Return 4.02 Response
-                CoAPMessage response = new CoAPMessage(
-                        CoAPConf.VERSION,
-                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                CoapMessage response = new CoapMessage(
+                        CoapConf.VERSION,
+                        type == CoapConf.TYPE.CON.getValue() ? CoapConf.TYPE.ACK.getValue() : CoapConf.TYPE.NON.getValue(),
                         tokenLength,
-                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_OPTION.getValue(),
+                        CoapConf.RESPONSE_CODE_CLIENT_ERROR.BAD_OPTION.getValue(),
                         messageId,
                         token,
                         null,
@@ -131,11 +128,11 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 optionLength += 255 + in.readUnsignedShort();
             } else if (optionLength == 15) {
                 // Return 4.00 Response
-                CoAPMessage response = new CoAPMessage(
-                        CoAPConf.VERSION,
-                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                CoapMessage response = new CoapMessage(
+                        CoapConf.VERSION,
+                        type == CoapConf.TYPE.CON.getValue() ? CoapConf.TYPE.ACK.getValue() : CoapConf.TYPE.NON.getValue(),
                         tokenLength,
-                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        CoapConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
                         messageId,
                         token,
                         null,
@@ -148,11 +145,11 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
             if (in.readableBytes() < optionLength) {
                 // Return 4.00 Response
-                CoAPMessage response = new CoAPMessage(
-                        CoAPConf.VERSION,
-                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                CoapMessage response = new CoapMessage(
+                        CoapConf.VERSION,
+                        type == CoapConf.TYPE.CON.getValue() ? CoapConf.TYPE.ACK.getValue() : CoapConf.TYPE.NON.getValue(),
                         tokenLength,
-                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        CoapConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
                         messageId,
                         token,
                         null,
@@ -165,7 +162,7 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
             byte[] optionValue = new byte[optionLength];
             in.readBytes(optionValue);  // TODO: 这里再确认一下readBytes会不会出问题
 
-            options.add(new CoAPOption(optionNumber, optionValue));
+            options.add(new CoapOption(optionNumber, optionValue));
         }
 
         // Handle payload
@@ -175,7 +172,7 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
             in.readBytes(payload);
         }
 
-        CoAPMessage coAPMessage = new CoAPMessage(version, type, tokenLength, code, messageId, token, options, payload, packet.sender());
-        out.add(coAPMessage);
+        CoapMessage coapMessage = new CoapMessage(version, type, tokenLength, code, messageId, token, options, payload, packet.sender());
+        out.add(coapMessage);
     }
 }

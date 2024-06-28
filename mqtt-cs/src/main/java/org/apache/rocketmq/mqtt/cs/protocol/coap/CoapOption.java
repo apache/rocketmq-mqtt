@@ -1,10 +1,10 @@
 package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
-public class CoAPOption {
+public class CoapOption {
     private int optionNumber;
     private byte[] optionValue;
 
-    public CoAPOption(int optionNumber, byte[] optionValue) {
+    public CoapOption(int optionNumber, byte[] optionValue) {
         this.optionNumber = optionNumber;
         this.optionValue = optionValue;
     }

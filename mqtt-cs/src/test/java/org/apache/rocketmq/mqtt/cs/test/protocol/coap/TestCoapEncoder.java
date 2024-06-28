@@ -3,10 +3,9 @@ package org.apache.rocketmq.mqtt.cs.test.protocol.coap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.MessageToByteEncoder;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPEncoder;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPMessage;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.CoAPOption;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapMessage;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapOption;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,33 +19,32 @@ import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
-public class TestCoAPEncoder {
+public class TestCoapEncoder {
 
     @Mock
     private ChannelHandlerContext channelHandlerContext;
 
     @InjectMocks
-    private CoAPEncoder coAPEncoder;
+    private CoapEncoder coapEncoder;
 
-    private CoAPMessage msg;
+    private CoapMessage msg;
 
     @Before
     public void setUp() {
-        CoAPOption option = new CoAPOption(5, new byte[]{5, 6, 7, 8});
-        List<CoAPOption> options = new ArrayList<>();
+        CoapOption option = new CoapOption(5, new byte[]{5, 6, 7, 8});
+        List<CoapOption> options = new ArrayList<>();
         InetSocketAddress remoteAddress = new InetSocketAddress("195.0.30.1", 1234);
         options.add(option);
-        msg = new CoAPMessage(1, 0, 4, 64, 1234, new byte[]{1, 2, 3, 4}, options, new byte[]{0, 1}, remoteAddress);
+        msg = new CoapMessage(1, 0, 4, 64, 1234, new byte[]{1, 2, 3, 4}, options, new byte[]{0, 1}, remoteAddress);
     }
 
     @Test
     public void testEncode() throws Exception {
         ByteBuf out = Unpooled.buffer();
-        coAPEncoder.encode(channelHandlerContext, msg, out);
+        coapEncoder.encode(channelHandlerContext, msg, out);
         byte[] result = new byte[out.readableBytes()];
         out.readBytes(result);
 
@@ -59,7 +57,7 @@ public class TestCoAPEncoder {
         msg.setPayload(new byte[0]); // Setting payload to empty
 
         ByteBuf out = Unpooled.buffer();
-        coAPEncoder.encode(channelHandlerContext, msg, out);
+        coapEncoder.encode(channelHandlerContext, msg, out);
         byte[] result = new byte[out.readableBytes()];
         out.readBytes(result);
 
@@ -73,7 +71,7 @@ public class TestCoAPEncoder {
         msg.setPayload(new byte[0]); // Setting payload to empty
 
         ByteBuf out = Unpooled.buffer();
-        coAPEncoder.encode(channelHandlerContext, msg, out);
+        coapEncoder.encode(channelHandlerContext, msg, out);
         byte[] result = new byte[out.readableBytes()];
         out.readBytes(result);
 

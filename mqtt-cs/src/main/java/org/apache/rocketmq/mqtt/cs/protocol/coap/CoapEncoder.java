@@ -3,16 +3,12 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.handler.codec.DatagramPacketDecoder;
-import io.netty.handler.codec.DatagramPacketEncoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-import java.net.InetSocketAddress;
 
-
-public class CoAPEncoder extends MessageToByteEncoder<CoAPMessage> {
+public class CoapEncoder extends MessageToByteEncoder<CoapMessage> {
     @Override
-    public void encode(ChannelHandlerContext ctx, CoAPMessage msg, ByteBuf out) throws Exception {
+    public void encode(ChannelHandlerContext ctx, CoapMessage msg, ByteBuf out) throws Exception {
 
         // Handle Version | Type | TokenLength
         byte firstByte = (byte)((msg.getVersion() << 6) | (msg.getType() << 4) | (msg.getTokenLength() & 0x0F));
@@ -25,7 +21,7 @@ public class CoAPEncoder extends MessageToByteEncoder<CoAPMessage> {
 
         // Handle Options
         int prevOptionNumber = 0;
-        for (CoAPOption option : msg.getOptions()) {
+        for (CoapOption option : msg.getOptions()) {
             int optionDelta = option.getOptionNumber() - prevOptionNumber;
             prevOptionNumber = option.getOptionNumber();
             int optionLength = option.getOptionValue().length;

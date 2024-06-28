@@ -114,7 +114,9 @@ public class MqttServer {
         startWs();
 
         // QUIC over DTLS
-        startQuic();
+        if (connectConf.isEnableQuic()) {
+            startQuic();
+        }
     }
 
     @PreDestroy

@@ -32,11 +32,6 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
             return;
         }
         int type = (firstByte >> 4) & 0x03;
-        // TODO: 映射到TYPE，且处理范围外的值
-        if (type < 0 || type > 3) {
-            // TODO: type不在规定范围内，返回4.00客户端错误
-            return;
-        }
         int tokenLength = firstByte & 0x0F;
         if (tokenLength > CoAPConf.MAX_TOKEN_LENGTH) {
             // TODO: token长度过大，返回4.00客户端错误

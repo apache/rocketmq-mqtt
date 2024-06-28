@@ -38,7 +38,7 @@ public class TestCoAPEncoder {
     public void setUp() {
         CoAPOption option = new CoAPOption(5, new byte[]{5, 6, 7, 8});
         List<CoAPOption> options = new ArrayList<>();
-        InetSocketAddress remoteAddress = new InetSocketAddress("localhost", 1234);
+        InetSocketAddress remoteAddress = new InetSocketAddress("195.0.30.1", 1234);
         options.add(option);
         msg = new CoAPMessage(1, 0, 4, 64, 1234, new byte[]{1, 2, 3, 4}, options, new byte[]{0, 1}, remoteAddress);
     }

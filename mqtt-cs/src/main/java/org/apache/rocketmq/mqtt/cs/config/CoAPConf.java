@@ -1,5 +1,7 @@
 package org.apache.rocketmq.mqtt.cs.config;
 
+import java.util.EnumSet;
+
 public class CoAPConf {
     /**
      * CoAP Version
@@ -162,6 +164,10 @@ public class CoAPConf {
 
         public int getValue() {
             return value;
+        }
+
+        public static boolean isValid(int value) {
+            return EnumSet.allOf(OPTION_NUMBER.class).stream().anyMatch(option -> option.getValue() == value);
         }
     }
 

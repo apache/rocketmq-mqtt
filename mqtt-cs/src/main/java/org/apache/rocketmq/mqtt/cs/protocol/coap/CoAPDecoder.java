@@ -9,6 +9,7 @@ import org.apache.rocketmq.mqtt.cs.config.CoAPConf;
 import org.checkerframework.checker.units.qual.C;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +51,19 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
         // Handle token
         if (in.readableBytes() < tokenLength) {
-            // TODO: 剩余字节数少于token长度，返回4.00客户端错误
+            // Return 4.00 Response
+            CoAPMessage response = new CoAPMessage(
+                    CoAPConf.VERSION,
+                    type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                    tokenLength,
+                    CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                    messageId,
+                    null,
+                    null,
+                    "Format-Error: The length of remaining readable bytes is less than tokenLength!".getBytes(StandardCharsets.UTF_8),
+                    packet.sender()
+            );
+            ctx.writeAndFlush(response);
             return;
         }
         byte[] token = new byte[tokenLength];
@@ -75,35 +88,78 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
             } else if (optionDelta == 14) {
                 optionDelta += 255 + in.readUnsignedShort();
             } else if (optionDelta == 15) {
-                // TODO: optionDelta不应该为15，返回4.00客户端错误
+                // Return 4.00 Response
                 CoAPMessage response = new CoAPMessage(
                         CoAPConf.VERSION,
-                        CoAPConf.TYPE.RST.getValue(),
+                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
                         tokenLength,
                         CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
                         messageId,
                         token,
                         null,
+                        "Format-Error: OptionDelta can not be 15!".getBytes(StandardCharsets.UTF_8),
+                        packet.sender()
+                );
+                ctx.writeAndFlush(response);
+                // TODO: 抽象成一个统一的4.00响应包，只是把对应的诊断信息传进去作为Payload
+                return;
+            }
+
+            optionNumber += optionDelta;    // current optionNumber = last optionNumber + optionDelta
+
+            if (!CoAPConf.OPTION_NUMBER.isValid(optionNumber)) {
+                // Return 4.02 Response
+                CoAPMessage response = new CoAPMessage(
+                        CoAPConf.VERSION,
+                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                        tokenLength,
+                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_OPTION.getValue(),
+                        messageId,
+                        token,
                         null,
+                        "Format-Error: Option number is not defined!".getBytes(StandardCharsets.UTF_8),
                         packet.sender()
                 );
                 ctx.writeAndFlush(response);
                 return;
             }
 
-            optionNumber += optionDelta;    // current optionNumber = last optionNumber + optionDelta
 
             if (optionLength == 13) {
                 optionLength += in.readUnsignedByte();
             } else if (optionLength == 14) {
                 optionLength += 255 + in.readUnsignedShort();
             } else if (optionLength == 15) {
-                // TODO: optionLength不应该为15，返回4.00客户端错误
+                // Return 4.00 Response
+                CoAPMessage response = new CoAPMessage(
+                        CoAPConf.VERSION,
+                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                        tokenLength,
+                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        messageId,
+                        token,
+                        null,
+                        "Format-Error: OptionLength can not be 15!".getBytes(StandardCharsets.UTF_8),
+                        packet.sender()
+                );
+                ctx.writeAndFlush(response);
                 return;
             }
 
             if (in.readableBytes() < optionLength) {
-                // TODO: 剩余可读长度小于optionLength，返回4.00客户端错误
+                // Return 4.00 Response
+                CoAPMessage response = new CoAPMessage(
+                        CoAPConf.VERSION,
+                        type == CoAPConf.TYPE.CON.getValue() ? CoAPConf.TYPE.ACK.getValue() : CoAPConf.TYPE.NON.getValue(),
+                        tokenLength,
+                        CoAPConf.RESPONSE_CODE_CLIENT_ERROR.BAD_REQUEST.getValue(),
+                        messageId,
+                        token,
+                        null,
+                        "Format-Error: The number of readable bytes is less than optionLength".getBytes(StandardCharsets.UTF_8),
+                        packet.sender()
+                );
+                ctx.writeAndFlush(response);
                 return;
             }
             byte[] optionValue = new byte[optionLength];

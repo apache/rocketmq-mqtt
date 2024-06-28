@@ -56,8 +56,8 @@ public class CoAPEncoder extends MessageToByteEncoder<CoAPMessage> {
         }
 
         // Send Response
-//        DatagramPacket responsePacket = new DatagramPacket(out, ctx.channel().remoteAddress());
-//        ctx.writeAndFlush(responsePacket);
+        DatagramPacket responsePacket = new DatagramPacket(out, msg.getRemoteAddress());
+        ctx.writeAndFlush(responsePacket);
 
     }
 

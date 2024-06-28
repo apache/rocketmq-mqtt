@@ -1,5 +1,6 @@
 package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 public class CoAPMessage {
@@ -11,8 +12,9 @@ public class CoAPMessage {
     private byte[] token;
     private List<CoAPOption> options;
     private byte[] payload;
+    private InetSocketAddress remoteAddress;
 
-    public CoAPMessage(int version, int type, int tokenLength, int code, int messageId, byte[] token, List<CoAPOption> options, byte[] payload) {
+    public CoAPMessage(int version, int type, int tokenLength, int code, int messageId, byte[] token, List<CoAPOption> options, byte[] payload, InetSocketAddress remoteAddress) {
         this.version = version;
         this.type = type;
         this.tokenLength = tokenLength;
@@ -21,6 +23,7 @@ public class CoAPMessage {
         this.token = token;
         this.options = options;
         this.payload = payload;
+        this.remoteAddress = remoteAddress;
     }
 
 
@@ -86,5 +89,13 @@ public class CoAPMessage {
 
     public void setPayload(byte[] payload) {
         this.payload = payload;
+    }
+
+    public InetSocketAddress getRemoteAddress() {
+        return remoteAddress;
+    }
+
+    public void setRemoteAddress(InetSocketAddress remoteAddress) {
+        this.remoteAddress = remoteAddress;
     }
 }

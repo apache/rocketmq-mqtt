@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,8 +38,9 @@ public class TestCoAPEncoder {
     public void setUp() {
         CoAPOption option = new CoAPOption(5, new byte[]{5, 6, 7, 8});
         List<CoAPOption> options = new ArrayList<>();
+        InetSocketAddress remoteAddress = new InetSocketAddress("localhost", 1234);
         options.add(option);
-        msg = new CoAPMessage(1, 0, 4, 64, 1234, new byte[]{1, 2, 3, 4}, options, new byte[]{0, 1});
+        msg = new CoAPMessage(1, 0, 4, 64, 1234, new byte[]{1, 2, 3, 4}, options, new byte[]{0, 1}, remoteAddress);
     }
 
     @Test

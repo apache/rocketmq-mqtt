@@ -8,6 +8,7 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import org.apache.rocketmq.mqtt.cs.config.CoAPConf;
 import org.checkerframework.checker.units.qual.C;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,7 +89,8 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
                         messageId,
                         token,
                         null,
-                        null
+                        null,
+                        packet.sender()
                 );
                 ctx.writeAndFlush(response);
                 return;
@@ -122,7 +124,7 @@ public class CoAPDecoder extends MessageToMessageDecoder<DatagramPacket> {
             in.readBytes(payload);
         }
 
-        CoAPMessage coAPMessage = new CoAPMessage(version, type, tokenLength, code, messageId, token, options, payload);
+        CoAPMessage coAPMessage = new CoAPMessage(version, type, tokenLength, code, messageId, token, options, payload, packet.sender());
         out.add(coAPMessage);
     }
 }

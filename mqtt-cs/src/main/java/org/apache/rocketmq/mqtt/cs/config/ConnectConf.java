@@ -77,7 +77,7 @@ public class ConnectConf {
     private boolean enableRetain = false;
     private boolean enableSubscriptionIdentifier = false;
     private int topicAliasMaximum = 10;
-    private int serverReceiveMaximum = 65535;
+    private int serverReceiveMaximum = 32767;
     private int maxTransferCountOnMessageInDisk = 8;
 
     public ConnectConf() throws IOException {

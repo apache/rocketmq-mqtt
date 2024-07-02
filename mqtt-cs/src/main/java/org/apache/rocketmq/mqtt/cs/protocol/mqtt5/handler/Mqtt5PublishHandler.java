@@ -213,7 +213,7 @@ public class Mqtt5PublishHandler implements MqttPacketHandler<MqttPublishMessage
     }
 
     private boolean topicAliasInvalid(Channel channel, MqttProperties.IntegerProperty topicAlias, MqttPublishVariableHeader variableHeader) {
-        logger.error("topicAliasInvalid, topicAlias:{}, topicName:{}, ChannelInfo.getClientTopicAlias {}", topicAlias, variableHeader.topicName(), ChannelInfo.getClientTopicAlias(channel, topicAlias.value()));
+        logger.debug("topicAliasInvalid, topicAlias:{}, topicName:{}, ChannelInfo.getClientTopicAlias {}", topicAlias, variableHeader.topicName(), ChannelInfo.getClientTopicAlias(channel, topicAlias.value()));
         return (topicAlias == null && StringUtils.isBlank(variableHeader.topicName())) ||
                 (topicAlias != null && topicAlias.value() > connectConf.getTopicAliasMaximum()) ||
                 (topicAlias != null && StringUtils.isBlank(variableHeader.topicName()) && ChannelInfo.getClientTopicAlias(channel, topicAlias.value()) == null);

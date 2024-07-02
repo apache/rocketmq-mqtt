@@ -104,7 +104,9 @@ public class NotifyManager {
         scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("Refresh_Notify_Topic_"));
         scheduler.scheduleWithFixedDelay(() -> {
             try {
-                refresh();
+                if (metaPersistManager != null) {
+                    refresh();
+                }
             } catch (Exception e) {
                 logger.error("", e);
             }

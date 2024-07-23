@@ -49,6 +49,9 @@ public class ConnectConf {
     private int mqttWsPort = 8888;
 
     private int quicPort = 14567;
+
+    private int coapPort = 5683;
+
     private boolean enableQuic = false;
 
     private boolean enableTlsSever = false;
@@ -124,6 +127,14 @@ public class ConnectConf {
 
     public int getMqttWsPort() {
         return mqttWsPort;
+    }
+
+    public int getCoapPort() {
+        return coapPort;
+    }
+
+    public void setCoapPort(int coapPort) {
+        this.coapPort = coapPort;
     }
 
     public boolean isEnableTlsSever() {

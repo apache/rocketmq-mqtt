@@ -28,6 +28,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -72,6 +73,8 @@ public class MqttServer {
     private final ServerBootstrap wsServerBootstrap = new ServerBootstrap();
     private final ServerBootstrap tlsServerBootstrap = new ServerBootstrap();
 
+    private Bootstrap coapBootstrap = new Bootstrap();
+
     private final Bootstrap quicBootstrap = new Bootstrap();
 
     @Resource
@@ -112,6 +115,8 @@ public class MqttServer {
         startTls();
 
         startWs();
+
+        startCoap();
 
         // QUIC over DTLS
         if (connectConf.isEnableQuic()) {
@@ -289,6 +294,30 @@ public class MqttServer {
             .bind(new InetSocketAddress(connectConf.getQuicPort()))
             .sync();
         LOGGER.info("MQTT server for QUIC over DTLS started, listening: {}", connectConf.getQuicPort());
+    }
+
+    private void startCoap() {
+        int port = connectConf.getCoapPort();
+        coapBootstrap
+                .group(new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+                .channel(NioDatagramChannel.class)
+                .option(ChannelOption.SO_BROADCAST, true)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .option(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
+                .localAddress(new InetSocketAddress(port))
+                .handler(new ChannelInitializer<DatagramChannel>() {
+                    @Override
+                    protected void initChannel(DatagramChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+//                        pipeline.addLast("coap-handler", new CoapHandler());
+//                        pipeline.addLast("coap-encoder", new CoapEncoder());
+//                        pipeline.addLast("coap-decoder", new CoapDecoder());
+//                        pipeline.addLast("coap-dispatcher", coapPacketDispatcher);
+                    }
+                });
+        coapBootstrap.bind();
+        LOGGER.info("start coap server , port:{}", port);
+
     }
 
 }

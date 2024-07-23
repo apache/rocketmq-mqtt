@@ -59,6 +59,7 @@ import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
 import org.apache.rocketmq.remoting.common.TlsMode;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapDecoder;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapPacketDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -90,6 +91,9 @@ public class MqttServer {
 
     @Resource
     private Mqtt5PacketDispatcher mqtt5PacketDispatcher;
+
+    @Resource
+    private CoapPacketDispatcher coapPacketDispatcher;
 
     @Resource
     private WebSocketServerHandler webSocketServerHandler;
@@ -314,7 +318,7 @@ public class MqttServer {
 //                        pipeline.addLast("coap-handler", new CoapHandler());
                         pipeline.addLast("coap-encoder", new CoapEncoder());
                         pipeline.addLast("coap-decoder", new CoapDecoder());
-//                        pipeline.addLast("coap-dispatcher", coapPacketDispatcher);
+                        pipeline.addLast("coap-dispatcher", coapPacketDispatcher);
                     }
                 });
         coapBootstrap.bind();

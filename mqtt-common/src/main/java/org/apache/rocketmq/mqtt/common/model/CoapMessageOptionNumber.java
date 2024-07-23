@@ -35,7 +35,8 @@ public enum CoapMessageOptionNumber {
     SIZE_2(28),
     PROXY_URI(35),
     PROXY_SCHEME(39),
-    SIZE_1(60);
+    SIZE_1(60),
+    REQUST_TAG(292);
 
     private static final CoapMessageOptionNumber[] VALUES;
     private final int value;
@@ -49,11 +50,11 @@ public enum CoapMessageOptionNumber {
     }
 
     public static boolean isValid(int number) {
-        return number > 0 && number < 192 && VALUES[number] != null;
+        return number > 0 && number < 293 && VALUES[number] != null;
     }
 
     public static CoapMessageOptionNumber valueOf(int number) {
-        if (number > 0 && number < 192 && VALUES[number] != null) {
+        if (number > 0 && number < 293 && VALUES[number] != null) {
             return  VALUES[number];
         } else {
             throw new IllegalArgumentException("Unknown CoapMessageOptionNumber " + number);
@@ -62,7 +63,7 @@ public enum CoapMessageOptionNumber {
 
     static {
         CoapMessageOptionNumber[] values = values();
-        VALUES = new CoapMessageOptionNumber[192];  // Using 192 since the highest defined code is 192
+        VALUES = new CoapMessageOptionNumber[293];
 
         for (CoapMessageOptionNumber number : values) {
             int value = number.value;

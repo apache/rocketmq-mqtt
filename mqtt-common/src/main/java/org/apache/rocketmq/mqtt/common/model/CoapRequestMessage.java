@@ -13,6 +13,8 @@ public class CoapRequestMessage extends CoapMessage {
     private boolean isReatin;
     private int expiry;
     private String authToken;
+    private String userName;
+    private String password;
 
 
     public CoapRequestMessage(int version, CoapMessageType type, int tokenLength, CoapMessageCode code, int messageId, byte[] token, byte[] payload, InetSocketAddress remoteAddress) {
@@ -77,5 +79,21 @@ public class CoapRequestMessage extends CoapMessage {
 
     public void setAuthToken(String authToken) {
         this.authToken = authToken;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

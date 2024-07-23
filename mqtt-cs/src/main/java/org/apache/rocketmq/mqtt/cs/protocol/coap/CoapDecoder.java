@@ -222,13 +222,17 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                     case Constants.COAP_QUERY_EXPIRY:
                         coapMessage.setExpiry(Integer.parseInt(parts[1]));
                         break;
+                    case Constants.COAP_QUERY_USER_NAME:
+                        coapMessage.setUserName(parts[1]);
+                    case Constants.COAP_QUERY_PASSWORD:
+                        coapMessage.setPassword(parts[1]);
                     default:
                         break;
                 }
             }
 
             if (optionNumber == CoapMessageOptionNumber.OBSERVE.value()) {
-                if (optionValue.length == 1 && optionValue[0] == 0) {
+                if (optionValue.length == 0) {
                     isObserve = true;
                 } else {
                     // Return 4.00 Response

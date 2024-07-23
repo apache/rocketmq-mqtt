@@ -323,7 +323,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
             coapMessage.setPayload(coapPayload);
         }
 
-//        sendTestResponse(ctx);
+        sendTestResponse(ctx);
         out.add(coapMessage);
     }
 

@@ -73,4 +73,8 @@ public class Constants {
     public static final String CLIENT_EVENT_ORIGIN_TOPIC = MQTT_SYSTEM_TOPIC
             + MQTT_TOPIC_DELIMITER + CLIENT_EVENT_SECOND_TOPIC;
     public static final int CLIENT_EVENT_BATCH_SIZE = 100;
+
+    public static final int COAP_VERSION = 1;
+    public static final int COAP_PAYLOAD_MARKER = 0xFF;
+    public static final int COAP_MAX_TOKEN_LENGTH = 8;
 }

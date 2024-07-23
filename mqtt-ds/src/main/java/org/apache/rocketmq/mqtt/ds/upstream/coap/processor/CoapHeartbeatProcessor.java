@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 public class CoapHeartbeatProcessor implements CoapUpstreamProcessor {
     @Override
     public CompletableFuture<HookResult> process(CoapRequestMessage msg) {
+        // todo: RPC broadcast (refresh token alive time)
         return null;
     }
 }

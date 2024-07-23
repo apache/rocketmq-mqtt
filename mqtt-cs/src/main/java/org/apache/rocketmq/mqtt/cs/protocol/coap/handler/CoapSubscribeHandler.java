@@ -9,11 +9,12 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
+        // todo: check token if connection mode
         return false;
     }
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
-
+        // todo: response ack
     }
 }

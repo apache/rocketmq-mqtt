@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 public class CoapPublishProcessor implements CoapUpstreamProcessor {
     @Override
     public CompletableFuture<HookResult> process(CoapRequestMessage msg) {
+        // todo: store into RocketMQ
         return null;
     }
 }

@@ -9,11 +9,13 @@ public class CoapDisconnectHandler implements CoapPacketHandler<CoapRequestMessa
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
+        // todo: check auth
+        // todo: check client id token
         return false;
     }
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
-
+        // todo: response ack
     }
 }

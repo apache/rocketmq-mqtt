@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 public class CoapConnectProcessor implements CoapUpstreamProcessor {
     @Override
     public CompletableFuture<HookResult> process(CoapRequestMessage msg) {
+        // todo: RPC broadcast (store token)
         return null;
     }
 }

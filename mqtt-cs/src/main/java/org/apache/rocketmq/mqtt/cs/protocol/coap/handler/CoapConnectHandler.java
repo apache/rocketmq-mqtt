@@ -9,11 +9,13 @@ public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage>
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
+        // todo: check auth
+        // todo: check client id duplication
         return false;
     }
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
-
+        // todo: response ack and return token
     }
 }

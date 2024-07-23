@@ -16,31 +16,18 @@
  */
 package org.apache.rocketmq.mqtt.common.model;
 
-public enum CoapMessageOptionNumber {
-    IF_MATCH(1),
-    URI_HOST(3),
-    ETAG(4),
-    IF_NONE_MATCH(5),
-    OBSERVE(6),
-    URI_PORT(7),
-    LOCATION_PATH(8),
-    URI_PATH(11),
-    CONTENT_FORMAT(12),
-    MAX_AGE(14),
-    URI_QUERY(15),
-    ACCEPT(17),
-    LOCATION_QUERY(20),
-    BLOCK_2(23),
-    BLOCK_1(27),
-    SIZE_2(28),
-    PROXY_URI(35),
-    PROXY_SCHEME(39),
-    SIZE_1(60);
+public enum CoapRequestType {
+    PUBLISH(0),
+    SUBSCRIBE(1),
 
-    private static final CoapMessageOptionNumber[] VALUES;
+    CONNECT(2),
+    HEARTBEAT(3),
+    DISCONNECT(4);
+
+    private static final CoapRequestType[] VALUES;
     private final int value;
 
-    private CoapMessageOptionNumber(int value) {
+    private CoapRequestType(int value) {
         this.value = value;
     }
 
@@ -48,28 +35,25 @@ public enum CoapMessageOptionNumber {
         return this.value;
     }
 
-    public static boolean isValid(int number) {
-        return number > 0 && number < 192 && VALUES[number] != null;
-    }
-
-    public static CoapMessageOptionNumber valueOf(int number) {
-        if (number > 0 && number < 192 && VALUES[number] != null) {
-            return  VALUES[number];
+    public static CoapRequestType valueOf(int type) {
+        if (type >= 0 && type < VALUES.length) {
+            return  VALUES[type];
         } else {
-            throw new IllegalArgumentException("Unknown CoapMessageOptionNumber " + number);
+            throw new IllegalArgumentException("Unknown CoapRequestType " + type);
         }
     }
 
     static {
-        CoapMessageOptionNumber[] values = values();
-        VALUES = new CoapMessageOptionNumber[192];  // Using 192 since the highest defined code is 192
+        CoapRequestType[] values = values();
+        VALUES = new CoapRequestType[values.length + 1];
 
-        for (CoapMessageOptionNumber number : values) {
-            int value = number.value;
+        for (CoapRequestType type : values) {
+            int value = type.value;
             if (VALUES[value] != null) {
                 throw new AssertionError("Value already in use: " + value + " by " + VALUES[value]);
             }
-            VALUES[value] = number;
+            VALUES[value] = type;
         }
     }
+
 }

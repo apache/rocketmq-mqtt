@@ -77,4 +77,12 @@ public class Constants {
     public static final int COAP_VERSION = 1;
     public static final int COAP_PAYLOAD_MARKER = 0xFF;
     public static final int COAP_MAX_TOKEN_LENGTH = 8;
+    public static final String COAP_QUERY_DELIMITER = "=";
+    public static final String COAP_PS_PREFIX = "ps";
+    public static final String COAP_CONNECTION_PREFIX_1 = "mqtt";
+    public static final String COAP_CONNECTION_PREFIX_2 = "connection";
+    public static final String COAP_QUERY_CLIENT_ID = "clientid";
+    public static final String COAP_QUERY_QOS = "qos";
+    public static final String COAP_QUERY_RETAIN = "retain";
+    public static final String COAP_QUERY_EXPIRY = "expiry";
 }

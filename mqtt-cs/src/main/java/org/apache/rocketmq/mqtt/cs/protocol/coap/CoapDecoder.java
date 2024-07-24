@@ -286,7 +286,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
             }
 
             // construct topic
-            coapMessage.setTopic(uriPaths.stream().skip(1).collect(Collectors.joining(Constants.MQTT_TOPIC_DELIMITER, "", Constants.MQTT_TOPIC_DELIMITER)));
+            coapMessage.setTopic(uriPaths.stream().skip(1).collect(Collectors.joining(Constants.MQTT_TOPIC_DELIMITER)));
 
         } else if (uriPaths.size() == 2 && uriPaths.get(0).equals(Constants.COAP_CONNECTION_PREFIX_1) && uriPaths.get(1).equals(Constants.COAP_CONNECTION_PREFIX_2)) {
             switch (coapCode) {
@@ -323,7 +323,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
             coapMessage.setPayload(coapPayload);
         }
 
-        sendTestResponse(ctx);
+//        sendTestResponse(ctx);
         out.add(coapMessage);
     }
 

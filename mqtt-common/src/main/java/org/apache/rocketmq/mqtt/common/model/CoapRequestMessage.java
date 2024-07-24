@@ -9,7 +9,7 @@ public class CoapRequestMessage extends CoapMessage {
     private CoapRequestType requestType;
     private String topic;
     private String clientId;
-    private MqttQoS qosLevel;
+    private MqttQoS qosLevel = MqttQoS.AT_MOST_ONCE;
     private boolean isReatin;
     private int expiry;
     private String authToken;
@@ -23,6 +23,20 @@ public class CoapRequestMessage extends CoapMessage {
 
     public CoapRequestMessage(int version, CoapMessageType type, int tokenLength, CoapMessageCode code, int messageId, byte[] token, InetSocketAddress remoteAddress) {
         super(version, type, tokenLength, code, messageId, token, remoteAddress);
+    }
+
+    public CoapRequestMessage copy() {
+        CoapRequestMessage msg = new CoapRequestMessage(getVersion(), getType(), getTokenLength(), getCode(), getMessageId(), getToken(), getPayload(), getRemoteAddress());
+        msg.setRequestType(requestType);
+        msg.setTopic(topic);
+        msg.setClientId(clientId);
+        msg.setQosLevel(qosLevel);
+        msg.setReatin(isReatin);
+        msg.setExpiry(expiry);
+        msg.setAuthToken(authToken);
+        msg.setUserName(userName);
+        msg.setPassword(password);
+        return msg;
     }
 
     public CoapRequestType getRequestType() {
@@ -96,4 +110,6 @@ public class CoapRequestMessage extends CoapMessage {
     public void setPassword(String password) {
         this.password = password;
     }
+
+
 }

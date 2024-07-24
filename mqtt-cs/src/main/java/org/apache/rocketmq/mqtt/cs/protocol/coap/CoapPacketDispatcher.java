@@ -152,19 +152,14 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
         switch (msg.getRequestType()) {
             case PUBLISH:
                 return coapPublishProcessor.process(msg);
-                break;
             case SUBSCRIBE:
                 return coapSubscribeProcessor.process(msg);
-                break;
             case CONNECT:
                 return coapConnectProcessor.process(msg);
-                break;
             case HEARTBEAT:
                 return coapHeartbeatProcessor.process(msg);
-                break;
             case DISCONNECT:
                 return coapDisconnectProcessor.process(msg);
-                break;
             default:
         }
         CompletableFuture<HookResult> hookResult = new CompletableFuture<>();

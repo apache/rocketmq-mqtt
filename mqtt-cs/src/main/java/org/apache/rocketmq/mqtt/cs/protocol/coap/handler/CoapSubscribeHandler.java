@@ -4,7 +4,9 @@ import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessage> {
 
     @Override

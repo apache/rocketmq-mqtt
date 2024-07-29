@@ -74,6 +74,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
 
     @PostConstruct
     public void init() {
+        pullService = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("coap_pull_message_thread_"));
         scheduler = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("coap_loop_scheduler_"));
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
     }

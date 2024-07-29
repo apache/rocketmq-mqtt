@@ -48,7 +48,7 @@ public class CoapEncoder extends MessageToMessageEncoder<CoapMessage> {
             for (CoapMessageOption option : msg.getOptions()) {
                 int optionDelta = option.getOptionNumber().value() - prevOptionNumber;
                 prevOptionNumber = option.getOptionNumber().value();
-                int optionLength = option.getOptionValue().length;
+                int optionLength = option.getOptionValue() == null ? 0 : option.getOptionValue().length;
 
                 if (optionDelta < 13) {
                     buffer.writeByte((byte)((optionDelta << 4) | (optionLength & 0x0F)));
@@ -66,7 +66,9 @@ public class CoapEncoder extends MessageToMessageEncoder<CoapMessage> {
                     buffer.writeShort(optionLength - 269);
                 }
 
-                buffer.writeBytes(option.getOptionValue());
+                if (optionLength > 0) {
+                    buffer.writeBytes(option.getOptionValue());
+                }
             }
         }
 

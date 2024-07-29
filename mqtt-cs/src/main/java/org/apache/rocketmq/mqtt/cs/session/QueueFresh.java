@@ -60,4 +60,21 @@ public class QueueFresh {
         return queues;
     }
 
+    public Set<Queue> freshQueue(CoapSession session) {
+        Set<Queue> queues = new HashSet<>();
+        Subscription subscription = session.getSubscription();
+        Set<String> brokers = lmqQueueStore.getReadableBrokers(subscription.toFirstTopic());
+        if (brokers == null || brokers.isEmpty()) {
+            return queues;
+        }
+        for (String broker : brokers) {
+            Queue moreQueue = new Queue();
+            moreQueue.setQueueName(subscription.toQueueName());
+            moreQueue.setBrokerName(broker);
+            queues.add(moreQueue);
+        }
+        session.freshQueue(queues);
+        return queues;
+    }
+
 }

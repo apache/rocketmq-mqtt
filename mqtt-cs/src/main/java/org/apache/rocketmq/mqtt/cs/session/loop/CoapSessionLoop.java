@@ -20,14 +20,15 @@ package org.apache.rocketmq.mqtt.cs.session.loop;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 
 public interface CoapSessionLoop {
 
-    boolean addSession(CoapSession session);
+    void addSession(CoapSession session, CompletableFuture<Void> future);
 
     CoapSession getSession(InetSocketAddress address);
 
-    void removeSession(InetSocketAddress address);
+    CoapSession removeSession(InetSocketAddress address);
 
     void notifyPullMessage();
 }

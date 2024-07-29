@@ -26,6 +26,9 @@ import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
+import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
+import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -47,11 +50,19 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     private static Logger logger = LoggerFactory.getLogger(CoapSessionLoopImpl.class);
 
     @Resource
+    private MatchAction matchAction;
+
+    @Resource
     private ConnectConf connectConf;
 
     @Resource
     private LmqQueueStore lmqQueueStore;
 
+    @Resource
+    private QueueFresh queueFresh;
+
+
+    private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
 
     private Map<InetSocketAddress, CoapSession> sessionMap = new ConcurrentHashMap<>(1024);
@@ -64,6 +75,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     @PostConstruct
     public void init() {
         scheduler = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("coap_loop_scheduler_"));
+        pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
     }
 
     private  void pullLoop() {
@@ -83,18 +95,26 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
 
 
     @Override
-    public boolean addSession(CoapSession session) {
+    public void addSession(CoapSession session, CompletableFuture<Void> future) {
         // todo: addSubscriptionAndInit
         InetSocketAddress address = session.getAddress();
         synchronized (this) {
             // if this session is already exist, refresh the subscription time and do nothing
             if (sessionMap.containsKey(address)) {
                 sessionMap.get(address).refreshSubscribeTime();
-                return false;
+                return;
             }
             sessionMap.put(address, session);
         }
-        return true;
+        // Init
+        AtomicInteger result = new AtomicInteger(0);
+        queueFresh.freshQueue(session);
+        Map<Queue, QueueOffset> offsetMap = session.getOffsetMap();
+        result.addAndGet(offsetMap.size());
+        for (Map.Entry<Queue, QueueOffset> entry : offsetMap.entrySet()) {
+            initOffset(session, entry.getKey(), entry.getValue(), future, result);
+        }
+        matchAction.addSubscription(session);
     }
 
     @Override
@@ -103,8 +123,21 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     }
 
     @Override
-    public void removeSession(InetSocketAddress address) {
-
+    public CoapSession removeSession(InetSocketAddress address) {
+        CoapSession session = null;
+        try {
+            synchronized (this) {
+                session = sessionMap.remove(address);
+            }
+            // todo: inFlyCache.cleanResource()
+            if (session != null) {
+                matchAction.removeSubscription(session);
+                // todo: persistOffset(session)
+            }
+        } catch (Exception e) {
+            logger.error("unloadSession fail:{}", address, e);
+        }
+        return session;
     }
 
     @Override
@@ -157,7 +190,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
                 if (PullResult.PULL_SUCCESS == pullResult.getCode()) {
                     if (pullResult.getMessageList() != null &&
                             pullResult.getMessageList().size() >= Math.min(count, connectConf.getMaxTransferCountOnMessageInDisk())) {
-                        scheduler.schedule(() -> pullMessage();
+                        scheduler.schedule(() -> pullMessage(session, queue), pullIntervalMillis, TimeUnit.MILLISECONDS);
                     }
                     boolean add = session.addSendingMessages(queue, pullResult.getMessageList());
 //                    if (add) {

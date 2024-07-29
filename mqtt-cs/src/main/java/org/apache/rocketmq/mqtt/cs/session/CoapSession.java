@@ -25,7 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CoapSession {
@@ -202,5 +205,13 @@ public class CoapSession {
 
     public void setPullSize(int pullSize) {
         this.pullSize = pullSize;
+    }
+
+    public Map<Queue, QueueOffset> getOffsetMap() {
+        return offsetMap;
+    }
+
+    public void setOffsetMap(Map<Queue, QueueOffset> offsetMap) {
+        this.offsetMap = offsetMap;
     }
 }

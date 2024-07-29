@@ -101,7 +101,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             session.setToken(coapMessage.getToken());
             session.setSubscribeTime(System.currentTimeMillis());
             session.setSubscription(subscription);
-            boolean addResult = sessionLoop.addSession(session); // if the session is already exist, do not send retained message
+            sessionLoop.addSession(session, future); // if the session is already exist, do not send retained message
 
             future.thenAccept(aVoid -> {
                 if (!ctx.channel().isActive()) {

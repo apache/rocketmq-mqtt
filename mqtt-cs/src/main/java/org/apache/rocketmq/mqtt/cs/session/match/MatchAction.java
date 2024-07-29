@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.MqttTopic;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,8 @@ public class MatchAction {
 
     private Trie<String, Integer> trie = new Trie<>();
     private ConcurrentMap<String, Set<String>> topicCache = new ConcurrentHashMap<>(16);
+
+    private ConcurrentMap<String, Set<InetSocketAddress>> coapTopicCache = new ConcurrentHashMap<>(16);
 
 
     public Set<Pair<Session, Subscription>> matchClients(String topic, String namespace) {
@@ -126,6 +130,16 @@ public class MatchAction {
         }
     }
 
+    public void addSubscription(CoapSession session) {
+        Subscription subscription = session.getSubscription();
+        String topicFilter = subscription.getTopicFilter();
+
+        synchronized (coapTopicCache) {
+            coapTopicCache.putIfAbsent(topicFilter, new HashSet<>());
+            coapTopicCache.get(topicFilter).add(session.getAddress());
+        }
+    }
+
     public void removeSubscription(Session session, Set<Subscription> subscriptions) {
         String channelId = session.getChannelId();
         if (channelId == null || subscriptions == null || subscriptions.isEmpty()) {
@@ -153,6 +167,20 @@ public class MatchAction {
                 channelIdSet.remove(channelId);
                 if (channelIdSet.isEmpty()) {
                     topicCache.remove(topicFilter);
+                }
+            }
+        }
+    }
+
+    public void removeSubscription(CoapSession session) {
+        String topicFilter = session.getSubscription().getTopicFilter();
+
+        synchronized (coapTopicCache) {
+            Set<InetSocketAddress> addressSet = coapTopicCache.get(topicFilter);
+            if (addressSet != null) {
+                addressSet.remove(session.getAddress());
+                if (addressSet.isEmpty()) {
+                    coapTopicCache.remove(topicFilter);
                 }
             }
         }

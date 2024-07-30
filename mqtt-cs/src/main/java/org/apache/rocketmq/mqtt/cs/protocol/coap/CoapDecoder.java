@@ -60,6 +60,8 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
         ByteBuf in = packet.content();
         remoteAddress = packet.sender();
+        System.out.println(ctx.channel().id());
+        System.out.println(remoteAddress);
 
         // The length of Coap message is at least 4 bytes.
         if (in.readableBytes() < 4) {

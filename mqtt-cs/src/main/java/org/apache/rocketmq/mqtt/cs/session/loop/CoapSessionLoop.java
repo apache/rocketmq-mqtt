@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
+import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 
 import java.net.InetSocketAddress;
@@ -30,5 +31,5 @@ public interface CoapSessionLoop {
 
     CoapSession removeSession(InetSocketAddress address);
 
-    void notifyPullMessage();
+    void notifyPullMessage(CoapSession session, Queue queue);
 }

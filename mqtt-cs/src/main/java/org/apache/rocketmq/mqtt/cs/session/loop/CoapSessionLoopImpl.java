@@ -28,6 +28,7 @@ import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class CoapSessionLoopImpl implements CoapSessionLoop{
     private static Logger logger = LoggerFactory.getLogger(CoapSessionLoopImpl.class);
+
+    @Resource
+    private PushAction pushAction;
 
     @Resource
     private MatchAction matchAction;
@@ -142,8 +146,13 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     }
 
     @Override
-    public void notifyPullMessage() {
-
+    public void notifyPullMessage(CoapSession session, Queue queue) {
+        if (session == null || queue == null) {
+            return;
+        }
+        logger.info("session loop impl doing notifyPullMessage queueFresh.freshQueue({}, {}})", session, session.getSubscription());
+        queueFresh.freshQueue(session);
+        pullMessage(session, queue);
     }
 
     private void pullMessage(CoapSession session, Queue queue) {
@@ -194,9 +203,9 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
                         scheduler.schedule(() -> pullMessage(session, queue), pullIntervalMillis, TimeUnit.MILLISECONDS);
                     }
                     boolean add = session.addSendingMessages(queue, pullResult.getMessageList());
-//                    if (add) {
-//                        pushAction.messageArrive(session, subscription, queue);
-//                    }
+                    if (add) {
+                        pushAction.coapMessageArrive(session, queue);
+                    }
                 } else if (PullResult.PULL_OFFSET_MOVED == pullResult.getCode()) {
                     queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
 //                    session.markPersistOffsetFlag(true);
@@ -206,6 +215,15 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
                 }
             } finally {
                 clearPullStatus(session, queue, pullEvent);
+            }
+        });
+
+        CompletableFuture<PullResult> pullResult = lmqQueueStore.pullMessage(subscription.toFirstTopic(), queue, queueOffset, count);
+        pullResult.whenComplete((pullResult1, throwable) -> {
+            if (throwable != null) {
+                result.completeExceptionally(throwable);
+            } else {
+                result.complete(pullResult1);
             }
         });
     }

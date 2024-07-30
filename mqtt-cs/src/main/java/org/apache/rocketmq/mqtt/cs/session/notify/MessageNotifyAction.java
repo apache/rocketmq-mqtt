@@ -22,8 +22,10 @@ import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.QueueCache;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
@@ -45,6 +47,9 @@ public class MessageNotifyAction {
 
     @Resource
     private SessionLoop sessionLoop;
+
+    @Resource
+    private CoapSessionLoop coapSessionLoop;
 
     @Resource
     private QueueCache queueCache;
@@ -73,6 +78,24 @@ public class MessageNotifyAction {
                     if (isTargetQueue(queue, event)) {
                         queueCache.refreshCache(Pair.of(queue, session));
                         sessionLoop.notifyPullMessage(session, subscription, queue);
+                    }
+                }
+            }
+        }
+        for (MessageEvent event : events) {
+            Set<CoapSession> coapResult = matchAction.matchCoapClients(TopicUtils.normalizeTopic(event.getPubTopic()));
+            if (coapResult == null || coapResult.isEmpty()) {
+                continue;
+            }
+            for (CoapSession coapSession : coapResult) {
+                Set<Queue> set = queueFresh.freshQueue(coapSession);
+                if (set == null || set.isEmpty()) {
+                    continue;
+                }
+                for (Queue queue : set) {
+                    if (isTargetQueue(queue, event)) {
+                        // todo: add queueCache
+                        coapSessionLoop.notifyPullMessage(coapSession, queue);
                     }
                 }
             }

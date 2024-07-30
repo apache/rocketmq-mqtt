@@ -27,20 +27,20 @@ import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
-import org.apache.rocketmq.mqtt.common.model.Message;
-import org.apache.rocketmq.mqtt.common.model.Queue;
-import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.*;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -95,6 +95,26 @@ public class PushAction {
         }
     }
 
+    public void coapMessageArrive(CoapSession session, Queue queue) {
+        if (session == null) {
+            return;
+        }
+        if (!connectConf.isOrder()) {
+            List<Message> list = session.pendMessageList(queue);
+            if (list != null && !list.isEmpty()) {
+                for (Message message : list) {
+                    message.setAck(0);
+                    coapPush(message, session, queue);
+                }
+            }
+            return;
+        }
+        Message message = session.nextSendMessageByOrder(queue);
+        if (message != null) {
+            coapPush(message, session, queue);
+        }
+    }
+
     public void push(Message message, Subscription subscription, Session session, Queue queue) {
         String clientId = session.getClientId();
         int mqttId = mqttMsgId.nextId(clientId);
@@ -129,6 +149,37 @@ public class PushAction {
         } else {
             retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
             write(session, message, mqttId, qos, subscription);
+        }
+    }
+
+    public void coapPush(Message message, CoapSession session, Queue queue) {
+        try {
+            if (message.getStoreTimestamp() > 0 && message.getStoreTimestamp() < session.getSubscribeTime()) {
+                logger.warn("coap old msg:{},{},{},{}", session.getAddress(), message.getMsgId(),
+                        message.getStoreTimestamp(), session.getSubscribeTime());
+//                rollNext(session);
+                return;
+            }
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+
+        //deal with message with empty payload
+        String msgPayLoad = new String(message.getPayload());
+        if (msgPayLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            message.setPayload("".getBytes());
+        }
+
+        Subscription subscription = session.getSubscription();
+        int qos = subscription.getQos();
+        if (message.qos() != null && (subscription.isP2p() || message.qos() < qos)) {
+            qos = message.qos();
+        }
+        if (qos == 0) {
+            session.sendNewMessage(message.getPayload(), qos);
+//            rollNextByAck(session);
+        } else {
+            // todo: deal with qos 1/2
         }
     }
 

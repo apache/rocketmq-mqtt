@@ -25,6 +25,7 @@ import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,9 @@ public class MatchAction {
 
     @Resource
     private SessionLoop sessionLoop;
+
+    @Resource
+    private CoapSessionLoop coapSessionLoop;
 
     private Trie<String, Integer> trie = new Trie<>();
     private ConcurrentMap<String, Set<String>> topicCache = new ConcurrentHashMap<>(16);
@@ -103,6 +107,31 @@ public class MatchAction {
                     }
                 }
             }
+        }
+        return result;
+    }
+
+    public Set<CoapSession> matchCoapClients(String topic) {
+        Set<CoapSession> result = new HashSet<>();
+        MqttTopic mqttTopic = TopicUtils.decode(topic);
+        String secondTopic = TopicUtils.normalizeSecondTopic(mqttTopic.getSecondTopic());
+        if (TopicUtils.isRetryTopic(topic) || TopicUtils.isP2P(secondTopic) || TopicUtils.isP2pTopic(topic)) {
+            return result;
+        }
+        Set<InetSocketAddress> addresses = new HashSet<>();
+        synchronized (coapTopicCache) {
+            Set<InetSocketAddress> precises = coapTopicCache.get(topic);
+            if (precises != null && !precises.isEmpty()) {
+                addresses.addAll(precises);
+            }
+        }
+        // todo: add trie relative
+        for (InetSocketAddress address : addresses) {
+            CoapSession session = coapSessionLoop.getSession(address);
+            if (session == null) {
+                continue;
+            }
+            result.add(session);
         }
         return result;
     }

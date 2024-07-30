@@ -25,6 +25,7 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttSubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
+import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,13 +50,14 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
         // todo: check token if connection mode
+//        doResponseSuccess(ctx, coapMessage);
+
 //        byte[] byteArray = new byte[3];
 //        intToByteArray(1, byteArray);
 //        doResponseSuccess(ctx, coapMessage, byteArray);
 //
 //        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        intToByteArray(2, byteArray);
-//        doResponseCON(ctx, coapMessage, byteArray);
+//        doResponseCON(ctx, coapMessage, intToByteArray(2));
 //
 //        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
 //        intToByteArray(3, byteArray);
@@ -101,6 +103,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             session.setToken(coapMessage.getToken());
             session.setSubscribeTime(System.currentTimeMillis());
             session.setSubscription(subscription);
+            session.setCtx(ctx);
             sessionLoop.addSession(session, future); // if the session is already exist, do not send retained message
 
             future.thenAccept(aVoid -> {
@@ -108,7 +111,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                     return;
                 }
                 // todo: removeFuture
-                doResponseSuccess(ctx, coapMessage);
+                doResponseSuccess(ctx, coapMessage, session);
                 // todo: sendRetainMessage()
 
 
@@ -148,7 +151,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         return byteArray;
     }
 
-    public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
+    public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, CoapSession session) {
         CoapMessage response = new CoapMessage(
                 Constants.COAP_VERSION,
                 coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
@@ -159,7 +162,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 "Hello, I have accept your request successfully!".getBytes(StandardCharsets.UTF_8),
                 coapMessage.getRemoteAddress()
         );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(1)));
+        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(response);
         } else {

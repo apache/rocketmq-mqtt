@@ -176,8 +176,18 @@ public class PushAction {
             qos = message.qos();
         }
         if (qos == 0) {
-            session.sendNewMessage(message.getPayload(), qos);
+            session.sendNewMessage(queue, message, qos);
+//            session.updateQueueOffset(queue, message);
 //            rollNextByAck(session);
+//            if (!connectConf.isOrder()) {
+//                session.ack(pendingQueue, pendingDownSeqId);
+//                return;
+//            }
+//
+//            Message nextSendOne = session.rollNext(subscription, pendingQueue, pendingDownSeqId);
+//            if (nextSendOne != null) {
+//                push(nextSendOne, subscription, session, pendingQueue);
+//            }
         } else {
             // todo: deal with qos 1/2
         }

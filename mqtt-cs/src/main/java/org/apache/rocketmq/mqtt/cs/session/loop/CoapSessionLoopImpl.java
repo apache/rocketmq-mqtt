@@ -27,7 +27,6 @@ import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
-import org.apache.rocketmq.mqtt.cs.session.Session;
 import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.match.MatchAction;
 import org.slf4j.Logger;

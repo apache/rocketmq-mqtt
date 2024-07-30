@@ -170,6 +170,37 @@ public class CoapSession {
         return list;
     }
 
+    public void ack(Queue pendingQueue, long pendingDownSeqId) {
+        if (pendingQueue == null) {
+            throw new RuntimeException("queue is null");
+        }
+        LinkedHashSet<Message> messages = sendingMessages.get(pendingQueue);
+        if (messages == null) {
+            return;
+        }
+        synchronized (this) {
+            if (messages.isEmpty()) {
+                return;
+            }
+            boolean flag = true;
+            Iterator<Message> iterator = messages.iterator();
+            while (iterator.hasNext()) {
+                Message message = iterator.next();
+                if (message.getOffset() == pendingDownSeqId) {
+                    message.setAck(1);
+                }
+                if (message.getAck() != 1) {
+                    flag = false;
+                }
+                if (flag) {
+                    updateQueueOffset(pendingQueue, message);
+//                    this.markPersistOffsetFlag(true);
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
     public Message nextSendMessageByOrder(Queue queue) {
         if (queue == null) {
             throw new RuntimeException("queue is null");
@@ -183,7 +214,7 @@ public class CoapSession {
         }
     }
 
-    public void sendNewMessage(byte[] payload, int qos) {
+    public void sendNewMessage(Queue queue, Message messageSend, int qos) {
         this.messageNum++;
         CoapMessage data = new CoapMessage(
                 Constants.COAP_VERSION,
@@ -192,7 +223,7 @@ public class CoapSession {
                 CoapMessageCode.CONTENT,
                 this.messageId + this.messageNum,
                 this.token,
-                payload,
+                messageSend.getPayload(),
                 this.address
         );
         data.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(this.messageNum)));
@@ -200,6 +231,28 @@ public class CoapSession {
             this.ctx.writeAndFlush(data);
         } else {
             System.out.println("Channel is not active");
+        }
+        if (qos == 0) {
+            LinkedHashSet<Message> messages = sendingMessages.get(queue);
+            if (messages == null) {
+                return;
+            }
+            synchronized (this) {
+                if (messages.isEmpty()) {
+                    return;
+                }
+                Iterator<Message> iterator = messages.iterator();
+                while (iterator.hasNext()) {
+                    Message message = iterator.next();
+                    if (message.equals(messageSend)) {
+                        message.setAck(1);
+                    }
+                    if (message.getAck() == 1) {
+                        updateQueueOffset(queue, message);
+                        iterator.remove();
+                    }
+                }
+            }
         }
     }
 

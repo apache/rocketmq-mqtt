@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -253,6 +254,26 @@ public class CoapSession {
                     }
                 }
             }
+        }
+    }
+
+    public void sendRemoveSessionMessage() {
+        this.messageNum++;
+        CoapMessage data = new CoapMessage(
+                Constants.COAP_VERSION,
+                this.subscription.getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
+                this.token.length,
+                CoapMessageCode.FORBIDDEN,
+                this.messageId + this.messageNum,
+                this.token,
+                "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8),
+                this.address
+        );
+        data.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(this.messageNum)));
+        if (this.ctx.channel().isActive()) {
+            this.ctx.writeAndFlush(data);
+        } else {
+            System.out.println("Channel is not active");
         }
     }
 

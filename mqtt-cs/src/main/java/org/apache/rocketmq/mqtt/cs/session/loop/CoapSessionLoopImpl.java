@@ -146,6 +146,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
             }
             // todo: inFlyCache.cleanResource()
             if (session != null) {
+                session.sendRemoveSessionMessage();
                 matchAction.removeSubscription(session);
                 // todo: persistOffset(session)
             }

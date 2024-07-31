@@ -49,7 +49,10 @@ public class CoapPublishProcessor implements CoapUpstreamProcessor {
     }
 
     public CompletableFuture<StoreResult> put(CoapRequestMessage coapMessage) {
+        // todo: process topic alias
+
         boolean isEmpty = false;
+
         // deal empty payload
         if (coapMessage.getPayload() == null || coapMessage.getPayload().length == 0) {
             coapMessage.setPayload(MessageUtil.EMPTYSTRING.getBytes(StandardCharsets.UTF_8));

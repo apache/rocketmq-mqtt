@@ -216,23 +216,7 @@ public class CoapSession {
     }
 
     public void sendNewMessage(Queue queue, Message messageSend, int qos) {
-        this.messageNum++;
-        CoapMessage data = new CoapMessage(
-                Constants.COAP_VERSION,
-                qos == 0 ? CoapMessageType.NON : CoapMessageType.CON,
-                this.token.length,
-                CoapMessageCode.CONTENT,
-                this.messageId + this.messageNum,
-                this.token,
-                messageSend.getPayload(),
-                this.address
-        );
-        data.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(this.messageNum)));
-        if (this.ctx.channel().isActive()) {
-            this.ctx.writeAndFlush(data);
-        } else {
-            System.out.println("Channel is not active");
-        }
+        write(messageSend.getPayload());
         if (qos == 0) {
             LinkedHashSet<Message> messages = sendingMessages.get(queue);
             if (messages == null) {
@@ -258,15 +242,24 @@ public class CoapSession {
     }
 
     public void sendRemoveSessionMessage() {
+        byte[] payload = "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8);
+        write(payload, CoapMessageCode.FORBIDDEN);
+    }
+
+    public void write(byte[] payload) {
+        write(payload, CoapMessageCode.CONTENT);
+    }
+
+    public void write(byte[] payload, CoapMessageCode code) {
         this.messageNum++;
         CoapMessage data = new CoapMessage(
                 Constants.COAP_VERSION,
                 this.subscription.getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
                 this.token.length,
-                CoapMessageCode.FORBIDDEN,
+                code,
                 this.messageId + this.messageNum,
                 this.token,
-                "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8),
+                payload,
                 this.address
         );
         data.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(this.messageNum)));

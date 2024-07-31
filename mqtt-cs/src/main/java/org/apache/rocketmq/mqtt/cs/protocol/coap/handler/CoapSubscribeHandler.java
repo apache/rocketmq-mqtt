@@ -19,13 +19,13 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.facade.RetainedPersistManager;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.*;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttSubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
-import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +44,12 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
 
     @Resource
     private CoapSessionLoop sessionLoop;
+
+    @Resource
+    private RetainedPersistManager retainedPersistManager;
+
+    @Resource
+    private PushAction pushAction;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_coap_subscribe_future"));
 
@@ -112,7 +118,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 }
                 // todo: removeFuture
                 doResponseSuccess(ctx, coapMessage, session);
-                // todo: sendRetainMessage()
+                sendRetainMessage(ctx, session);
 
 
             });
@@ -120,6 +126,16 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             logger.error("Coap Subscribe:{}", coapMessage.getRemoteAddress(), e);
         }
 
+    }
+
+    private void sendRetainMessage(ChannelHandlerContext ctx, CoapSession session) {
+        CompletableFuture<Message> retainedMessage = retainedPersistManager.getRetainedMessage(session.getSubscription().getTopicFilter());
+        retainedMessage.whenComplete(((message, throwable) -> {
+            if (message == null) {
+                return;
+            }
+            session.write(message.getPayload());
+        }));
     }
 
     public void doResponseFail(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, String errContent) {

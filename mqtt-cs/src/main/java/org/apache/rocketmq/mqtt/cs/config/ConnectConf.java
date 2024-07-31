@@ -83,6 +83,8 @@ public class ConnectConf {
     private int serverReceiveMaximum = 32767;
     private int maxTransferCountOnMessageInDisk = 8;
 
+    private long coapSessionTimeout = 90000;    //90000ms,90s
+
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
         InputStream in = classPathResource.getInputStream();
@@ -363,5 +365,13 @@ public class ConnectConf {
 
     public void setEnableQuic(boolean enableQuic) {
         this.enableQuic = enableQuic;
+    }
+
+    public long getCoapSessionTimeout() {
+        return coapSessionTimeout;
+    }
+
+    public void setCoapSessionTimeout(long coapSessionTimeout) {
+        this.coapSessionTimeout = coapSessionTimeout;
     }
 }

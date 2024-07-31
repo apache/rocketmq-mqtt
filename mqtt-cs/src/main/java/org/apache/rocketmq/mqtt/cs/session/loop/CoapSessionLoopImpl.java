@@ -18,6 +18,8 @@
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
 import com.alibaba.fastjson.JSONObject;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.PullResult;
@@ -67,6 +69,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
 
     private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
+    private HashedWheelTimer hashedWheelTimer;
 
     private Map<InetSocketAddress, CoapSession> sessionMap = new ConcurrentHashMap<>(1024);
     private Map<String, PullEvent> pullEventMap = new ConcurrentHashMap<>(1024);
@@ -80,6 +83,13 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
         pullService = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("coap_pull_message_thread_"));
         scheduler = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("coap_loop_scheduler_"));
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
+        hashedWheelTimer = new HashedWheelTimer(1, TimeUnit.SECONDS);
+        hashedWheelTimer.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            for (InetSocketAddress address : sessionMap.keySet()) {
+                removeSession(address);
+            }
+        }));
     }
 
     private  void pullLoop() {
@@ -119,6 +129,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
             initOffset(session, entry.getKey(), entry.getValue(), future, result);
         }
         matchAction.addSubscription(session);
+        hashedWheelTimer.newTimeout(timeout -> checkSessionAlive(timeout, address), connectConf.getCoapSessionTimeout(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -166,6 +177,19 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
         } else {
             PullEvent pullEvent = new PullEvent(session, queue);
             pullEventMap.put(eventQueueKey(session, queue), pullEvent);
+        }
+    }
+
+    private void checkSessionAlive(Timeout timeout, InetSocketAddress address) {
+        CoapSession session = sessionMap.get(address);
+        if (session == null) {
+            return;
+        }
+        if (System.currentTimeMillis() - session.getSubscribeTime() > connectConf.getCoapSessionTimeout()) {
+            removeSession(address);
+        } else {
+            long delay = connectConf.getCoapSessionTimeout() - (System.currentTimeMillis() - session.getSubscribeTime());
+            hashedWheelTimer.newTimeout(timeout.task(), delay, TimeUnit.MILLISECONDS);
         }
     }
 

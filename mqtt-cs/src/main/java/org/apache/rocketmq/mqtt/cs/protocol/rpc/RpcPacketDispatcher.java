@@ -18,8 +18,12 @@
 package org.apache.rocketmq.mqtt.cs.protocol.rpc;
 
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.DatagramPacket;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.common.model.RpcHeader;
@@ -32,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -56,6 +61,8 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
                 doNotify(request);
             } else if (RpcCode.CMD_CLOSE_CHANNEL == code) {
                 closeChannel(request);
+            } else if (RpcCode.COM_NOTIFY_COAP_MESSAGE == code) {
+                doNotifyCoap(request);
             }
         } catch (Throwable t) {
             logger.error("", t);
@@ -79,6 +86,23 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
         String channelId = request.getExtFields() != null ?
                 request.getExtFields().get(RpcHeader.MQTT_CHANNEL_ID) : null;
         channelManager.closeConnect(channelId, request.getRemark());
+    }
+
+    private void doNotifyCoap(RemotingCommand request) {
+        String payload = new String(request.getBody(), StandardCharsets.UTF_8);
+        JSONObject jsonObject = JSON.parseObject(payload);
+
+        byte[] data = jsonObject.getBytes("data");
+        String senderAddress = jsonObject.getString("senderAddress");
+        int senderPort = jsonObject.getIntValue("senderPort");
+        String recipientAddress = jsonObject.getString("recipientAddress");
+        int recipientPort = jsonObject.getIntValue("recipientPort");
+        ByteBuf buffer = Unpooled.wrappedBuffer(data);
+
+        InetSocketAddress sender = new InetSocketAddress(senderAddress, senderPort);
+        InetSocketAddress recipient = new InetSocketAddress(recipientAddress, recipientPort);
+        DatagramPacket packet = new DatagramPacket(buffer.retain(), recipient, sender);
+        System.out.println(packet);
     }
 
 }

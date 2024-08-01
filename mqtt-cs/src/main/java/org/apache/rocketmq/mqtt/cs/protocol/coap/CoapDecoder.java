@@ -16,7 +16,6 @@
  */
 package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
-import com.sun.org.apache.bcel.internal.Const;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
@@ -34,9 +33,7 @@ import org.apache.rocketmq.mqtt.common.model.Constants;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 

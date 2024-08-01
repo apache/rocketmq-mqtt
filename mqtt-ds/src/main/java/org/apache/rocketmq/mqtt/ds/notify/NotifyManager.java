@@ -18,6 +18,9 @@
 package org.apache.rocketmq.mqtt.ds.notify;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.socket.DatagramPacket;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
@@ -50,6 +53,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -266,6 +270,40 @@ public class NotifyManager {
             return response.getCode() == RpcCode.SUCCESS;
         } catch (Exception e) {
             logger.error("fail notify {}", node, e);
+            return false;
+        }
+    }
+
+    public boolean doCoapForward(String node, DatagramPacket packet) {
+        Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
+        if (connectorNodes == null || connectorNodes.isEmpty()) {
+            return false;
+        }
+        if (!connectorNodes.contains(node)) {
+            return true;
+        }
+        try {
+            // serialization
+            ByteBuf buffer = packet.content();
+            byte[] data = new byte[buffer.readableBytes()];
+            buffer.getBytes(buffer.readerIndex(), data);
+            InetSocketAddress sender = packet.sender();
+            InetSocketAddress recipient = packet.recipient();
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("data", data);
+            jsonObject.put("senderAddress", sender.getAddress().getHostAddress());
+            jsonObject.put("senderPort", sender.getPort());
+            jsonObject.put("recipientAddress", recipient.getAddress().getHostAddress());
+            jsonObject.put("recipientPort", recipient.getPort());
+            // create command
+            RemotingCommand remotingCommand = RemotingCommand.createRequestCommand(RpcCode.COM_NOTIFY_COAP_MESSAGE,
+                    null);
+            remotingCommand.setBody(JSON.toJSONBytes(jsonObject));
+            // RPC invoke
+            RemotingCommand response = remotingClient.invokeSync(node + ":" + serviceConf.getCsRpcPort(), remotingCommand, 1000);
+            return response.getCode() == RpcCode.SUCCESS;
+        } catch (Exception e) {
+            logger.error("fail coap forward {}", node, e);
             return false;
         }
     }

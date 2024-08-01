@@ -23,4 +23,6 @@ public class RpcCode {
 
     public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
     public static final int CMD_CLOSE_CHANNEL = 203;
+
+    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
 }

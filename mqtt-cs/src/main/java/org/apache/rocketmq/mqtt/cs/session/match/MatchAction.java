@@ -23,22 +23,22 @@ import org.apache.rocketmq.mqtt.common.model.MqttTopic;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.Trie;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
-import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.Session;
-import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
+import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.net.InetSocketAddress;
 
 
 @Component

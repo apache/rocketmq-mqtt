@@ -17,16 +17,28 @@
 
 package org.apache.rocketmq.mqtt.cs.session;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.rocketmq.mqtt.common.model.*;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.Message;
+import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.Queue;
+import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CoapSession {

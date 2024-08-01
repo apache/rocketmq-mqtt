@@ -52,10 +52,6 @@ public class CoapRPCHandler extends SimpleChannelInboundHandler<DatagramPacket> 
             if (connectorNodes == null || connectorNodes.isEmpty()) {
                 throw new RemotingException("No Connect Nodes");
             }
-            // not forward if the packet is from RPC
-            if (connectorNodes.contains(address.getHostName())) {
-                ctx.fireChannelRead(packet);
-            }
             // calculate machine index to forward
             int hash = address.toString().hashCode();
             int nodeNum = Math.abs(hash % connectorNodes.size());

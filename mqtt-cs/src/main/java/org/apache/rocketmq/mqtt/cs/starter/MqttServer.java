@@ -48,6 +48,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.channel.AdaptiveTlsHandler;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.ChannelPipelineLazyInit;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttVersionHandler;
@@ -318,6 +319,7 @@ public class MqttServer {
                 .handler(new ChannelInitializer<DatagramChannel>() {
                     @Override
                     protected void initChannel(DatagramChannel ch) throws Exception {
+                        DatagramChannelManager.getInstance().setDatagramChannel(ch);
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast("coap-handler", coapRPCHandler);
                         pipeline.addLast("coap-encoder", new CoapEncoder());

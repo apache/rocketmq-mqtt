@@ -23,11 +23,13 @@ import com.alibaba.fastjson.JSON;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.common.model.RpcHeader;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.session.notify.MessageNotifyAction;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
@@ -102,7 +104,9 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
         InetSocketAddress sender = new InetSocketAddress(senderAddress, senderPort);
         InetSocketAddress recipient = new InetSocketAddress(recipientAddress, recipientPort);
         DatagramPacket packet = new DatagramPacket(buffer.retain(), recipient, sender);
-        System.out.println(packet);
+
+        DatagramChannel channel = DatagramChannelManager.getInstance().getDatagramChannel();
+        channel.pipeline().context("coap-handler").fireChannelRead(packet); // forward to coap-decoder
     }
 
 }

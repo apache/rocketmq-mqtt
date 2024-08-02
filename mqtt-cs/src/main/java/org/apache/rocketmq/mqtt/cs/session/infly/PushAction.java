@@ -28,12 +28,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.Session;
@@ -75,7 +81,7 @@ public class PushAction {
     private LmqQueueStore lmqQueueStore;
 
     @Resource
-    private CoapRetryManager coapRetryManager;
+    private DatagramChannelManager datagramChannelManager;
 
     public void messageArrive(Session session, Subscription subscription, Queue queue) {
         if (session == null) {
@@ -167,11 +173,9 @@ public class PushAction {
             message.setPayload("".getBytes());
         }
 
-        Subscription subscription = session.getSubscription();
-        CoapMessage sendMessage = session.sendNewMessage(queue, message);
-        if (subscription.getQos() > 0) {
-            coapRetryManager.addRetryMessage(sendMessage);
-        }
+        session.sendNewMessage(queue, message);
+        CoapMessage sendMessage = buildCoapMessage(message, session);
+        datagramChannelManager.pushMessage(sendMessage);
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
@@ -372,6 +376,29 @@ public class PushAction {
         if (nextSendOne != null) {
             push(nextSendOne, subscription, session, pendingQueue);
         }
+    }
+
+    private CoapMessage buildCoapMessage(Message message, CoapSession session) {
+        CoapMessage coapMessage = new CoapMessage(
+                Constants.COAP_VERSION,
+                session.getSubscription().getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
+                session.getToken().length,
+                CoapMessageCode.CONTENT,
+                session.getMessageId() + session.getMessageNum(),
+                session.getToken(),
+                message.getPayload(),
+                session.getAddress()
+        );
+        coapMessage.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
+        return coapMessage;
+    }
+
+    private byte[] intToByteArray(int value) {
+        byte[] byteArray = new byte[3];
+        byteArray[0] = (byte) (value >> 16);
+        byteArray[1] = (byte) (value >> 8);
+        byteArray[2] = (byte) (value);
+        return byteArray;
     }
 
 }

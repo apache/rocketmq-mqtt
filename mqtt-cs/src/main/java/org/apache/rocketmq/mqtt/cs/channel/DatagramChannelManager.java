@@ -18,7 +18,9 @@ package org.apache.rocketmq.mqtt.cs.channel;
 
 import io.netty.channel.socket.DatagramChannel;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapRetryManager;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -28,6 +30,9 @@ public class DatagramChannelManager {
 
     @Resource
     private CoapResponseCache coapResponseCache;
+
+    @Resource
+    private CoapRetryManager coapRetryManager;
 
     private DatagramChannel channel;
 
@@ -41,6 +46,17 @@ public class DatagramChannelManager {
 
     public void write(CoapMessage message) {
         channel.writeAndFlush(message);
+    }
+
+    public void writeResponse(CoapMessage message) {
+        channel.writeAndFlush(message);
         coapResponseCache.put(message);
+    }
+
+    public void pushMessage(CoapMessage message) {
+        channel.writeAndFlush(message);
+        if (message.getType() == CoapMessageType.CON) {
+            coapRetryManager.addRetryMessage(message);
+        }
     }
 }

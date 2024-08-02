@@ -26,6 +26,11 @@ import org.apache.rocketmq.mqtt.common.model.PullResult;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.QueueFresh;
@@ -38,6 +43,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -65,6 +71,9 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
 
     @Resource
     private QueueFresh queueFresh;
+
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
 
 
     private ScheduledThreadPoolExecutor pullService;
@@ -145,7 +154,18 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
             }
             // todo: inFlyCache.cleanResource()
             if (session != null) {
-                session.sendRemoveSessionMessage();
+                session.messageNumIncrement();
+                CoapMessage removeMessage = new CoapMessage(
+                        Constants.COAP_VERSION,
+                        session.getSubscription().getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
+                        session.getToken().length,
+                        CoapMessageCode.FORBIDDEN,
+                        session.getMessageId() + session.getMessageNum(),
+                        session.getToken(),
+                        "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8),
+                        session.getAddress()
+                );
+                datagramChannelManager.pushMessage(removeMessage);
                 matchAction.removeSubscription(session);
                 // todo: persistOffset(session)
             }

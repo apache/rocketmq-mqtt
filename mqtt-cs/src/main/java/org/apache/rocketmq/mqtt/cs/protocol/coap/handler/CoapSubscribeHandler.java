@@ -34,6 +34,7 @@ import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapRetryManager;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,9 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
 
     @Resource
     private CoapResponseCache coapResponseCache;
+
+    @Resource
+    private CoapRetryManager coapRetryManager;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_coap_subscribe_future"));
 
@@ -93,7 +97,6 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         newSession.setToken(coapMessage.getToken());
         newSession.setSubscribeTime(System.currentTimeMillis());
         newSession.setSubscription(subscription);
-        newSession.setCtx(ctx);
         CompletableFuture<Void> future = new CompletableFuture<>();
         // todo: setFuture
         scheduler.schedule(() -> {
@@ -125,7 +128,21 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             if (message == null) {
                 return;
             }
-            session.write(message.getPayload());
+            session.messageNumIncrement();
+            CoapMessage sendMessage = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    session.getSubscription().getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
+                    session.getToken().length,
+                    CoapMessageCode.CONTENT,
+                    session.getMessageId() + session.getMessageNum(),
+                    session.getToken(),
+                    message.getPayload(),
+                    session.getAddress()
+            );
+            ctx.writeAndFlush(sendMessage);
+            if (session.getSubscription().getQos() > 0) {
+                coapRetryManager.addRetryMessage(sendMessage);
+            }
         }));
     }
 

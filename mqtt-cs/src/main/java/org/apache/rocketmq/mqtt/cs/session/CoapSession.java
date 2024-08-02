@@ -17,22 +17,14 @@
 
 package org.apache.rocketmq.mqtt.cs.session;
 
-import io.netty.channel.ChannelHandlerContext;
-import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
-import org.apache.rocketmq.mqtt.common.model.CoapMessage;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.QueueOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
@@ -44,10 +36,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CoapSession {
     private static Logger logger = LoggerFactory.getLogger(CoapSession.class);
+
     private static final int MAX_MESSAGE_ID = 65535;
 
     private InetSocketAddress address;
-    private ChannelHandlerContext ctx;
     private final int messageId = new Random().nextInt(MAX_MESSAGE_ID) + 1;
     private byte[] token;
     private int messageNum = 0;
@@ -230,15 +222,15 @@ public class CoapSession {
         }
     }
 
-    public CoapMessage sendNewMessage(Queue queue, Message messageSend) {
-        CoapMessage data = write(messageSend.getPayload());
+    public void sendNewMessage(Queue queue, Message messageSend) {
+        this.messageNum++;
         LinkedHashSet<Message> messages = sendingMessages.get(queue);
         if (messages == null) {
-            return null;
+            return;
         }
         synchronized (this) {
             if (messages.isEmpty()) {
-                return null;
+                return;
             }
             Iterator<Message> iterator = messages.iterator();
             while (iterator.hasNext()) {
@@ -252,45 +244,10 @@ public class CoapSession {
                 }
             }
         }
-        return data;
     }
 
-    public void sendRemoveSessionMessage() {
-        byte[] payload = "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8);
-        write(payload, CoapMessageCode.FORBIDDEN);
-    }
-
-    public CoapMessage write(byte[] payload) {
-        return write(payload, CoapMessageCode.CONTENT);
-    }
-
-    public CoapMessage write(byte[] payload, CoapMessageCode code) {
+    public void messageNumIncrement() {
         this.messageNum++;
-        CoapMessage data = new CoapMessage(
-                Constants.COAP_VERSION,
-                this.subscription.getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
-                this.token.length,
-                code,
-                this.messageId + this.messageNum,
-                this.token,
-                payload,
-                this.address
-        );
-        data.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(this.messageNum)));
-        if (this.ctx.channel().isActive()) {
-            this.ctx.writeAndFlush(data);
-        } else {
-            System.out.println("Channel is not active");
-        }
-        return data;
-    }
-
-    private byte[] intToByteArray(int value) {
-        byte[] byteArray = new byte[3];
-        byteArray[0] = (byte) (value >> 16);
-        byteArray[1] = (byte) (value >> 8);
-        byteArray[2] = (byte) (value);
-        return byteArray;
     }
 
     public InetSocketAddress getAddress() {
@@ -343,14 +300,6 @@ public class CoapSession {
 
     public void setPullSize(int pullSize) {
         this.pullSize = pullSize;
-    }
-
-    public ChannelHandlerContext getCtx() {
-        return ctx;
-    }
-
-    public void setCtx(ChannelHandlerContext ctx) {
-        this.ctx = ctx;
     }
 
     public Map<Queue, QueueOffset> getOffsetMap() {

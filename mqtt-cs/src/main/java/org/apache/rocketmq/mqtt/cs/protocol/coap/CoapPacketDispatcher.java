@@ -26,11 +26,13 @@ import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapSubscribeHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapHeartbeatHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapDisconnectHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapAckHandler;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapPublishProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapSubscribeProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapConnectProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapHeartbeatProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapDisconnectProcessor;
+import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapAckProcessor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +61,9 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
     private CoapDisconnectHandler coapDisconnectHandler;
 
     @Resource
+    private CoapAckHandler coapAckHandler;
+
+    @Resource
     private CoapPublishProcessor coapPublishProcessor;
 
     @Resource
@@ -72,6 +77,9 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
 
     @Resource
     private CoapDisconnectProcessor coapDisconnectProcessor;
+
+    @Resource
+    private CoapAckProcessor coapAckProcessor;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CoapRequestMessage msg) throws Exception {
@@ -127,6 +135,9 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
             case DISCONNECT:
                 coapDisconnectHandler.doHandler(ctx, msg, processResult);
                 break;
+            case ACK:
+                coapAckHandler.doHandler(ctx, msg, processResult);
+                break;
             default:
         }
     }
@@ -143,6 +154,8 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
                 return coapHeartbeatHandler.preHandler(ctx, msg);
             case DISCONNECT:
                 return coapDisconnectHandler.preHandler(ctx, msg);
+            case ACK:
+                return coapAckHandler.preHandler(ctx, msg);
             default:
                 return false;
         }
@@ -160,6 +173,8 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
                 return coapHeartbeatProcessor.process(msg);
             case DISCONNECT:
                 return coapDisconnectProcessor.process(msg);
+            case ACK:
+                return coapAckProcessor.process(msg);
             default:
         }
         CompletableFuture<HookResult> hookResult = new CompletableFuture<>();

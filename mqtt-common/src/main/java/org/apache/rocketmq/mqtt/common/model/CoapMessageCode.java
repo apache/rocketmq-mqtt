@@ -17,6 +17,8 @@
 package org.apache.rocketmq.mqtt.common.model;
 
 public enum CoapMessageCode {
+    EMPTY(0),
+
     // Request Code, 0.xx
     GET(1),
     POST(2),
@@ -62,7 +64,7 @@ public enum CoapMessageCode {
     }
 
     public static CoapMessageCode valueOf(int code) {
-        if (code > 0 && code < VALUES.length && VALUES[code] != null) {
+        if (code >= 0 && code < VALUES.length && VALUES[code] != null) {
             return  VALUES[code];
         } else {
             throw new IllegalArgumentException("Unknown CoapMessageCode " + code);
@@ -71,6 +73,10 @@ public enum CoapMessageCode {
 
     public static boolean isRequestCode(CoapMessageCode code) {
         return (code == GET) || (code == POST) || (code == PUT) || (code == DELETE);
+    }
+    
+    public static boolean isEmptyCode(CoapMessageCode code) {
+        return code == EMPTY;
     }
 
     static {

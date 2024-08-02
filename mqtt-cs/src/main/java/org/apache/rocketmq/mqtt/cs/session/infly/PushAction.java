@@ -104,19 +104,12 @@ public class PushAction {
         if (session == null) {
             return;
         }
-        if (!connectConf.isOrder()) {
-            List<Message> list = session.pendMessageList(queue);
-            if (list != null && !list.isEmpty()) {
-                for (Message message : list) {
-                    message.setAck(0);
-                    coapPush(message, session, queue);
-                }
+        List<Message> list = session.pendMessageList(queue);
+        if (list != null && !list.isEmpty()) {
+            for (Message message : list) {
+                message.setAck(0);
+                coapPush(message, session, queue);
             }
-            return;
-        }
-        Message message = session.nextSendMessageByOrder(queue);
-        if (message != null) {
-            coapPush(message, session, queue);
         }
     }
 
@@ -162,7 +155,6 @@ public class PushAction {
             if (message.getStoreTimestamp() > 0 && message.getStoreTimestamp() < session.getSubscribeTime()) {
                 logger.warn("coap old msg:{},{},{},{}", session.getAddress(), message.getMsgId(),
                         message.getStoreTimestamp(), session.getSubscribeTime());
-//                rollNext(session);
                 return;
             }
         } catch (Exception e) {
@@ -176,25 +168,10 @@ public class PushAction {
         }
 
         Subscription subscription = session.getSubscription();
-        int qos = subscription.getQos();
-        if (message.qos() != null && (subscription.isP2p() || message.qos() < qos)) {
-            qos = message.qos();
-        }
-        CoapMessage sendMessage = session.sendNewMessage(queue, message, qos);
-        if (qos > 0) {
+        CoapMessage sendMessage = session.sendNewMessage(queue, message);
+        if (subscription.getQos() > 0) {
             coapRetryManager.addRetryMessage(sendMessage);
         }
-//            session.updateQueueOffset(queue, message);
-//            rollNextByAck(session);
-//            if (!connectConf.isOrder()) {
-//                session.ack(pendingQueue, pendingDownSeqId);
-//                return;
-//            }
-//
-//            Message nextSendOne = session.rollNext(subscription, pendingQueue, pendingDownSeqId);
-//            if (nextSendOne != null) {
-//                push(nextSendOne, subscription, session, pendingQueue);
-//            }
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {

@@ -101,7 +101,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
             in.skipBytes(in.readableBytes());
             return;
         }
-        if (!CoapMessageCode.isRequestCode(coapCode)) {
+        if (!CoapMessageCode.isRequestCode(coapCode) && !CoapMessageCode.isEmptyCode(coapCode)) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The code must be a request code!";
             sendErrorResponse(ctx);
@@ -127,6 +127,13 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
         in.readBytes(coapToken);
 
         CoapRequestMessage coapMessage = new CoapRequestMessage(version, coapType, coapTokenLength, coapCode, coapMessageId, coapToken, remoteAddress);
+
+        // Handle ACK
+        if (coapType == CoapMessageType.ACK) {
+            coapMessage.setRequestType(CoapRequestType.ACK);
+            ctx.fireChannelRead(coapMessage);
+            return;
+        }
 
         // Handle options
         int nextByte;

@@ -227,15 +227,15 @@ public class CoapSession {
         }
     }
 
-    public CoapMessage sendNewMessage(Queue queue, Message messageSend, int qos) {
+    public CoapMessage sendNewMessage(Queue queue, Message messageSend) {
         CoapMessage data = write(messageSend.getPayload());
         LinkedHashSet<Message> messages = sendingMessages.get(queue);
         if (messages == null) {
-            return;
+            return null;
         }
         synchronized (this) {
             if (messages.isEmpty()) {
-                return;
+                return null;
             }
             Iterator<Message> iterator = messages.iterator();
             while (iterator.hasNext()) {

@@ -17,12 +17,14 @@
 package org.apache.rocketmq.mqtt.common.model;
 
 public enum CoapRequestType {
-    PUBLISH(0),
-    SUBSCRIBE(1),
+    ACK(0),
 
-    CONNECT(2),
-    HEARTBEAT(3),
-    DISCONNECT(4);
+    PUBLISH(1),
+    SUBSCRIBE(2),
+
+    CONNECT(3),
+    HEARTBEAT(4),
+    DISCONNECT(5);
 
     private static final CoapRequestType[] VALUES;
     private final int value;

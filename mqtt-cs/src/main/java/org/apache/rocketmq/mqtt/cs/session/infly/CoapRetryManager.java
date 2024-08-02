@@ -1,0 +1,97 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.rocketmq.mqtt.cs.session.infly;
+
+import io.netty.channel.socket.DatagramChannel;
+import org.apache.rocketmq.common.ThreadFactoryImpl;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+@Component
+public class CoapRetryManager {
+
+    private static Logger logger = LoggerFactory.getLogger(CoapRetryManager.class);
+
+    private ScheduledThreadPoolExecutor scheduler;
+
+    private ConcurrentMap<Integer, RetryMessage> retryMessageMap = new ConcurrentHashMap<>(1024);
+
+    private static final int SCHEDULE_INTERVAL = 1000;
+    private static final int MAX_RETRY_TIME = 3;
+    private static final long RETRY_INTERVAL = 3000;
+
+    @PostConstruct
+    public void init() {
+        scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("coap_retry_message_thread_"));
+        scheduler.scheduleWithFixedDelay(() -> doRetry(), SCHEDULE_INTERVAL, SCHEDULE_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+
+    public void addRetryMessage(CoapMessage message) {
+        retryMessageMap.put(message.getMessageId(), new RetryMessage(message.getMessageId(), message));
+    }
+
+    public void removeRetryMessage(int messageId) {
+        retryMessageMap.remove(messageId);
+    }
+
+    public boolean contains(int messageId) {
+        return retryMessageMap.containsKey(messageId);
+    }
+
+    private void doRetry() {
+        if (retryMessageMap.isEmpty()) {
+            return;
+        }
+        long currentTime = System.currentTimeMillis();
+        for (RetryMessage retryMessage : retryMessageMap.values()) {
+            if (currentTime - retryMessage.lastSendTime < RETRY_INTERVAL) {
+                continue;
+            }
+            if (retryMessage.retryTime >= MAX_RETRY_TIME) {
+                removeRetryMessage(retryMessage.messageId);
+                logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
+                continue;
+            }
+            DatagramChannel channel = DatagramChannelManager.getInstance().getDatagramChannel();
+            channel.writeAndFlush(retryMessage.message);
+            retryMessage.retryTime++;
+            retryMessage.lastSendTime = currentTime;
+        }
+    }
+
+    public class RetryMessage {
+        private int messageId;
+        private CoapMessage message;
+        private int retryTime = 0;
+        private long lastSendTime = System.currentTimeMillis();
+
+        public RetryMessage(int messageId, CoapMessage message) {
+            this.messageId = messageId;
+            this.message = message;
+        }
+    }
+}

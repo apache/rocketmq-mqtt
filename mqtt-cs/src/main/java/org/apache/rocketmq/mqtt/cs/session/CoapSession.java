@@ -227,30 +227,29 @@ public class CoapSession {
         }
     }
 
-    public void sendNewMessage(Queue queue, Message messageSend, int qos) {
-        write(messageSend.getPayload());
-        if (qos == 0) {
-            LinkedHashSet<Message> messages = sendingMessages.get(queue);
-            if (messages == null) {
+    public CoapMessage sendNewMessage(Queue queue, Message messageSend, int qos) {
+        CoapMessage data = write(messageSend.getPayload());
+        LinkedHashSet<Message> messages = sendingMessages.get(queue);
+        if (messages == null) {
+            return;
+        }
+        synchronized (this) {
+            if (messages.isEmpty()) {
                 return;
             }
-            synchronized (this) {
-                if (messages.isEmpty()) {
-                    return;
+            Iterator<Message> iterator = messages.iterator();
+            while (iterator.hasNext()) {
+                Message message = iterator.next();
+                if (message.equals(messageSend)) {
+                    message.setAck(1);
                 }
-                Iterator<Message> iterator = messages.iterator();
-                while (iterator.hasNext()) {
-                    Message message = iterator.next();
-                    if (message.equals(messageSend)) {
-                        message.setAck(1);
-                    }
-                    if (message.getAck() == 1) {
-                        updateQueueOffset(queue, message);
-                        iterator.remove();
-                    }
+                if (message.getAck() == 1) {
+                    updateQueueOffset(queue, message);
+                    iterator.remove();
                 }
             }
         }
+        return data;
     }
 
     public void sendRemoveSessionMessage() {
@@ -258,11 +257,11 @@ public class CoapSession {
         write(payload, CoapMessageCode.FORBIDDEN);
     }
 
-    public void write(byte[] payload) {
-        write(payload, CoapMessageCode.CONTENT);
+    public CoapMessage write(byte[] payload) {
+        return write(payload, CoapMessageCode.CONTENT);
     }
 
-    public void write(byte[] payload, CoapMessageCode code) {
+    public CoapMessage write(byte[] payload, CoapMessageCode code) {
         this.messageNum++;
         CoapMessage data = new CoapMessage(
                 Constants.COAP_VERSION,
@@ -280,6 +279,7 @@ public class CoapSession {
         } else {
             System.out.println("Channel is not active");
         }
+        return data;
     }
 
     private byte[] intToByteArray(int value) {

@@ -27,6 +27,7 @@ import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
@@ -72,6 +73,9 @@ public class PushAction {
 
     @Resource
     private LmqQueueStore lmqQueueStore;
+
+    @Resource
+    private CoapRetryManager coapRetryManager;
 
     public void messageArrive(Session session, Subscription subscription, Queue queue) {
         if (session == null) {
@@ -176,8 +180,10 @@ public class PushAction {
         if (message.qos() != null && (subscription.isP2p() || message.qos() < qos)) {
             qos = message.qos();
         }
-        if (qos == 0) {
-            session.sendNewMessage(queue, message, qos);
+        CoapMessage sendMessage = session.sendNewMessage(queue, message, qos);
+        if (qos > 0) {
+            coapRetryManager.addRetryMessage(sendMessage);
+        }
 //            session.updateQueueOffset(queue, message);
 //            rollNextByAck(session);
 //            if (!connectConf.isOrder()) {
@@ -189,9 +195,6 @@ public class PushAction {
 //            if (nextSendOne != null) {
 //                push(nextSendOne, subscription, session, pendingQueue);
 //            }
-        } else {
-            // todo: deal with qos 1/2
-        }
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {

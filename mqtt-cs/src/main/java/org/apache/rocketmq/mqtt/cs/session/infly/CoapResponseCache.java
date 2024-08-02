@@ -14,33 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.rocketmq.mqtt.cs.channel;
+package org.apache.rocketmq.mqtt.cs.session.infly;
 
-import io.netty.channel.socket.DatagramChannel;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
-import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
-
 @Component
-public class DatagramChannelManager {
+public class CoapResponseCache {
+    private static final int MAX_SIZE = 10000;
+    private Cache<Integer, CoapMessage> responseCache = Caffeine.newBuilder().maximumSize(MAX_SIZE).build();
 
-    @Resource
-    private CoapResponseCache coapResponseCache;
-
-    private DatagramChannel channel;
-
-    public void setChannel(DatagramChannel channel) {
-        this.channel = channel;
+    public void put(CoapMessage coapMessage) {
+        responseCache.put(coapMessage.getMessageId(), coapMessage);
     }
 
-    public DatagramChannel getChannel() {
-        return channel;
+    public CoapMessage get(int messageId) {
+        return responseCache.getIfPresent(messageId);
     }
 
-    public void write(CoapMessage message) {
-        channel.writeAndFlush(message);
-        coapResponseCache.put(message);
-    }
 }

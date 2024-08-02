@@ -19,6 +19,7 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapPublishHandler;
@@ -27,6 +28,7 @@ import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapHeartbeatHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapAckHandler;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapPublishProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapSubscribeProcessor;
 import org.apache.rocketmq.mqtt.ds.upstream.coap.processor.CoapConnectProcessor;
@@ -81,8 +83,18 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
     @Resource
     private CoapAckProcessor coapAckProcessor;
 
+    @Resource
+    private CoapResponseCache coapResponseCache;
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, CoapRequestMessage msg) throws Exception {
+
+        // check duplicate
+        CoapMessage oldResponse = coapResponseCache.get(msg.getMessageId());
+        if (oldResponse != null) {
+            ctx.writeAndFlush(oldResponse);
+            return;
+        }
 
         boolean preResult = preHandler(ctx, msg);
         if (!preResult) {

@@ -53,6 +53,9 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
     @Resource
     private ChannelManager channelManager;
 
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws Exception {
         RemotingCommand response = RemotingCommand.createResponseCommand(RpcCode.SUCCESS, null);
@@ -105,7 +108,7 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
         InetSocketAddress recipient = new InetSocketAddress(recipientAddress, recipientPort);
         DatagramPacket packet = new DatagramPacket(buffer.retain(), recipient, sender);
 
-        DatagramChannel channel = DatagramChannelManager.getInstance().getDatagramChannel();
+        DatagramChannel channel = datagramChannelManager.getChannel();
         channel.pipeline().context("coap-handler").fireChannelRead(packet); // forward to coap-decoder
     }
 

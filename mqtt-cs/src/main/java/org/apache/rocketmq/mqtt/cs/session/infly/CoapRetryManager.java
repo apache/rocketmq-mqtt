@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -33,6 +34,9 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class CoapRetryManager {
+
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
 
     private static Logger logger = LoggerFactory.getLogger(CoapRetryManager.class);
 
@@ -75,7 +79,7 @@ public class CoapRetryManager {
                 logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
                 continue;
             }
-            DatagramChannel channel = DatagramChannelManager.getInstance().getDatagramChannel();
+            DatagramChannel channel = datagramChannelManager.getChannel();
             channel.writeAndFlush(retryMessage.message);
             retryMessage.retryTime++;
             retryMessage.lastSendTime = System.currentTimeMillis();

@@ -109,6 +109,10 @@ public class MqttServer {
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     private NioEventLoopGroup acceptorEventLoopGroup;
 
     private NioEventLoopGroup workerEventLoopGroup;
@@ -319,7 +323,7 @@ public class MqttServer {
                 .handler(new ChannelInitializer<DatagramChannel>() {
                     @Override
                     protected void initChannel(DatagramChannel ch) throws Exception {
-                        DatagramChannelManager.getInstance().setDatagramChannel(ch);
+                        datagramChannelManager.setChannel(ch);
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast("coap-handler", coapRPCHandler);
                         pipeline.addLast("coap-encoder", new CoapEncoder());

@@ -33,7 +33,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
-import org.apache.rocketmq.mqtt.cs.session.infly.PushAction;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,37 +58,13 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     private RetainedPersistManager retainedPersistManager;
 
     @Resource
-    private PushAction pushAction;
+    private CoapResponseCache coapResponseCache;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_coap_subscribe_future"));
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
         // todo: check token if connection mode
-//        doResponseSuccess(ctx, coapMessage);
-
-//        byte[] byteArray = new byte[3];
-//        intToByteArray(1, byteArray);
-//        doResponseSuccess(ctx, coapMessage, byteArray);
-//
-//        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        doResponseCON(ctx, coapMessage, intToByteArray(2));
-//
-//        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        intToByteArray(3, byteArray);
-//        doResponseCON(ctx, coapMessage, byteArray);
-//
-//        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        intToByteArray(4, byteArray);
-//        doResponseCON(ctx, coapMessage, byteArray);
-//
-//        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        intToByteArray(5, byteArray);
-//        doResponseCONError(ctx, coapMessage, byteArray);
-//
-//        coapMessage.setMessageId(coapMessage.getMessageId() + 1);
-//        intToByteArray(6, byteArray);
-//        doResponseCON(ctx, coapMessage, byteArray);
         return true;
     }
 
@@ -167,6 +143,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(1)));
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(response);
+            coapResponseCache.put(response);
         } else {
             System.out.println("Channel is not active");
         }
@@ -196,86 +173,10 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
         if (ctx.channel().isActive()) {
             ctx.writeAndFlush(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
-
-    }
-
-    public void doResponseNON(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, byte[] byteArray) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                CoapMessageType.NON,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.CONTENT,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                "Hello, 111".getBytes(StandardCharsets.UTF_8),
-                coapMessage.getRemoteAddress()
-        );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, byteArray));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
+            coapResponseCache.put(response);
         } else {
             System.out.println("Channel is not active");
         }
     }
 
-    public void doResponseCON(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, byte[] byteArray) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                CoapMessageType.CON,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.CONTENT,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                "Hello, 222".getBytes(StandardCharsets.UTF_8),
-                coapMessage.getRemoteAddress()
-        );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, byteArray));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
-    }
-
-    public void doResponseCONError(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, byte[] byteArray) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                CoapMessageType.CON,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.BAD_REQUEST,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                "Hello, 222".getBytes(StandardCharsets.UTF_8),
-                coapMessage.getRemoteAddress()
-        );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, byteArray));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
-    }
-
-
-    public void doResponseRST(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, byte[] byteArray) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                CoapMessageType.RST,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.BAD_REQUEST,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                "Hello, RST".getBytes(StandardCharsets.UTF_8),
-                coapMessage.getRemoteAddress()
-        );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, byteArray));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
-    }
 }

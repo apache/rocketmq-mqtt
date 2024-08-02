@@ -24,10 +24,16 @@ import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
 
 @Component
 public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage> {
+
+    @Resource
+    private CoapResponseCache coapResponseCache;
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
@@ -56,6 +62,7 @@ public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage>
                 coapMessage.getRemoteAddress()
         );
         ctx.writeAndFlush(response);
+        coapResponseCache.put(response);
     }
 
     public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
@@ -70,5 +77,6 @@ public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage>
                 coapMessage.getRemoteAddress()
         );
         ctx.writeAndFlush(response);
+        coapResponseCache.put(response);
     }
 }

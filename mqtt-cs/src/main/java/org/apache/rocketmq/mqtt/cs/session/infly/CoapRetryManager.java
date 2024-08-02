@@ -66,9 +66,8 @@ public class CoapRetryManager {
         if (retryMessageMap.isEmpty()) {
             return;
         }
-        long currentTime = System.currentTimeMillis();
         for (RetryMessage retryMessage : retryMessageMap.values()) {
-            if (currentTime - retryMessage.lastSendTime < RETRY_INTERVAL) {
+            if (System.currentTimeMillis() - retryMessage.lastSendTime < RETRY_INTERVAL) {
                 continue;
             }
             if (retryMessage.retryTime >= MAX_RETRY_TIME) {
@@ -79,7 +78,7 @@ public class CoapRetryManager {
             DatagramChannel channel = DatagramChannelManager.getInstance().getDatagramChannel();
             channel.writeAndFlush(retryMessage.message);
             retryMessage.retryTime++;
-            retryMessage.lastSendTime = currentTime;
+            retryMessage.lastSendTime = System.currentTimeMillis();
         }
     }
 

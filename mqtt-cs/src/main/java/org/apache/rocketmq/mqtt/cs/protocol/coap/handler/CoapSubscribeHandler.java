@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -99,6 +100,24 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             return;
         }
 
+        Subscription subscription = new Subscription();
+        subscription.setQos(coapMessage.getQosLevel().value());
+        subscription.setTopicFilter(TopicUtils.normalizeTopic(coapMessage.getTopic()));
+
+        InetSocketAddress address = coapMessage.getRemoteAddress();
+        CoapSession session = sessionLoop.getSession(address);
+        if (session != null) {
+            session.refreshSubscribeTime();
+            doResponseSuccess(ctx, coapMessage, session);
+            return;
+        }
+
+        CoapSession newSession = new CoapSession();
+        newSession.setAddress(address);
+        newSession.setToken(coapMessage.getToken());
+        newSession.setSubscribeTime(System.currentTimeMillis());
+        newSession.setSubscription(subscription);
+        newSession.setCtx(ctx);
         CompletableFuture<Void> future = new CompletableFuture<>();
         // todo: setFuture
         scheduler.schedule(() -> {
@@ -107,28 +126,16 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
             }
         }, 1, TimeUnit.SECONDS);
         try {
-            Subscription subscription = new Subscription();
-            subscription.setQos(coapMessage.getQosLevel().value());
-            subscription.setTopicFilter(TopicUtils.normalizeTopic(coapMessage.getTopic()));
-
-            CoapSession session = new CoapSession();
-            session.setAddress(coapMessage.getRemoteAddress());
-            session.setMessageId(coapMessage.getMessageId());
-            session.setToken(coapMessage.getToken());
-            session.setSubscribeTime(System.currentTimeMillis());
-            session.setSubscription(subscription);
-            session.setCtx(ctx);
-            sessionLoop.addSession(session, future); // if the session is already exist, do not send retained message
+            sessionLoop.addSession(newSession, future);
+            doResponseSuccess(ctx, coapMessage, newSession);
 
             future.thenAccept(aVoid -> {
                 if (!ctx.channel().isActive()) {
                     return;
                 }
                 // todo: removeFuture
-                doResponseSuccess(ctx, coapMessage, session);
-                sendRetainMessage(ctx, session);
-
-
+                doResponseSuccess(ctx, coapMessage, newSession);
+                sendRetainMessage(ctx, newSession);
             });
         } catch (Exception e) {
             logger.error("Coap Subscribe:{}", coapMessage.getRemoteAddress(), e);

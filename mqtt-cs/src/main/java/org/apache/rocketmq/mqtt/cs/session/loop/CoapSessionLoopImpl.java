@@ -115,7 +115,6 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
         synchronized (this) {
             // if this session is already exist, refresh the subscription time and do nothing
             if (sessionMap.containsKey(address)) {
-                sessionMap.get(address).refreshSubscribeTime();
                 return;
             }
             sessionMap.put(address, session);

@@ -39,13 +39,16 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CoapSession {
     private static Logger logger = LoggerFactory.getLogger(CoapSession.class);
+    private static final int MAX_MESSAGE_ID = 65535;
+
     private InetSocketAddress address;
     private ChannelHandlerContext ctx;
-    private int messageId;
+    private final int messageId = new Random().nextInt(MAX_MESSAGE_ID) + 1;
     private byte[] token;
     private int messageNum = 0;
     private long subscribeTime;
@@ -300,10 +303,6 @@ public class CoapSession {
 
     public int getMessageId() {
         return messageId;
-    }
-
-    public void setMessageId(int messageId) {
-        this.messageId = messageId;
     }
 
     public byte[] getToken() {

@@ -50,6 +50,8 @@ public class CoapSession {
     private Map<Queue, QueueOffset> offsetMap = new ConcurrentHashMap<>(16);
     Map<Queue, LinkedHashSet<Message>> sendingMessages = new ConcurrentHashMap<>(16);
 
+    int timeForTest = 0;
+
     public CoapSession() {}
 
     public void refreshSubscribeTime() {
@@ -223,7 +225,7 @@ public class CoapSession {
     }
 
     public void sendNewMessage(Queue queue, Message messageSend) {
-        this.messageNum++;
+        messageNumIncrement();
         LinkedHashSet<Message> messages = sendingMessages.get(queue);
         if (messages == null) {
             return;

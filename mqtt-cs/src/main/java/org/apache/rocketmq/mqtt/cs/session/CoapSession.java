@@ -50,8 +50,6 @@ public class CoapSession {
     private Map<Queue, QueueOffset> offsetMap = new ConcurrentHashMap<>(16);
     Map<Queue, LinkedHashSet<Message>> sendingMessages = new ConcurrentHashMap<>(16);
 
-    int timeForTest = 0;
-
     public CoapSession() {}
 
     public void refreshSubscribeTime() {

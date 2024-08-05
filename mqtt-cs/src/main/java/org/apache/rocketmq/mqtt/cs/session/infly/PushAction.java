@@ -31,8 +31,6 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
@@ -175,7 +173,7 @@ public class PushAction {
 
         session.sendNewMessage(queue, message);
         CoapMessage sendMessage = buildCoapMessage(message, session);
-        datagramChannelManager.pushMessage(sendMessage);
+        datagramChannelManager.pushMessage(session, sendMessage);
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
@@ -389,16 +387,8 @@ public class PushAction {
                 message.getPayload(),
                 session.getAddress()
         );
-        coapMessage.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
+        coapMessage.addObserveOption(session.getMessageNum());
         return coapMessage;
-    }
-
-    private byte[] intToByteArray(int value) {
-        byte[] byteArray = new byte[3];
-        byteArray[0] = (byte) (value >> 16);
-        byteArray[1] = (byte) (value >> 8);
-        byteArray[2] = (byte) (value);
-        return byteArray;
     }
 
 }

@@ -27,8 +27,6 @@ import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
-import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
@@ -134,7 +132,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                     message.getPayload(),
                     session.getAddress()
             );
-            datagramChannelManager.pushMessage(sendMessage);
+            datagramChannelManager.pushMessage(session, sendMessage);
         }));
     }
 
@@ -149,18 +147,8 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 errContent.getBytes(StandardCharsets.UTF_8),
                 coapMessage.getRemoteAddress()
         );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(1)));
+        response.addObserveOption(1);
         datagramChannelManager.writeResponse(response);
-    }
-
-
-    // change an integer into a byte array with length 3
-    private byte[] intToByteArray(int value) {
-        byte[] byteArray = new byte[3];
-        byteArray[0] = (byte) (value >> 16);
-        byteArray[1] = (byte) (value >> 8);
-        byteArray[2] = (byte) (value);
-        return byteArray;
     }
 
     public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, CoapSession session) {
@@ -174,7 +162,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 "Hello, I have accept your request successfully!".getBytes(StandardCharsets.UTF_8),
                 coapMessage.getRemoteAddress()
         );
-        response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
+        response.addObserveOption(session.getMessageNum());
         datagramChannelManager.writeResponse(response);
     }
 

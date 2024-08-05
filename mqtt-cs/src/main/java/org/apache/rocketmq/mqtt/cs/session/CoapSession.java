@@ -64,11 +64,11 @@ public class CoapSession {
     }
 
     public void freshQueue(Set<Queue> queues) {
-        if (this.subscription == null) {
+        if (subscription == null) {
             throw new RuntimeException("subscription is null");
         }
         if (queues == null) {
-            logger.warn("queues is null when freshQueue,{},{}", this.address, this.subscription);
+            logger.warn("queues is null when freshQueue,{},{}", address, subscription);
             return;
         }
 
@@ -94,7 +94,7 @@ public class CoapSession {
         }
 
         if (queues.isEmpty()) {
-            logger.warn("queues is empty when freshQueue,{},{}", this.address, this.subscription);
+            logger.warn("queues is empty when freshQueue,{},{}", address, subscription);
         }
     }
 
@@ -104,7 +104,7 @@ public class CoapSession {
 
     public void updateQueueOffset(Queue queue, Message message) {
         if (!offsetMap.containsKey(queue)) {
-            logger.warn("failed update queue offset,not found queueOffset,{},{},{}", this.address, this.subscription,
+            logger.warn("failed update queue offset,not found queueOffset,{},{},{}", address, subscription,
                     queue);
             return;
         }
@@ -126,7 +126,7 @@ public class CoapSession {
             sendingMessages.putIfAbsent(queue, new LinkedHashSet<>(8));
         }
         if (!offsetMap.containsKey(queue)) {
-            logger.warn("not found queueOffset,{},{},{}", this.address, this.subscription, queue);
+            logger.warn("not found queueOffset,{},{},{}", address, subscription, queue);
             return false;
         }
         boolean add =false;
@@ -246,8 +246,12 @@ public class CoapSession {
         }
     }
 
+    public int getNextMessageID() {
+        return messageId + messageNum;
+    }
+
     public void messageNumIncrement() {
-        this.messageNum++;
+        messageNum++;
     }
 
     public InetSocketAddress getAddress() {

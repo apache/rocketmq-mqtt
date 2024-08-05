@@ -105,12 +105,20 @@ public class CoapMessage {
         return options;
     }
 
+    public void clearOptions() {
+        this.options.clear();
+    }
+
     public void setOptions(List<CoapMessageOption> options) {
         this.options = options;
     }
 
     public void addOption(CoapMessageOption option) {
         this.options.add(option);
+    }
+
+    public void addObserveOption(int value) {
+        this.options.add(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(value)));
     }
 
     public byte[] getPayload() {
@@ -128,6 +136,15 @@ public class CoapMessage {
     public void setRemoteAddress(InetSocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
     }
+
+    private byte[] intToByteArray(int value) {
+        byte[] byteArray = new byte[3];
+        byteArray[0] = (byte) (value >> 16);
+        byteArray[1] = (byte) (value >> 8);
+        byteArray[2] = (byte) (value);
+        return byteArray;
+    }
+
 
     @Override
     public String toString() {

@@ -20,6 +20,7 @@ package org.apache.rocketmq.mqtt.cs.session.infly;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -53,8 +54,8 @@ public class CoapRetryManager {
         scheduler.scheduleWithFixedDelay(() -> doRetry(), SCHEDULE_INTERVAL, SCHEDULE_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
-    public void addRetryMessage(CoapMessage message) {
-        retryMessageMap.put(message.getMessageId(), new RetryMessage(message.getMessageId(), message));
+    public void addRetryMessage(CoapSession session, CoapMessage message) {
+        retryMessageMap.put(message.getMessageId(), new RetryMessage(message.getMessageId(), message, session));
     }
 
     public void removeRetryMessage(int messageId) {
@@ -78,6 +79,17 @@ public class CoapRetryManager {
                 logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
                 continue;
             }
+            // update messageID if session has newer messageID
+            CoapSession session = retryMessage.session;
+            int latestMessageNum = session.getMessageNum();
+            int latestMessageID = session.getMessageId() + latestMessageNum;
+            if (latestMessageID > retryMessage.messageId) {
+                retryMessage.messageId = latestMessageID;
+                retryMessage.message.setMessageId(latestMessageID);
+                retryMessage.message.clearOptions();
+                retryMessage.message.addObserveOption(latestMessageNum);
+                session.messageNumIncrement();
+            }
             datagramChannelManager.write(retryMessage.message);
             retryMessage.retryTime++;
             retryMessage.lastSendTime = System.currentTimeMillis();
@@ -87,6 +99,7 @@ public class CoapRetryManager {
     public class RetryMessage {
         private int messageId;
         private CoapMessage message;
+        private CoapSession session;
         private int retryTime = 0;
         private long lastSendTime = System.currentTimeMillis();
 
@@ -94,5 +107,12 @@ public class CoapRetryManager {
             this.messageId = messageId;
             this.message = message;
         }
+
+        public RetryMessage(int messageId, CoapMessage message, CoapSession session) {
+            this.messageId = messageId;
+            this.message = message;
+            this.session = session;
+        }
+
     }
 }

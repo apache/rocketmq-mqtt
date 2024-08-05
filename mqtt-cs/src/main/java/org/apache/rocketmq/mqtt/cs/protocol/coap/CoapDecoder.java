@@ -29,7 +29,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestType;
 import org.apache.rocketmq.mqtt.common.model.Constants;
-import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 
 import javax.annotation.Resource;
 import java.net.InetSocketAddress;
@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     @Resource
-    private CoapResponseCache coapResponseCache;
+    private DatagramChannelManager datagramChannelManager;
 
     private CoapMessageType coapType;
     private int coapTokenLength;
@@ -347,8 +347,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 errorContent.getBytes(StandardCharsets.UTF_8),
                 remoteAddress
         );
-        ctx.writeAndFlush(response);
-        coapResponseCache.put(response);
+        datagramChannelManager.writeResponse(response);
     }
 
 }

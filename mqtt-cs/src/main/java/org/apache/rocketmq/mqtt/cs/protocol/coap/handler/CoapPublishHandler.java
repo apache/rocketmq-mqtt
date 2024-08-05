@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.springframework.stereotype.Component;
@@ -33,7 +34,7 @@ import javax.annotation.Resource;
 public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage> {
 
     @Resource
-    private CoapResponseCache coapResponseCache;
+    private DatagramChannelManager datagramChannelManager;
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
@@ -43,40 +44,30 @@ public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage>
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
+        CoapMessage response;
         if (upstreamHookResult.isSuccess()) {
-            doResponseSuccess(ctx, coapMessage);
+            response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.CREATED,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    null,
+                    coapMessage.getRemoteAddress()
+            );
         } else {
-            doResponseFail(ctx, coapMessage, upstreamHookResult.getRemark());
+            response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.INTERNAL_SERVER_ERROR,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    upstreamHookResult.getRemark().getBytes(),
+                    coapMessage.getRemoteAddress()
+            );
         }
-    }
-
-    public void doResponseFail(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, String errContent) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.INTERNAL_SERVER_ERROR,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                errContent.getBytes(),
-                coapMessage.getRemoteAddress()
-        );
-        ctx.writeAndFlush(response);
-        coapResponseCache.put(response);
-    }
-
-    public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.CREATED,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                null,
-                coapMessage.getRemoteAddress()
-        );
-        ctx.writeAndFlush(response);
-        coapResponseCache.put(response);
+        datagramChannelManager.writeResponse(response);
     }
 }

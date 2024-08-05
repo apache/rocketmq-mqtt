@@ -31,10 +31,9 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageOption;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageOptionNumber;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
-import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
-import org.apache.rocketmq.mqtt.cs.session.infly.CoapRetryManager;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,10 +58,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     private RetainedPersistManager retainedPersistManager;
 
     @Resource
-    private CoapResponseCache coapResponseCache;
-
-    @Resource
-    private CoapRetryManager coapRetryManager;
+    private DatagramChannelManager datagramChannelManager;
 
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_coap_subscribe_future"));
 
@@ -138,10 +134,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                     message.getPayload(),
                     session.getAddress()
             );
-            ctx.writeAndFlush(sendMessage);
-            if (session.getSubscription().getQos() > 0) {
-                coapRetryManager.addRetryMessage(sendMessage);
-            }
+            datagramChannelManager.pushMessage(sendMessage);
         }));
     }
 
@@ -157,12 +150,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 coapMessage.getRemoteAddress()
         );
         response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(1)));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-            coapResponseCache.put(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
+        datagramChannelManager.writeResponse(response);
     }
 
 
@@ -187,12 +175,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 coapMessage.getRemoteAddress()
         );
         response.addOption(new CoapMessageOption(CoapMessageOptionNumber.OBSERVE, intToByteArray(session.getMessageNum())));
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-            coapResponseCache.put(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
+        datagramChannelManager.writeResponse(response);
     }
 
 }

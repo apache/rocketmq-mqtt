@@ -17,7 +17,6 @@
 
 package org.apache.rocketmq.mqtt.cs.session.infly;
 
-import io.netty.channel.socket.DatagramChannel;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
@@ -79,8 +78,7 @@ public class CoapRetryManager {
                 logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
                 continue;
             }
-            DatagramChannel channel = datagramChannelManager.getChannel();
-            channel.writeAndFlush(retryMessage.message);
+            datagramChannelManager.write(retryMessage.message);
             retryMessage.retryTime++;
             retryMessage.lastSendTime = System.currentTimeMillis();
         }

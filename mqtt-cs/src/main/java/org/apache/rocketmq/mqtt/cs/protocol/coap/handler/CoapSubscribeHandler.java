@@ -106,7 +106,6 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         }, 1, TimeUnit.SECONDS);
         try {
             sessionLoop.addSession(newSession, future);
-            doResponseSuccess(ctx, coapMessage, newSession);
 
             future.thenAccept(aVoid -> {
                 if (!ctx.channel().isActive()) {

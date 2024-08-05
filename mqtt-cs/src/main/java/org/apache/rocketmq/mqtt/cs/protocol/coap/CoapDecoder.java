@@ -29,7 +29,9 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestType;
 import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 
+import javax.annotation.Resource;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -39,6 +41,9 @@ import java.util.stream.Collectors;
 
 
 public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
+
+    @Resource
+    private CoapResponseCache coapResponseCache;
 
     private CoapMessageType coapType;
     private int coapTokenLength;
@@ -343,24 +348,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 remoteAddress
         );
         ctx.writeAndFlush(response);
+        coapResponseCache.put(response);
     }
 
-    public void sendTestResponse(ChannelHandlerContext ctx) {
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                coapType == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
-                coapToken == null ? 0 : coapTokenLength,
-                CoapMessageCode.Valid,
-                coapMessageId,
-                coapToken,
-                "Hello, I have accept your request successfully!".getBytes(StandardCharsets.UTF_8),
-                remoteAddress
-        );
-        if (ctx.channel().isActive()) {
-            ctx.writeAndFlush(response);
-        } else {
-            System.out.println("Channel is not active");
-        }
-
-    }
 }

@@ -45,8 +45,8 @@ import java.util.concurrent.CompletableFuture;
 
 @Component
 public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapRequestMessage> {
-
     private static Logger logger = LoggerFactory.getLogger(CoapPacketDispatcher.class);
+
     @Resource
     private CoapPublishHandler coapPublishHandler;
 
@@ -87,15 +87,15 @@ public class CoapPacketDispatcher extends SimpleChannelInboundHandler<CoapReques
     private CoapResponseCache coapResponseCache;
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, CoapRequestMessage msg) throws Exception {
-
-        // check duplicate
+    protected void channelRead0(ChannelHandlerContext ctx, CoapRequestMessage msg) {
+        // If it is a retransmitted message, send the old response and do nothing.
         CoapMessage oldResponse = coapResponseCache.get(msg.getMessageId());
         if (oldResponse != null) {
             ctx.writeAndFlush(oldResponse);
             return;
         }
 
+        // preHandler=>process=>postHandler
         boolean preResult = preHandler(ctx, msg);
         if (!preResult) {
             return;

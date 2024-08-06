@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.cs.protocol.coap;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -45,20 +44,20 @@ public class CoapRPCHandler extends SimpleChannelInboundHandler<DatagramPacket> 
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
-            // get sender socket address
+            // Get sender socket address.
             InetSocketAddress address = packet.sender();
-            // get machines
+            // Get all machines.
             Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
             if (connectorNodes == null || connectorNodes.isEmpty()) {
                 throw new RemotingException("No Connect Nodes");
             }
-            // calculate machine index to forward
+            // Calculate machine index with ip-port to forward the packet.
             int hash = address.toString().hashCode();
             int nodeNum = Math.abs(hash % connectorNodes.size());
             List<String> nodeList = new ArrayList<>(connectorNodes);
             Collections.sort(nodeList);
             String forwardNode = nodeList.get(nodeNum);
-            // forward the packet if not for localhost
+            // Forward the packet if not for localhost, otherwise fire to next channel.
             if (InetAddress.getLocalHost().getHostAddress().equals(forwardNode)) {
                 ctx.fireChannelRead(packet);
             } else {

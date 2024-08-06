@@ -105,14 +105,16 @@ public class CoapRetryManager {
             }
             // update messageID if session has newer messageID
             CoapSession session = retryMessage.session;
-            int latestMessageNum = session.getMessageNum();
-            int latestMessageID = session.getMessageId() + latestMessageNum;
-            if (latestMessageID > retryMessage.messageId) {
-                retryMessage.messageId = latestMessageID;
-                retryMessage.message.setMessageId(latestMessageID);
-                retryMessage.message.clearOptions();
-                retryMessage.message.addObserveOption(latestMessageNum);
-                session.messageNumIncrement();
+            if (session != null) {
+                int latestMessageNum = session.getMessageNum();
+                int latestMessageID = session.getMessageId() + latestMessageNum;
+                if (latestMessageID > retryMessage.messageId) {
+                    retryMessage.messageId = latestMessageID;
+                    retryMessage.message.setMessageId(latestMessageID);
+                    retryMessage.message.clearOptions();
+                    retryMessage.message.addObserveOption(latestMessageNum);
+                    session.messageNumIncrement();
+                }
             }
             datagramChannelManager.write(retryMessage.message);
             retryMessage.retryTime++;

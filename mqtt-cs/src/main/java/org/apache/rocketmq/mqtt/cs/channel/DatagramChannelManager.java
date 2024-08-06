@@ -60,5 +60,4 @@ public class DatagramChannelManager {
             coapRetryManager.addRetryMessage(session, message);
         }
     }
-
 }

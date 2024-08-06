@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.cs.protocol.coap.handler;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -46,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessage> {
-
     private static Logger logger = LoggerFactory.getLogger(CoapSubscribeHandler.class);
 
     @Resource
@@ -68,24 +66,27 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
-        // todo: response ack
+        // Send error response if upstream fail.
         if (!upstreamHookResult.isSuccess()) {
-            doResponseFail(ctx, coapMessage, upstreamHookResult.getRemark());
+            doResponseFail(coapMessage, upstreamHookResult.getRemark());
             return;
         }
 
+        // Construct subscription.
         Subscription subscription = new Subscription();
         subscription.setQos(coapMessage.getQosLevel().value());
         subscription.setTopicFilter(TopicUtils.normalizeTopic(coapMessage.getTopic()));
 
+        // Get session from sessionLoop if it is already existed, otherwise create a new one.
         InetSocketAddress address = coapMessage.getRemoteAddress();
         CoapSession session = sessionLoop.getSession(address);
+        // If session already exist, refresh subscribe time and send response.
         if (session != null) {
             session.refreshSubscribeTime();
-            doResponseSuccess(ctx, coapMessage, session);
+            doResponseSuccess(coapMessage, session);
             return;
         }
-
+        // If it is a new session, create and add to sessionLoop. And send response and retained message later.
         CoapSession newSession = new CoapSession();
         newSession.setAddress(address);
         newSession.setToken(coapMessage.getToken());
@@ -100,14 +101,13 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         }, 1, TimeUnit.SECONDS);
         try {
             sessionLoop.addSession(newSession, future);
-
             future.thenAccept(aVoid -> {
                 if (!ctx.channel().isActive()) {
                     return;
                 }
                 // todo: removeFuture
-                doResponseSuccess(ctx, coapMessage, newSession);
-                sendRetainMessage(ctx, newSession);
+                doResponseSuccess(coapMessage, newSession);
+                sendRetainMessage(newSession);
             });
         } catch (Exception e) {
             logger.error("Coap Subscribe:{}", coapMessage.getRemoteAddress(), e);
@@ -115,7 +115,8 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
 
     }
 
-    private void sendRetainMessage(ChannelHandlerContext ctx, CoapSession session) {
+    private void sendRetainMessage(CoapSession session) {
+        // Get retainedMessage from persist manager and send to client.
         CompletableFuture<Message> retainedMessage = retainedPersistManager.getRetainedMessage(session.getSubscription().getTopicFilter());
         retainedMessage.whenComplete(((message, throwable) -> {
             if (message == null) {
@@ -136,7 +137,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         }));
     }
 
-    public void doResponseFail(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, String errContent) {
+    public void doResponseFail(CoapRequestMessage coapMessage, String errContent) {
         CoapMessage response = new CoapMessage(
                 Constants.COAP_VERSION,
                 CoapMessageType.ACK,
@@ -151,7 +152,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
         datagramChannelManager.writeResponse(response);
     }
 
-    public void doResponseSuccess(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, CoapSession session) {
+    public void doResponseSuccess(CoapRequestMessage coapMessage, CoapSession session) {
         CoapMessage response = new CoapMessage(
                 Constants.COAP_VERSION,
                 coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
@@ -159,7 +160,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                 CoapMessageCode.CONTENT,
                 coapMessage.getMessageId(),
                 coapMessage.getToken(),
-                "Hello, I have accept your request successfully!".getBytes(StandardCharsets.UTF_8),
+                null,
                 coapMessage.getRemoteAddress()
         );
         response.addObserveOption(session.getMessageNum());

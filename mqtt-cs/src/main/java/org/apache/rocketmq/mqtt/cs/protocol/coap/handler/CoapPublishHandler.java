@@ -25,7 +25,6 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
-import org.apache.rocketmq.mqtt.cs.session.infly.CoapResponseCache;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -44,6 +43,7 @@ public class CoapPublishHandler implements CoapPacketHandler<CoapRequestMessage>
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
+        // Send response to client with success/error content.
         CoapMessage response;
         if (upstreamHookResult.isSuccess()) {
             response = new CoapMessage(

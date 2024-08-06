@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
 import com.alibaba.fastjson.JSONObject;
@@ -75,7 +74,6 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     @Resource
     private DatagramChannelManager datagramChannelManager;
 
-
     private ScheduledThreadPoolExecutor pullService;
     private ScheduledThreadPoolExecutor scheduler;
     private HashedWheelTimer hashedWheelTimer;
@@ -91,7 +89,9 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
     public void init() {
         pullService = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("coap_pull_message_thread_"));
         scheduler = new ScheduledThreadPoolExecutor(2, new ThreadFactoryImpl("coap_loop_scheduler_"));
+        // Check new message arrive.
         pullService.scheduleWithFixedDelay(() -> pullLoop(), pullIntervalMillis, pullIntervalMillis, TimeUnit.MILLISECONDS);
+        // Check session alive and remove expired session.
         hashedWheelTimer = new HashedWheelTimer(1, TimeUnit.SECONDS);
         hashedWheelTimer.start();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -116,13 +116,12 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
         }
     }
 
-
     @Override
     public void addSession(CoapSession session, CompletableFuture<Void> future) {
         // todo: addSubscriptionAndInit
         InetSocketAddress address = session.getAddress();
         synchronized (this) {
-            // if this session is already exist, refresh the subscription time and do nothing
+            // If this session is already exist, refresh the subscription time and do nothing.
             if (sessionMap.containsKey(address)) {
                 return;
             }
@@ -137,7 +136,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
             initOffset(session, entry.getKey(), entry.getValue(), future, result);
         }
         matchAction.addSubscription(session);
-        hashedWheelTimer.newTimeout(timeout -> checkSessionAlive(timeout, address), connectConf.getCoapSessionTimeout(), TimeUnit.MILLISECONDS);
+        hashedWheelTimer.newTimeout(timeout -> checkSessionAlive(timeout, address), connectConf.getCoapSessionTimeout(), TimeUnit.MILLISECONDS);    // Add to alive checker.
     }
 
     @Override
@@ -152,7 +151,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
             synchronized (this) {
                 session = sessionMap.remove(address);
             }
-            // todo: inFlyCache.cleanResource()
+            // Send the last notification before removal.
             if (session != null) {
                 session.messageNumIncrement();
                 CoapMessage removeMessage = new CoapMessage(

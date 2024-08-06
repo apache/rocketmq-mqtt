@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.cs.session.loop;
 
 import org.apache.rocketmq.mqtt.common.model.Queue;
@@ -25,11 +24,35 @@ import java.util.concurrent.CompletableFuture;
 
 public interface CoapSessionLoop {
 
+    /**
+     * Add one coap session.
+     *
+     * @param session
+     * @param future
+     */
     void addSession(CoapSession session, CompletableFuture<Void> future);
 
+    /**
+     * Get one coap session by ip-port.
+     *
+     * @param address
+     * @return
+     */
     CoapSession getSession(InetSocketAddress address);
 
+    /**
+     * Remove one coap session.
+     *
+     * @param address
+     * @return
+     */
     CoapSession removeSession(InetSocketAddress address);
 
+    /**
+     * notify to pull message from queue
+     *
+     * @param session
+     * @param queue
+     */
     void notifyPullMessage(CoapSession session, Queue queue);
 }

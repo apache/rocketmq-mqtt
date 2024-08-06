@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.cs.session.infly;
 
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -35,14 +34,13 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class CoapRetryManager {
+    private static Logger logger = LoggerFactory.getLogger(CoapRetryManager.class);
 
     @Resource
     private DatagramChannelManager datagramChannelManager;
 
     @Resource
     private CoapSessionLoop coapSessionLoop;
-
-    private static Logger logger = LoggerFactory.getLogger(CoapRetryManager.class);
 
     private ScheduledThreadPoolExecutor scheduler;
 
@@ -55,7 +53,7 @@ public class CoapRetryManager {
     @PostConstruct
     public void init() {
         scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("coap_retry_message_thread_"));
-        scheduler.scheduleWithFixedDelay(() -> doRetry(), SCHEDULE_INTERVAL, SCHEDULE_INTERVAL, TimeUnit.MILLISECONDS);
+        scheduler.scheduleWithFixedDelay(this::doRetry, SCHEDULE_INTERVAL, SCHEDULE_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     public void addRetryMessage(CoapSession session, CoapMessage message) {
@@ -72,7 +70,7 @@ public class CoapRetryManager {
 
     public void ackMessage(int messageId) {
         RetryMessage removedMessage = retryMessageMap.remove(messageId);
-        // refresh subscription each time receiving an ACK
+        // Refresh subscription each time receiving an ACK.
         if (removedMessage.session != null) {
             removedMessage.session.refreshSubscribeTime();
         }
@@ -89,21 +87,21 @@ public class CoapRetryManager {
             if (retryMessage.retryTime >= MAX_RETRY_TIME) {
                 RetryMessage removedMessage = removeRetryMessage(retryMessage.messageId);
                 CoapSession session = removedMessage.session;
-                // remove session if exceed max retry time
+                // Remove session if exceed max retry time.
                 if (session != null) {
-                    // release session from all relative retry message
+                    // Release session from all relative retry message.
                     for (RetryMessage message : retryMessageMap.values()) {
                         if (message.session == session) {
                             message.session = null;
                         }
                     }
-                    // remove from session loop
+                    // Remove from session loop.
                     coapSessionLoop.removeSession(session.getAddress());
                 }
                 logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
                 continue;
             }
-            // update messageID if session has newer messageID
+            // Update messageID if session has newer messageID.
             CoapSession session = retryMessage.session;
             if (session != null) {
                 int latestMessageNum = session.getMessageNum();
@@ -116,6 +114,7 @@ public class CoapRetryManager {
                     session.messageNumIncrement();
                 }
             }
+            // Send retry message and refresh retry info.
             datagramChannelManager.write(retryMessage.message);
             retryMessage.retryTime++;
             retryMessage.lastSendTime = System.currentTimeMillis();
@@ -134,6 +133,6 @@ public class CoapRetryManager {
             this.message = message;
             this.session = session;
         }
-
     }
+
 }

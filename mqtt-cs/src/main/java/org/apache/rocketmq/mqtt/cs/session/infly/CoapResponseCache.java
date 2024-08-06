@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class CoapResponseCache {
     private static final int MAX_SIZE = 10000;
+
     private Cache<Integer, CoapMessage> responseCache = Caffeine.newBuilder().maximumSize(MAX_SIZE).build();
 
     public void put(CoapMessage coapMessage) {

@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 
-
 public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     @Resource
@@ -59,7 +58,7 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     @Override
     public void decode(ChannelHandlerContext ctx, DatagramPacket packet, List<Object> out) {
-
+        // Get data and remote address
         ByteBuf in = packet.content();
         remoteAddress = packet.sender();
 
@@ -67,9 +66,8 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
         if (in.readableBytes() < 4) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The length of header must be at least 4 bytes!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
 
@@ -79,9 +77,8 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
         if (version != Constants.COAP_VERSION) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: Version must be 1!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
         coapType = CoapMessageType.valueOf((firstByte >> 4) & 0x03);
@@ -89,133 +86,118 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
         if (coapTokenLength > Constants.COAP_MAX_TOKEN_LENGTH) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The length of token is too long!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
-
-        // Handle code
         try {
             coapCode = CoapMessageCode.valueOf(in.readUnsignedByte());
         } catch (IllegalArgumentException e) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The code is not defined!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
         if (!CoapMessageCode.isRequestCode(coapCode) && !CoapMessageCode.isEmptyCode(coapCode)) {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The code must be a request code!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
 
-        // Handle messageID
+        // Handle messageID.
         coapMessageId = in.readUnsignedShort();
 
-        // Handle token
+        // Handle token.
         if (in.readableBytes() < coapTokenLength) {
-            // Return 4.00 Response
-            errorCode = CoapMessageCode.BAD_REQUEST;
+            errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
             errorContent = "Format-Error: The length of remaining readable bytes is less than tokenLength!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
         coapToken = new byte[coapTokenLength];
         in.readBytes(coapToken);
 
+        // Construct request message.
         CoapRequestMessage coapMessage = new CoapRequestMessage(version, coapType, coapTokenLength, coapCode, coapMessageId, coapToken, remoteAddress);
 
-        // Handle ACK
+        // Handle ACK, which is an empty message.
         if (coapType == CoapMessageType.ACK) {
             coapMessage.setRequestType(CoapRequestType.ACK);
             ctx.fireChannelRead(coapMessage);
             return;
         }
 
-        // Handle options
+        // Handle options. There may be multiple options, each containing option delta, option length and option value. The end of options is marked by payload marker.
         int nextByte;
         int optionNumber = 0;
         List<String> uriPaths = new ArrayList<>();
         while (in.readableBytes() > 0) {
-
             nextByte = in.readUnsignedByte();
+            // Terminate when meeting payload marker.
             if (nextByte == Constants.COAP_PAYLOAD_MARKER) {
                 break;
             }
-
+            // Handle optionDelta and optionLength.
             int optionDelta = nextByte >> 4;
             int optionLength = nextByte & 0x0F;
-
+            // Add up extended delta if delta is larger than 12.
             if (optionDelta == 13) {
                 optionDelta += in.readUnsignedByte();
             } else if (optionDelta == 14) {
                 optionDelta += 255 + in.readUnsignedShort();
             } else if (optionDelta == 15) {
-                // Return 4.00 Response
-                errorCode = CoapMessageCode.BAD_REQUEST;
+                errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
                 errorContent = "Format-Error: OptionDelta can not be 15!";
-                sendErrorResponse(ctx);
+                sendErrorResponse();
                 in.skipBytes(in.readableBytes());
                 return;
             }
-
             optionNumber += optionDelta;    // current optionNumber = last optionNumber + optionDelta
-
             if (!CoapMessageOptionNumber.isValid(optionNumber)) {
-                // Return 4.02 Response
-                errorCode = CoapMessageCode.BAD_OPTION;
+                errorCode = CoapMessageCode.BAD_OPTION; // Return 4.02 Response
                 errorContent = "Format-Error: Option number is not defined!";
-                sendErrorResponse(ctx);
+                sendErrorResponse();
                 in.skipBytes(in.readableBytes());
                 return;
             }
-
+            // Add up extended length if length is larger than 12.
             if (optionLength == 13) {
                 optionLength += in.readUnsignedByte();
             } else if (optionLength == 14) {
                 optionLength += 255 + in.readUnsignedShort();
             } else if (optionLength == 15) {
-                // Return 4.00 Response
-                errorCode = CoapMessageCode.BAD_REQUEST;
+                errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
                 errorContent = "Format-Error: OptionLength can not be 15!";
-                sendErrorResponse(ctx);
+                sendErrorResponse();
+                in.skipBytes(in.readableBytes());
+                return;
+            }
+            if (in.readableBytes() < optionLength) {
+                errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
+                errorContent = "Format-Error: The number of readable bytes is less than optionLength";
+                sendErrorResponse();
                 in.skipBytes(in.readableBytes());
                 return;
             }
 
-            if (in.readableBytes() < optionLength) {
-                // Return 4.00 Response
-                errorCode = CoapMessageCode.BAD_REQUEST;
-                errorContent = "Format-Error: The number of readable bytes is less than optionLength";
-                sendErrorResponse(ctx);
-                in.skipBytes(in.readableBytes());
-                return;
-            }
+            // Handle option value. Need further process if optionNumber is URI_PATH, URI_QUERY or OBSERVE.
             byte[] optionValue = new byte[optionLength];
             in.readBytes(optionValue);
-
             if (optionNumber == CoapMessageOptionNumber.URI_PATH.value()) {
                 uriPaths.add(new String(optionValue, StandardCharsets.UTF_8));
             }
-
             if (optionNumber == CoapMessageOptionNumber.URI_QUERY.value()) {
                 String query = new String(optionValue, StandardCharsets.UTF_8);
                 String[] parts = query.split(Constants.COAP_QUERY_DELIMITER, 2);
                 if (parts.length != 2) {
-                    // Return 4.00 Response
-                    errorCode = CoapMessageCode.BAD_REQUEST;
+                    errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
                     errorContent = "Format-Error: The Format of Observe is not correct!";
-                    sendErrorResponse(ctx);
-                    // Skip unread bytes
-                    in.skipBytes(in.readableBytes());
+                    sendErrorResponse();
+                    in.skipBytes(in.readableBytes());   // Skip unread bytes
                     return;
                 }
                 switch (parts[0]) {
@@ -239,35 +221,30 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                         break;
                 }
             }
-
             if (optionNumber == CoapMessageOptionNumber.OBSERVE.value()) {
                 if (optionValue.length == 0) {
                     isObserve = true;
                 } else {
-                    // Return 4.00 Response
-                    errorCode = CoapMessageCode.BAD_REQUEST;
+                    errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
                     errorContent = "Format-Error: The Format of Observe is not correct!";
-                    sendErrorResponse(ctx);
-                    // Skip unread bytes
-                    in.skipBytes(in.readableBytes());
+                    sendErrorResponse();
+                    in.skipBytes(in.readableBytes());   // Skip unread bytes
                     return;
                 }
             }
-
             coapMessage.addOption(new CoapMessageOption(optionNumber, optionValue));
         }
 
+        // Handle Uri-Path.
         if (uriPaths.isEmpty()) {
-            // Return 4.00 Response
-            errorCode = CoapMessageCode.BAD_REQUEST;
+            errorCode = CoapMessageCode.BAD_REQUEST;    // Return 4.00 Response
             errorContent = "Format-Error: The Format is not correct!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
-
-        // Handle Uri-Path
+        // If in format /ps/full-topic-path, it will be a subscription or publish request. Eg, /ps/topic1/r1 means subscribing/publishing to /topic/r1.
+        // If in format /mqtt/connection, it will be a connection, heartbeat or disconnect request.
         if (uriPaths.get(0).equals(Constants.COAP_PS_PREFIX)) {
             switch (coapCode) {
                 case GET:
@@ -276,9 +253,8 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                     } else {
                         errorCode = CoapMessageCode.BAD_REQUEST;
                         errorContent = "Format-Error: The Format is not correct!";
-                        sendErrorResponse(ctx);
-                        // Skip unread bytes
-                        in.skipBytes(in.readableBytes());
+                        sendErrorResponse();
+                        in.skipBytes(in.readableBytes());   // Skip unread bytes
                         return;
                     }
                     break;
@@ -288,15 +264,13 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 default:
                     errorCode = CoapMessageCode.BAD_REQUEST;
                     errorContent = "Format-Error: The Format is not correct!";
-                    sendErrorResponse(ctx);
-                    // Skip unread bytes
-                    in.skipBytes(in.readableBytes());
+                    sendErrorResponse();
+                    in.skipBytes(in.readableBytes());   // Skip unread bytes
                     return;
             }
 
-            // construct topic
+            // Construct full topic path. Eg, /ps/topic1/r1 be converted to /topic/r1.
             coapMessage.setTopic(uriPaths.stream().skip(1).collect(Collectors.joining(Constants.MQTT_TOPIC_DELIMITER)));
-
         } else if (uriPaths.size() == 2 && uriPaths.get(0).equals(Constants.COAP_CONNECTION_PREFIX_1) && uriPaths.get(1).equals(Constants.COAP_CONNECTION_PREFIX_2)) {
             switch (coapCode) {
                 case POST:
@@ -311,17 +285,15 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                 default:
                     errorCode = CoapMessageCode.BAD_REQUEST;
                     errorContent = "Format-Error: The Format is not correct!";
-                    sendErrorResponse(ctx);
-                    // Skip unread bytes
-                    in.skipBytes(in.readableBytes());
+                    sendErrorResponse();
+                    in.skipBytes(in.readableBytes());   // Skip unread bytes
                     return;
             }
         } else {
             errorCode = CoapMessageCode.BAD_REQUEST;
             errorContent = "Format-Error: The Format is not correct!";
-            sendErrorResponse(ctx);
-            // Skip unread bytes
-            in.skipBytes(in.readableBytes());
+            sendErrorResponse();
+            in.skipBytes(in.readableBytes());   // Skip unread bytes
             return;
         }
 
@@ -332,11 +304,10 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
             coapMessage.setPayload(coapPayload);
         }
 
-//        sendTestResponse(ctx);
         out.add(coapMessage);
     }
 
-    public void sendErrorResponse(ChannelHandlerContext ctx) {
+    public void sendErrorResponse() {
         CoapMessage response = new CoapMessage(
                 Constants.COAP_VERSION,
                 coapType == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,

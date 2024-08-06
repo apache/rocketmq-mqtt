@@ -21,6 +21,7 @@ import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
+import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,9 @@ public class CoapRetryManager {
 
     @Resource
     private DatagramChannelManager datagramChannelManager;
+
+    @Resource
+    private CoapSessionLoop coapSessionLoop;
 
     private static Logger logger = LoggerFactory.getLogger(CoapRetryManager.class);
 
@@ -83,7 +87,19 @@ public class CoapRetryManager {
                 continue;
             }
             if (retryMessage.retryTime >= MAX_RETRY_TIME) {
-                removeRetryMessage(retryMessage.messageId);
+                RetryMessage removedMessage = removeRetryMessage(retryMessage.messageId);
+                CoapSession session = removedMessage.session;
+                // remove session if exceed max retry time
+                if (session != null) {
+                    // release session from all relative retry message
+                    for (RetryMessage message : retryMessageMap.values()) {
+                        if (message.session == session) {
+                            message.session = null;
+                        }
+                    }
+                    // remove from session loop
+                    coapSessionLoop.removeSession(session.getAddress());
+                }
                 logger.info("coap retry message expired, messageId:{}", retryMessage.messageId);
                 continue;
             }

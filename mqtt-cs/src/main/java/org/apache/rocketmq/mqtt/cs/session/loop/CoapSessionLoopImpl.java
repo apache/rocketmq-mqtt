@@ -165,7 +165,7 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
                         "Subscription is expired, please subscribe again.".getBytes(StandardCharsets.UTF_8),
                         session.getAddress()
                 );
-                datagramChannelManager.pushMessage(session, removeMessage);
+                datagramChannelManager.pushMessage(null, removeMessage);
                 matchAction.removeSubscription(session);
                 // todo: persistOffset(session)
             }

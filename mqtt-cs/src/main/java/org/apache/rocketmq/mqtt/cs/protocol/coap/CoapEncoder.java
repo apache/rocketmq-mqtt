@@ -30,19 +30,19 @@ public class CoapEncoder extends MessageToMessageEncoder<CoapMessage> {
 
     @Override
     public void encode(ChannelHandlerContext ctx, CoapMessage msg, List<Object> out) throws Exception {
-
+        // Get buffer to write bytes to send.
         ByteBuf buffer = Unpooled.buffer();
 
-        // Handle Version | Type | TokenLength
+        // Handle Version | Type | TokenLength into first byte.
         byte firstByte = (byte)((msg.getVersion() << 6) | (msg.getType().value() << 4) | (msg.getTokenLength() & 0x0F));
         buffer.writeByte(firstByte);
 
-        // Handle Code, MessageID, Token
+        // Handle Code, MessageID, Token.
         buffer.writeByte(msg.getCode().value());
         buffer.writeShort(msg.getMessageId());
         buffer.writeBytes(msg.getToken());
 
-        // Handle Options
+        // Handle Options.
         if (!msg.getOptions().isEmpty()) {
             int prevOptionNumber = 0;
             for (CoapMessageOption option : msg.getOptions()) {
@@ -72,13 +72,13 @@ public class CoapEncoder extends MessageToMessageEncoder<CoapMessage> {
             }
         }
 
-        // Handle Payload if not empty
+        // Handle Payload if not empty.
         if (msg.getPayload() != null && msg.getPayload().length > 0) {
             buffer.writeByte((byte)0xFF);
             buffer.writeBytes(msg.getPayload());
         }
 
-        // Send Response
+        // Send Response.
         DatagramPacket responsePacket = new DatagramPacket(buffer, msg.getRemoteAddress());
         out.add(responsePacket);
 

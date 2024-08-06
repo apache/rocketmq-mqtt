@@ -40,7 +40,7 @@ public class CoapAckHandler implements CoapPacketHandler<CoapRequestMessage> {
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
         int messageId = coapMessage.getMessageId();
         if (coapRetryManager.contains(messageId)) {
-            coapRetryManager.removeRetryMessage(messageId);
+            coapRetryManager.ackMessage(messageId);
         }
     }
 }

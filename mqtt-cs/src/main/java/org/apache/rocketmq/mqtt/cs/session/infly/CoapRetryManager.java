@@ -58,16 +58,20 @@ public class CoapRetryManager {
         retryMessageMap.put(message.getMessageId(), new RetryMessage(message.getMessageId(), message, session));
     }
 
-    public void removeRetryMessage(int messageId) {
+    public RetryMessage removeRetryMessage(int messageId) {
+        return retryMessageMap.remove(messageId);
+    }
+
+    public boolean contains(int messageId) {
+        return retryMessageMap.containsKey(messageId);
+    }
+
+    public void ackMessage(int messageId) {
         RetryMessage removedMessage = retryMessageMap.remove(messageId);
         // refresh subscription each time receiving an ACK
         if (removedMessage.session != null) {
             removedMessage.session.refreshSubscribeTime();
         }
-    }
-
-    public boolean contains(int messageId) {
-        return retryMessageMap.containsKey(messageId);
     }
 
     private void doRetry() {

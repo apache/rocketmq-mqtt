@@ -127,11 +127,6 @@ public class CoapRetryManager {
         private int retryTime = 0;
         private long lastSendTime = System.currentTimeMillis();
 
-        public RetryMessage(int messageId, CoapMessage message) {
-            this.messageId = messageId;
-            this.message = message;
-        }
-
         public RetryMessage(int messageId, CoapMessage message, CoapSession session) {
             this.messageId = messageId;
             this.message = message;

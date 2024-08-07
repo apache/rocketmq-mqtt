@@ -72,13 +72,14 @@ public class CoapSession {
             return;
         }
 
+        // Remove expired queues.
         for (Queue memQueue: offsetMap.keySet()) {
             if (!queues.contains(memQueue)) {
                 offsetMap.remove(memQueue);
             }
         }
 
-        // init queueOffset
+        // Init queueOffset for new queue.
         for (Queue nowQueue : queues) {
             if (!offsetMap.containsKey(nowQueue)) {
                 QueueOffset queueOffset = new QueueOffset();
@@ -87,6 +88,7 @@ public class CoapSession {
             }
         }
 
+        // Remove expired sendingMessage.
         for (Queue memQueue : sendingMessages.keySet()) {
             if (!queues.contains(memQueue)) {
                 sendingMessages.remove(memQueue);
@@ -98,7 +100,7 @@ public class CoapSession {
         }
     }
 
-    public void addOffset(Queue queue, QueueOffset offset) {
+    public void addQueueOffset(Queue queue, QueueOffset offset) {
         offsetMap.put(queue, offset);
     }
 
@@ -157,6 +159,7 @@ public class CoapSession {
         }
     }
 
+    // Get all messages of the queue which are pending to be sent.
     public List<Message> pendMessageList(Queue queue) {
         if (queue == null) {
             throw new RuntimeException("queue is null");
@@ -178,11 +181,12 @@ public class CoapSession {
         return list;
     }
 
-    public void ack(Queue pendingQueue, long pendingDownSeqId) {
-        if (pendingQueue == null) {
+    // Set message ack, remove the message from sendingMessages, and update queueOffset of the relative queue.
+    public void ack(Queue queue, long offset) {
+        if (queue == null) {
             throw new RuntimeException("queue is null");
         }
-        LinkedHashSet<Message> messages = sendingMessages.get(pendingQueue);
+        LinkedHashSet<Message> messages = sendingMessages.get(queue);
         if (messages == null) {
             return;
         }
@@ -194,14 +198,14 @@ public class CoapSession {
             Iterator<Message> iterator = messages.iterator();
             while (iterator.hasNext()) {
                 Message message = iterator.next();
-                if (message.getOffset() == pendingDownSeqId) {
+                if (message.getOffset() == offset) {
                     message.setAck(1);
                 }
                 if (message.getAck() != 1) {
                     flag = false;
                 }
                 if (flag) {
-                    updateQueueOffset(pendingQueue, message);
+                    updateQueueOffset(queue, message);
 //                    this.markPersistOffsetFlag(true);
                     iterator.remove();
                 }
@@ -209,21 +213,8 @@ public class CoapSession {
         }
     }
 
-    public Message nextSendMessageByOrder(Queue queue) {
-        if (queue == null) {
-            throw new RuntimeException("queue is null");
-        }
-        LinkedHashSet<Message> messages = sendingMessages.get(queue);
-        if (messages == null) {
-            return null;
-        }
-        synchronized (this) {
-            return messages.isEmpty() ? null : messages.iterator().next();
-        }
-    }
-
-    public void sendNewMessage(Queue queue, Message messageSend) {
-        messageNumIncrement();
+    // Set message ack, remove the message from sendingMessages, and update queueOffset of the relative queue.
+    public void ack(Queue queue, Message messageSend) {
         LinkedHashSet<Message> messages = sendingMessages.get(queue);
         if (messages == null) {
             return;
@@ -243,6 +234,19 @@ public class CoapSession {
                     iterator.remove();
                 }
             }
+        }
+    }
+
+    public Message nextSendMessageByOrder(Queue queue) {
+        if (queue == null) {
+            throw new RuntimeException("queue is null");
+        }
+        LinkedHashSet<Message> messages = sendingMessages.get(queue);
+        if (messages == null) {
+            return null;
+        }
+        synchronized (this) {
+            return messages.isEmpty() ? null : messages.iterator().next();
         }
     }
 

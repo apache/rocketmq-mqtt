@@ -66,10 +66,9 @@ public class CoapPublishProcessor implements CoapUpstreamProcessor {
 
     public CompletableFuture<StoreResult> put(CoapRequestMessage coapMessage) {
         // todo: process topic alias
-
         boolean isEmpty = false;
 
-        // deal empty payload
+        // Deal empty payload.
         if (coapMessage.getPayload() == null || coapMessage.getPayload().length == 0) {
             coapMessage.setPayload(MessageUtil.EMPTYSTRING.getBytes(StandardCharsets.UTF_8));
             isEmpty = true;
@@ -78,7 +77,7 @@ public class CoapPublishProcessor implements CoapUpstreamProcessor {
         String originTopic = coapMessage.getTopic();
         String pubTopic = TopicUtils.normalizeTopic(originTopic);
         MqttTopic mqttTopic = TopicUtils.decode(pubTopic);
-        firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic()); // Check the firstTopic is existed
+        firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic()); // Check if the firstTopic is existed
         Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, null); // Find queues by topic
 
         String msgId = MessageClientIDSetter.createUniqID();
@@ -86,9 +85,9 @@ public class CoapPublishProcessor implements CoapUpstreamProcessor {
 
         if (coapMessage.isReatin()) {
             CoapRequestMessage retainedCoapMessage = coapMessage.copy();
-            //Change the retained flag of message that will send MQ is 0
+            // Change the retained flag of message that will send MQ is 0.
             retainedCoapMessage.setReatin(false);
-            // store retained message
+            // Store retained message.
             Message metaMessage = MessageUtil.toMessage(retainedCoapMessage);
             metaMessage.setMsgId(msgId);
             metaMessage.setBornTimestamp(bornTime);

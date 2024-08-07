@@ -171,9 +171,10 @@ public class PushAction {
             message.setPayload("".getBytes());
         }
 
-        session.sendNewMessage(queue, message);
+        session.messageNumIncrement();
         CoapMessage sendMessage = buildCoapMessage(message, session);
         datagramChannelManager.pushMessage(session, sendMessage);
+        session.ack(queue, message);
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {

@@ -188,9 +188,6 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
         if (session == null || queue == null) {
             return;
         }
-//        if (needLoadPersistedOffset(session, queue)) {
-//            return;
-//        }
         if (!session.sendingMessageIsEmpty(queue)) {
             scheduler.schedule(() -> pullMessage(session, queue), pullIntervalMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -250,7 +247,6 @@ public class CoapSessionLoopImpl implements CoapSessionLoop{
                     }
                 } else if (PullResult.PULL_OFFSET_MOVED == pullResult.getCode()) {
                     queueOffset.setOffset(pullResult.getNextQueueOffset().getOffset());
-//                    session.markPersistOffsetFlag(true);
                     pullMessage(session, queue);
                 } else {
                     logger.error("response:{},{}", session.getAddress(), JSONObject.toJSONString(pullResult));

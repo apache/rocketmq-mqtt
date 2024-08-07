@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.ds.upstream.coap.processor;
 
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
@@ -37,7 +36,6 @@ public class CoapSubscribeProcessor implements CoapUpstreamProcessor {
     @Override
     public CompletableFuture<HookResult> process(CoapRequestMessage coapMessage) {
         String pubTopic = TopicUtils.normalizeTopic(coapMessage.getTopic());
-        assert pubTopic != null;
         MqttTopic mqttTopic = TopicUtils.decode(pubTopic);
         firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic());
         return HookResult.newHookResult(HookResult.SUCCESS, null, null);

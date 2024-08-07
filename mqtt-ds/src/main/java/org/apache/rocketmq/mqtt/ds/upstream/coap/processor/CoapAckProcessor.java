@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.ds.upstream.coap.processor;
 
 import org.apache.rocketmq.mqtt.common.hook.HookResult;

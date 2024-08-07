@@ -283,7 +283,7 @@ public class NotifyManager {
             return true;
         }
         try {
-            // serialization
+            // Serialization, change datagram packet to bytes.
             ByteBuf buffer = packet.content();
             byte[] data = new byte[buffer.readableBytes()];
             buffer.getBytes(buffer.readerIndex(), data);
@@ -295,11 +295,11 @@ public class NotifyManager {
             jsonObject.put("senderPort", sender.getPort());
             jsonObject.put("recipientAddress", recipient.getAddress().getHostAddress());
             jsonObject.put("recipientPort", recipient.getPort());
-            // create command
+            // Create RPC command.
             RemotingCommand remotingCommand = RemotingCommand.createRequestCommand(RpcCode.COM_NOTIFY_COAP_MESSAGE,
                     null);
             remotingCommand.setBody(JSON.toJSONBytes(jsonObject));
-            // RPC invoke
+            // RPC invoke.
             RemotingCommand response = remotingClient.invokeSync(node + ":" + serviceConf.getCsRpcPort(), remotingCommand, 1000);
             return response.getCode() == RpcCode.SUCCESS;
         } catch (Exception e) {

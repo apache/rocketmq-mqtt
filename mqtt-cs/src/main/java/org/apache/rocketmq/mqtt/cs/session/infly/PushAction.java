@@ -165,12 +165,13 @@ public class PushAction {
             logger.error("", e);
         }
 
-        //deal with message with empty payload
+        // Deal with message with empty payload
         String msgPayLoad = new String(message.getPayload());
         if (msgPayLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
             message.setPayload("".getBytes());
         }
 
+        // Send message to client, and remove from the sendingMessages of session.
         session.messageNumIncrement();
         CoapMessage sendMessage = buildCoapMessage(message, session);
         datagramChannelManager.pushMessage(session, sendMessage);

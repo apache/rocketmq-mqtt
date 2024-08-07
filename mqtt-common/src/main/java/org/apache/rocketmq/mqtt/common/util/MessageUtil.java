@@ -150,7 +150,6 @@ public class MessageUtil {
         message.setPayload(body);
 
         // todo: add other properties, topicAlias, expiry, etc
-
         return message;
     }
 

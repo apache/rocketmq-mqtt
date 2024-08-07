@@ -49,11 +49,13 @@ public class DatagramChannelManager {
         channel.writeAndFlush(message);
     }
 
+    // Write to channel and add to response cache.
     public void writeResponse(CoapMessage message) {
         channel.writeAndFlush(message);
         coapResponseCache.put(message);
     }
 
+    // Write to channel and add to retry manager.
     public void pushMessage(CoapSession session, CoapMessage message) {
         channel.writeAndFlush(message);
         if (message.getType() == CoapMessageType.CON) {

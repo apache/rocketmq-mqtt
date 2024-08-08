@@ -77,9 +77,6 @@ public class TestCoapPacketDispatcher {
     @Before
     public void setUp() throws IllegalAccessException {
         channel = new EmbeddedChannel(coapPacketDispatcher);
-//        FieldUtils.writeDeclaredField(coapPacketDispatcher, "coapResponseCache", coapResponseCache, true);
-
-
     }
 
     @Test

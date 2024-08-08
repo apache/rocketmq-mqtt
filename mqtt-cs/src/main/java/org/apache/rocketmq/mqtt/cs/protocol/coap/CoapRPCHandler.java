@@ -61,9 +61,8 @@ public class CoapRPCHandler extends SimpleChannelInboundHandler<DatagramPacket> 
             if (InetAddress.getLocalHost().getHostAddress().equals(forwardNode)) {
                 ctx.fireChannelRead(packet);
             } else {
-                try {
-                    notifyManager.doCoapForward(forwardNode, packet);
-                } finally {
+                boolean isForward = notifyManager.doCoapForward(forwardNode, packet);
+                if (!isForward) {
                     ReferenceCountUtil.release(packet);
                 }
             }

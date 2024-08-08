@@ -141,7 +141,7 @@ public class CoapMessage {
         byte[] byteArray = new byte[3];
         byteArray[0] = (byte) (value >> 16);
         byteArray[1] = (byte) (value >> 8);
-        byteArray[2] = (byte) (value);
+        byteArray[2] = (byte) value;
         return byteArray;
     }
 

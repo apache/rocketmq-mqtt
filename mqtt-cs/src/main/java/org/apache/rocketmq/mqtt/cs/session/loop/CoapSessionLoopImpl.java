@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
-public class CoapSessionLoopImpl implements CoapSessionLoop{
+public class CoapSessionLoopImpl implements CoapSessionLoop {
     private static Logger logger = LoggerFactory.getLogger(CoapSessionLoopImpl.class);
 
     @Resource

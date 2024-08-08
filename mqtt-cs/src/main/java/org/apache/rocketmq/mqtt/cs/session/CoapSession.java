@@ -131,7 +131,7 @@ public class CoapSession {
             logger.warn("not found queueOffset,{},{},{}", address, subscription, queue);
             return false;
         }
-        boolean add =false;
+        boolean add = false;
         QueueOffset queueOffset = offsetMap.get(queue);
         for (Message message : messages) {
             if (message.getOffset() < queueOffset.getOffset() && queueOffset.getOffset() != Long.MAX_VALUE) {

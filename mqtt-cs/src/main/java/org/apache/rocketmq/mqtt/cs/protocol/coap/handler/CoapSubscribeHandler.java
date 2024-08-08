@@ -118,7 +118,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     private void sendRetainMessage(CoapSession session) {
         // Get retainedMessage from persist manager and send to client.
         CompletableFuture<Message> retainedMessage = retainedPersistManager.getRetainedMessage(session.getSubscription().getTopicFilter());
-        retainedMessage.whenComplete(((message, throwable) -> {
+        retainedMessage.whenComplete((message, throwable) -> {
             if (message == null) {
                 return;
             }
@@ -134,7 +134,7 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
                     session.getAddress()
             );
             datagramChannelManager.pushMessage(session, sendMessage);
-        }));
+        });
     }
 
     public void doResponseFail(CoapRequestMessage coapMessage, String errContent) {

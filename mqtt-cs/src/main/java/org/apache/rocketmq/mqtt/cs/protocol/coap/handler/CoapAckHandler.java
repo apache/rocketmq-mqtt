@@ -38,6 +38,9 @@ public class CoapAckHandler implements CoapPacketHandler<CoapRequestMessage> {
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
+        if (!upstreamHookResult.isSuccess()) {
+            return;
+        }
         // Ack the relative message in retry manager.
         int messageId = coapMessage.getMessageId();
         if (coapRetryManager.contains(messageId)) {

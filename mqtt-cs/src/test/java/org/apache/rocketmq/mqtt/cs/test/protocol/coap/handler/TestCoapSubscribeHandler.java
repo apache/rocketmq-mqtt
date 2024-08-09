@@ -1,6 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.rocketmq.mqtt.cs.test.protocol.coap.handler;
 
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -25,14 +40,18 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestCoapSubscribeHandler {
 
     private CoapSubscribeHandler coapSubscribeHandler;
+    private CoapRequestMessage coapMessage;
 
     @Mock
     private CoapSessionLoop sessionLoop;
@@ -47,13 +66,7 @@ public class TestCoapSubscribeHandler {
     private ChannelHandlerContext ctx;
 
     @Mock
-    private CoapRequestMessage coapMessage;
-
-    @Mock
     private CoapSession session;
-
-    @Mock
-    private Channel channel;
 
     @Before
     public void setUp() throws IllegalAccessException {
@@ -61,6 +74,18 @@ public class TestCoapSubscribeHandler {
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "sessionLoop", sessionLoop, true);
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "retainedPersistManager", retainedPersistManager, true);
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "datagramChannelManager", datagramChannelManager, true);
+        coapMessage = new CoapRequestMessage(
+                1,
+                CoapMessageType.CON,
+                0,
+                CoapMessageCode.GET,
+                1111,
+                null,
+                "TestData".getBytes(StandardCharsets.UTF_8),
+                new InetSocketAddress("127.0.0.1", 9675)
+        );
+        coapMessage.setTopic("topic1/r1");
+        coapMessage.setQosLevel(MqttQoS.AT_LEAST_ONCE);
     }
 
     @Test
@@ -72,10 +97,6 @@ public class TestCoapSubscribeHandler {
     @Test
     public void testDoHandlerUpstreamFail() {
         HookResult failHookResult = new HookResult(HookResult.FAIL, "Error", null);
-        when(coapMessage.getTokenLength()).thenReturn(0);
-        when(coapMessage.getMessageId()).thenReturn(1);
-        when(coapMessage.getToken()).thenReturn(null);
-        when(coapMessage.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 9675));
 
         coapSubscribeHandler.doHandler(ctx, coapMessage, failHookResult);
 
@@ -89,18 +110,11 @@ public class TestCoapSubscribeHandler {
     @Test
     public void testDoHanlderOldSession() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        when(coapMessage.getQosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        when(coapMessage.getTopic()).thenReturn("topic1/r1");
-        when(coapMessage.getType()).thenReturn(CoapMessageType.CON);
-        when(coapMessage.getTokenLength()).thenReturn(0);
-        when(coapMessage.getMessageId()).thenReturn(1);
-        when(coapMessage.getToken()).thenReturn(null);
-        when(coapMessage.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 9675));
-        when(sessionLoop.getSession(any())).thenReturn(session);
+        when(sessionLoop.getSession(any(InetSocketAddress.class))).thenReturn(session);
 
         coapSubscribeHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(sessionLoop).getSession(any());
+        verify(sessionLoop).getSession(any(InetSocketAddress.class));
         verify(session).refreshSubscribeTime();
         verify(datagramChannelManager).writeResponse(argThat(response -> {
             assertEquals(response.getCode(), CoapMessageCode.CONTENT);
@@ -112,26 +126,17 @@ public class TestCoapSubscribeHandler {
     @Test
     public void testDoHanlderNewSession() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        when(coapMessage.getQosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        when(coapMessage.getTopic()).thenReturn("topic1/r1");
-        when(coapMessage.getToken()).thenReturn(null);
-        when(coapMessage.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 9675));
-        when(sessionLoop.getSession(any())).thenReturn(null);
+        when(sessionLoop.getSession(any(InetSocketAddress.class))).thenReturn(null);
 
         coapSubscribeHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(sessionLoop).getSession(any());
-        verify(sessionLoop).addSession(any(), any());
+        verify(sessionLoop).getSession(any(InetSocketAddress.class));
+        verify(sessionLoop).addSession(any(CoapSession.class), any());
         verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager);
     }
 
     @Test
     public void testDoResponseFail() {
-        when(coapMessage.getTokenLength()).thenReturn(0);
-        when(coapMessage.getMessageId()).thenReturn(1);
-        when(coapMessage.getToken()).thenReturn(null);
-        when(coapMessage.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 9675));
-
         coapSubscribeHandler.doResponseFail(coapMessage, "Error");
 
         verify(datagramChannelManager).writeResponse(argThat(response -> {
@@ -143,13 +148,6 @@ public class TestCoapSubscribeHandler {
 
     @Test
     public void testDoResponseSuccess() {
-        when(coapMessage.getType()).thenReturn(CoapMessageType.CON);
-        when(coapMessage.getTokenLength()).thenReturn(0);
-        when(coapMessage.getMessageId()).thenReturn(1);
-        when(coapMessage.getToken()).thenReturn(null);
-        when(coapMessage.getRemoteAddress()).thenReturn(new InetSocketAddress("127.0.0.1", 9675));
-        when(session.getMessageNum()).thenReturn(1);
-
         coapSubscribeHandler.doResponseSuccess(coapMessage, session);
 
         verify(datagramChannelManager).writeResponse(argThat(response -> {

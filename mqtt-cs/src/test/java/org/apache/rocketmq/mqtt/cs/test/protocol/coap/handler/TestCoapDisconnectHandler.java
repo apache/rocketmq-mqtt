@@ -21,7 +21,7 @@ import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.*;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
-import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapConnectHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,10 +41,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class TestCoapConnectHandler {
 
-    private CoapConnectHandler coapConnectHandler;
+@RunWith(MockitoJUnitRunner.class)
+public class TestCoapDisconnectHandler {
+
+    private CoapDisconnectHandler coapDisconnectHandler;
     private CoapRequestMessage coapMessage;
 
     @Mock
@@ -58,43 +59,42 @@ public class TestCoapConnectHandler {
 
     @Before
     public void setUp() throws Exception {
-        coapConnectHandler = new CoapConnectHandler();
-        FieldUtils.writeDeclaredField(coapConnectHandler, "coapTokenManager", coapTokenManager, true);
-        FieldUtils.writeDeclaredField(coapConnectHandler, "datagramChannelManager", datagramChannelManager, true);
+        coapDisconnectHandler = new CoapDisconnectHandler();
+        FieldUtils.writeDeclaredField(coapDisconnectHandler, "coapTokenManager", coapTokenManager, true);
+        FieldUtils.writeDeclaredField(coapDisconnectHandler, "datagramChannelManager", datagramChannelManager, true);
         coapMessage = new CoapRequestMessage(
                 Constants.COAP_VERSION,
                 CoapMessageType.CON,
                 0,
-                CoapMessageCode.POST,
+                CoapMessageCode.DELETED,
                 1111,
                 null,
                 null,
                 new InetSocketAddress("127.0.0.1", 9675)
         );
-        coapMessage.setRequestType(CoapRequestType.CONNECT);
+        coapMessage.setRequestType(CoapRequestType.DISCONNECT);
         coapMessage.setClientId("123");
-        coapMessage.setUserName("admin");
-        coapMessage.setPassword("public");
+        coapMessage.setAuthToken("12345678");
     }
 
     @Test
     public void testPreHandler() {
-        assertTrue(coapConnectHandler.preHandler(ctx, coapMessage));
+        assertTrue(coapDisconnectHandler.preHandler(ctx, coapMessage));
         verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
 
         coapMessage.setClientId(null);
-        assertFalse(coapConnectHandler.preHandler(ctx, coapMessage));
+        assertFalse(coapDisconnectHandler.preHandler(ctx, coapMessage));
         verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
     }
 
     @Test
-    public void testConnectFail() {
+    public void testDisconnectFail() {
         HookResult failHookResult = new HookResult(HookResult.FAIL, "Error", null);
 
-        coapConnectHandler.doHandler(ctx, coapMessage, failHookResult);
+        coapDisconnectHandler.doHandler(ctx, coapMessage, failHookResult);
 
         verify(datagramChannelManager).writeResponse(argThat(response -> {
-            assertEquals(CoapMessageCode.UNAUTHORIZED, response.getCode());
+            assertEquals(CoapMessageCode.INTERNAL_SERVER_ERROR, response.getCode());
             assertEquals(failHookResult.getRemark(), new String(response.getPayload(), StandardCharsets.UTF_8));
             return true;
         }));
@@ -102,17 +102,32 @@ public class TestCoapConnectHandler {
     }
 
     @Test
-    public void testConnectSuccess() {
+    public void testDisconnectUnauthorized() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        String authToken = "12345678";
-        when(coapTokenManager.createToken(anyString())).thenReturn(authToken);
+        when(coapTokenManager.isValid(anyString(), anyString())).thenReturn(false);
 
-        coapConnectHandler.doHandler(ctx, coapMessage, successHookResult);
+        coapDisconnectHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(coapTokenManager).createToken(coapMessage.getClientId());
+        verify(coapTokenManager).isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
         verify(datagramChannelManager).writeResponse(argThat(response -> {
-            assertEquals(CoapMessageCode.CREATED, response.getCode());
-            assertEquals(authToken, new String(response.getPayload(), StandardCharsets.UTF_8));
+            assertEquals(CoapMessageCode.UNAUTHORIZED, response.getCode());
+            assertEquals("AuthToken is not valid.", new String(response.getPayload(), StandardCharsets.UTF_8));
+            return true;
+        }));
+        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+    }
+
+    @Test
+    public void testDisconnectSuccess() {
+        HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
+        when(coapTokenManager.isValid(anyString(), anyString())).thenReturn(true);
+
+        coapDisconnectHandler.doHandler(ctx, coapMessage, successHookResult);
+
+        verify(coapTokenManager).isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
+        verify(coapTokenManager).removeToken(coapMessage.getClientId());
+        verify(datagramChannelManager).writeResponse(argThat(response -> {
+            assertEquals(CoapMessageCode.DELETED, response.getCode());
             return true;
         }));
         verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);

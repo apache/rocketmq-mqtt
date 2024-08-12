@@ -53,7 +53,7 @@ public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage>
                     Constants.COAP_VERSION,
                     CoapMessageType.ACK,
                     coapMessage.getTokenLength(),
-                    CoapMessageCode.INTERNAL_SERVER_ERROR,
+                    CoapMessageCode.UNAUTHORIZED,
                     coapMessage.getMessageId(),
                     coapMessage.getToken(),
                     upstreamHookResult.getRemark().getBytes(StandardCharsets.UTF_8),

@@ -18,22 +18,78 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap.handler;
 
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
-import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
+import org.apache.rocketmq.mqtt.common.model.*;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
+import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
 import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class CoapHeartbeatHandler implements CoapPacketHandler<CoapRequestMessage> {
 
+    @Resource
+    private CoapTokenManager coapTokenManager;
+
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
         // todo: check auth
-        // todo: check client id and token
-        return false;
+        if (coapMessage.getClientId() == null || coapMessage.getAuthToken() == null) {
+            return false;
+        }
+        return true;
     }
 
     @Override
     public void doHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage, HookResult upstreamHookResult) {
-        // todo: response ack
+        // Response fail ack if upstream hook fail.
+        if (!upstreamHookResult.isSuccess()) {
+            CoapMessage response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    CoapMessageType.ACK,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.INTERNAL_SERVER_ERROR,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    upstreamHookResult.getRemark().getBytes(StandardCharsets.UTF_8),
+                    coapMessage.getRemoteAddress()
+            );
+            datagramChannelManager.writeResponse(response);
+            return;
+        }
+        // Response unauthorized ack if authToken is not valid.
+        if (!coapTokenManager.isValid(coapMessage.getClientId(), coapMessage.getAuthToken())) {
+            CoapMessage response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    CoapMessageType.ACK,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.UNAUTHORIZED,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    "AuthToken is not valid.".getBytes(StandardCharsets.UTF_8),
+                    coapMessage.getRemoteAddress()
+            );
+            datagramChannelManager.writeResponse(response);
+            return;
+        }
+        // Refresh update time of token
+        coapTokenManager.refreshToken(coapMessage.getClientId());
+        // Response ack success
+        CoapMessage response = new CoapMessage(
+                Constants.COAP_VERSION,
+                CoapMessageType.ACK,
+                coapMessage.getTokenLength(),
+                CoapMessageCode.CHANGED,
+                coapMessage.getMessageId(),
+                coapMessage.getToken(),
+                null,
+                coapMessage.getRemoteAddress()
+        );
+        datagramChannelManager.writeResponse(response);
     }
 }

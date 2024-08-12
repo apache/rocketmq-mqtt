@@ -72,6 +72,14 @@ public class CoapTokenManager {
         }
     }
 
+    public ConcurrentMap<String, CoapToken> getTokenMap() {
+        return tokenMap;
+    }
+
+    public void setTokenMap(ConcurrentMap<String, CoapToken> tokenMap) {
+        this.tokenMap = tokenMap;
+    }
+
     private void clearExpiredToken() {
         if (tokenMap.isEmpty()) {
             return;

@@ -41,7 +41,6 @@ public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage>
         if (coapMessage.getClientId() == null || coapMessage.getUserName() == null || coapMessage.getPassword() == null) {
             return false;
         }
-        // todo: check auth
         return true;
     }
 

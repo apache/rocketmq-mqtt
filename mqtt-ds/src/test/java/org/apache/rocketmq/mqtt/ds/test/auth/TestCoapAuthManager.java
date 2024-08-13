@@ -17,6 +17,7 @@
 package org.apache.rocketmq.mqtt.ds.test.auth;
 
 import org.apache.commons.lang.reflect.FieldUtils;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.ds.auth.CoapAuthManager;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.junit.Before;
@@ -24,6 +25,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
@@ -51,19 +55,23 @@ public class TestCoapAuthManager {
     }
 
     @Test
-    public void doAuthWrongUsername() {
+    public void doAuthWrongUsername() throws ExecutionException, InterruptedException {
         String wrongUsername = "user222";
-        assertFalse(coapAuthManager.doAuth(wrongUsername, secretKey));
+        CompletableFuture<HookResult> future = coapAuthManager.doAuth(wrongUsername, secretKey);
+        assertFalse(future.get().isSuccess());
     }
 
     @Test
-    public void doAuthWrongPassword() {
+    public void doAuthWrongPassword() throws ExecutionException, InterruptedException {
         String wrongPassword = "password222";
-        assertFalse(coapAuthManager.doAuth(username, wrongPassword));
+        CompletableFuture<HookResult> future = coapAuthManager.doAuth(username, wrongPassword);
+        assertFalse(future.get().isSuccess());
     }
 
     @Test
-    public void doAuthSuccess() {
-        assertTrue(coapAuthManager.doAuth(username, secretKey));
+    public void doAuthSuccess() throws ExecutionException, InterruptedException {
+        CompletableFuture<HookResult> future = coapAuthManager.doAuth(username, secretKey);
+        assertTrue(future.get().isSuccess());
     }
+
 }

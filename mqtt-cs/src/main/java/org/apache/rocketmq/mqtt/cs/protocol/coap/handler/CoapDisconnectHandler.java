@@ -38,7 +38,6 @@ public class CoapDisconnectHandler implements CoapPacketHandler<CoapRequestMessa
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
-        // todo: check auth
         if (coapMessage.getClientId() == null || coapMessage.getAuthToken() == null) {
             return false;
         }

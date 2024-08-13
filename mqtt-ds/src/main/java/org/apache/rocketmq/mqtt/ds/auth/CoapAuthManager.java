@@ -16,6 +16,9 @@
  */
 package org.apache.rocketmq.mqtt.ds.auth;
 
+import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.common.util.PasswordHashUtil;
 import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
@@ -25,6 +28,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class CoapAuthManager {
@@ -44,15 +48,15 @@ public class CoapAuthManager {
         hashedPassword = PasswordHashUtil.hashWithSalt(serviceConf.getSecretKey(), salt, algorithm, saltPosition);
     }
 
-    public boolean doAuth(String username, String password) {
+    public CompletableFuture<HookResult> doAuth(String username, String password) {
         try {
             if (serviceConf.getUsername().equals(username) && PasswordHashUtil.validatePassword(password, hashedPassword, salt, algorithm, saltPosition)) {
-                return true;
+                return HookResult.newHookResult(HookResult.SUCCESS, null, null);
             }
         } catch (NoSuchAlgorithmException e) {
             logger.error("", e);
         }
-        return false;
+        return HookResult.newHookResult(HookResult.FAIL, MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USERNAME_OR_PASSWORD.byteValue(), Remark.AUTH_FAILED, null);
     }
 
 }

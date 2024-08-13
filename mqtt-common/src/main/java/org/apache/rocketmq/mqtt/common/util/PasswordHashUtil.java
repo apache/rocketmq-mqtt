@@ -53,7 +53,7 @@ public class PasswordHashUtil {
     }
 
 
-    public static boolean validatePassword(String password, String storedHash, String salt, String algorithm, String saltPosition) throws Exception{
+    public static boolean validatePassword(String password, String storedHash, String salt, String algorithm, String saltPosition) throws NoSuchAlgorithmException{
         if (algorithm.equals("PLAIN")) {
             return password.equals(storedHash);
         }

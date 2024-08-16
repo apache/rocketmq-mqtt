@@ -35,8 +35,8 @@ public class CoapAuthManager {
     public static Logger logger = LoggerFactory.getLogger(CoapAuthManager.class);
 
     private static String salt;
-    private static final String algorithm = "SHA-256";
-    private static final String saltPosition = "suffix";
+    private static final String ALGORITHM = "SHA-256";
+    private static final String SALT_POSITION = "suffix";
     private static String hashedPassword;
 
     @Resource
@@ -45,12 +45,12 @@ public class CoapAuthManager {
     @PostConstruct
     public void init() throws NoSuchAlgorithmException {
         salt = PasswordHashUtil.generateSalt(16);
-        hashedPassword = PasswordHashUtil.hashWithSalt(serviceConf.getSecretKey(), salt, algorithm, saltPosition);
+        hashedPassword = PasswordHashUtil.hashWithSalt(serviceConf.getSecretKey(), salt, ALGORITHM, SALT_POSITION);
     }
 
     public CompletableFuture<HookResult> doAuth(String username, String password) {
         try {
-            if (serviceConf.getUsername().equals(username) && PasswordHashUtil.validatePassword(password, hashedPassword, salt, algorithm, saltPosition)) {
+            if (serviceConf.getUsername().equals(username) && PasswordHashUtil.validatePassword(password, hashedPassword, salt, ALGORITHM, SALT_POSITION)) {
                 return HookResult.newHookResult(HookResult.SUCCESS, null, null);
             }
         } catch (NoSuchAlgorithmException e) {

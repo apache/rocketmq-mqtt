@@ -23,9 +23,11 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
-import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -33,9 +35,7 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 public class CoapDisconnectHandler implements CoapPacketHandler<CoapRequestMessage> {
-
-    @Resource
-    private CoapTokenManager coapTokenManager;
+    private static Logger logger = LoggerFactory.getLogger(CoapDisconnectHandler.class);
 
     @Resource
     private DatagramChannelManager datagramChannelManager;
@@ -66,7 +66,7 @@ public class CoapDisconnectHandler implements CoapPacketHandler<CoapRequestMessa
             return;
         }
         // Response unauthorized ack if authToken is not valid.
-        if (!coapTokenManager.isValid(coapMessage.getClientId(), coapMessage.getAuthToken())) {
+        if (!CoapTokenUtil.isValid(coapMessage.getClientId(), coapMessage.getAuthToken())) {
             CoapMessage response = new CoapMessage(
                     Constants.COAP_VERSION,
                     CoapMessageType.ACK,
@@ -81,7 +81,7 @@ public class CoapDisconnectHandler implements CoapPacketHandler<CoapRequestMessa
             return;
         }
         // Remove clientId-token from token manager.
-        coapTokenManager.removeToken(coapMessage.getClientId());
+//        coapTokenManager.removeToken(coapMessage.getClientId());
         // Response ack success
         CoapMessage response = new CoapMessage(
                 Constants.COAP_VERSION,

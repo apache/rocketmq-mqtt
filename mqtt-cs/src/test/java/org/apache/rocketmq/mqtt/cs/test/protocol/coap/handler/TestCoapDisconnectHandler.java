@@ -24,6 +24,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestType;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
@@ -53,9 +54,6 @@ public class TestCoapDisconnectHandler {
     private CoapRequestMessage coapMessage;
 
     @Mock
-    private CoapTokenManager coapTokenManager;
-
-    @Mock
     private DatagramChannelManager datagramChannelManager;
 
     @Mock
@@ -64,7 +62,6 @@ public class TestCoapDisconnectHandler {
     @Before
     public void setUp() throws Exception {
         coapDisconnectHandler = new CoapDisconnectHandler();
-        FieldUtils.writeDeclaredField(coapDisconnectHandler, "coapTokenManager", coapTokenManager, true);
         FieldUtils.writeDeclaredField(coapDisconnectHandler, "datagramChannelManager", datagramChannelManager, true);
         coapMessage = new CoapRequestMessage(
                 Constants.COAP_VERSION,
@@ -78,17 +75,17 @@ public class TestCoapDisconnectHandler {
         );
         coapMessage.setRequestType(CoapRequestType.DISCONNECT);
         coapMessage.setClientId("123");
-        coapMessage.setAuthToken("12345678");
+        coapMessage.setAuthToken(CoapTokenUtil.generateToken("123"));
     }
 
     @Test
     public void testPreHandler() {
         assertTrue(coapDisconnectHandler.preHandler(ctx, coapMessage));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
 
         coapMessage.setClientId(null);
         assertFalse(coapDisconnectHandler.preHandler(ctx, coapMessage));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 
     @Test
@@ -102,38 +99,34 @@ public class TestCoapDisconnectHandler {
             assertEquals(failHookResult.getRemark(), new String(response.getPayload(), StandardCharsets.UTF_8));
             return true;
         }));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 
     @Test
     public void testDisconnectUnauthorized() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        when(coapTokenManager.isValid(anyString(), anyString())).thenReturn(false);
+        coapMessage.setAuthToken("wrongToken");
 
         coapDisconnectHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(coapTokenManager).isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
         verify(datagramChannelManager).writeResponse(argThat(response -> {
             assertEquals(CoapMessageCode.UNAUTHORIZED, response.getCode());
             assertEquals("AuthToken is not valid.", new String(response.getPayload(), StandardCharsets.UTF_8));
             return true;
         }));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 
     @Test
     public void testDisconnectSuccess() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        when(coapTokenManager.isValid(anyString(), anyString())).thenReturn(true);
 
         coapDisconnectHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(coapTokenManager).isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
-        verify(coapTokenManager).removeToken(coapMessage.getClientId());
         verify(datagramChannelManager).writeResponse(argThat(response -> {
             assertEquals(CoapMessageCode.DELETED, response.getCode());
             return true;
         }));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 }

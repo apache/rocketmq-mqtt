@@ -24,6 +24,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestType;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapConnectHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
@@ -36,9 +37,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
@@ -52,9 +51,6 @@ public class TestCoapConnectHandler {
     private CoapRequestMessage coapMessage;
 
     @Mock
-    private CoapTokenManager coapTokenManager;
-
-    @Mock
     private DatagramChannelManager datagramChannelManager;
 
     @Mock
@@ -63,7 +59,6 @@ public class TestCoapConnectHandler {
     @Before
     public void setUp() throws Exception {
         coapConnectHandler = new CoapConnectHandler();
-        FieldUtils.writeDeclaredField(coapConnectHandler, "coapTokenManager", coapTokenManager, true);
         FieldUtils.writeDeclaredField(coapConnectHandler, "datagramChannelManager", datagramChannelManager, true);
         coapMessage = new CoapRequestMessage(
                 Constants.COAP_VERSION,
@@ -84,11 +79,11 @@ public class TestCoapConnectHandler {
     @Test
     public void testPreHandler() {
         assertTrue(coapConnectHandler.preHandler(ctx, coapMessage));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
 
         coapMessage.setClientId(null);
         assertFalse(coapConnectHandler.preHandler(ctx, coapMessage));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 
     @Test
@@ -102,23 +97,24 @@ public class TestCoapConnectHandler {
             assertEquals(failHookResult.getRemark(), new String(response.getPayload(), StandardCharsets.UTF_8));
             return true;
         }));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 
     @Test
     public void testConnectSuccess() {
         HookResult successHookResult = new HookResult(HookResult.SUCCESS, null, null);
-        String authToken = "12345678";
-        when(coapTokenManager.createToken(anyString())).thenReturn(authToken);
 
         coapConnectHandler.doHandler(ctx, coapMessage, successHookResult);
 
-        verify(coapTokenManager).createToken(coapMessage.getClientId());
         verify(datagramChannelManager).writeResponse(argThat(response -> {
             assertEquals(CoapMessageCode.CREATED, response.getCode());
-            assertEquals(authToken, new String(response.getPayload(), StandardCharsets.UTF_8));
+            try {
+                assertTrue(CoapTokenUtil.isValid(coapMessage.getClientId(), new String(response.getPayload(), StandardCharsets.UTF_8)));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             return true;
         }));
-        verifyNoMoreInteractions(coapTokenManager, datagramChannelManager, ctx);
+        verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 }

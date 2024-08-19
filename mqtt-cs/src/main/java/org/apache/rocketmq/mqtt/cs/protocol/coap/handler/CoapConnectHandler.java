@@ -23,9 +23,12 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -33,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage> {
+    private static Logger logger = LoggerFactory.getLogger(CoapConnectHandler.class);
 
     @Resource
     private CoapTokenManager coapTokenManager;
@@ -65,19 +69,24 @@ public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage>
             datagramChannelManager.writeResponse(response);
             return;
         }
-        // Create new token.
-        String authToken = coapTokenManager.createToken(coapMessage.getClientId());
-        // Response success ack and return authToken.
-        CoapMessage response = new CoapMessage(
-                Constants.COAP_VERSION,
-                CoapMessageType.ACK,
-                coapMessage.getTokenLength(),
-                CoapMessageCode.CREATED,
-                coapMessage.getMessageId(),
-                coapMessage.getToken(),
-                authToken.getBytes(StandardCharsets.UTF_8),
-                coapMessage.getRemoteAddress()
-        );
-        datagramChannelManager.writeResponse(response);
+        try {
+            // Create new token.
+            String authToken = CoapTokenUtil.generateToken(coapMessage.getClientId());
+            // Response success ack and return authToken.
+            CoapMessage response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    CoapMessageType.ACK,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.CREATED,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    authToken.getBytes(StandardCharsets.UTF_8),
+                    coapMessage.getRemoteAddress()
+            );
+            datagramChannelManager.writeResponse(response);
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+
     }
 }

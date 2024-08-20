@@ -14,15 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.mqtt.cs.protocol;
 
-package org.apache.rocketmq.mqtt.common.model;
+import io.netty.channel.ChannelHandlerContext;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+public interface CoapPacketHandler<T extends CoapMessage> {
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
+    /**
+     * preHandler before upstream processor, for preprocessing
+     *
+     * @param ctx
+     * @param coapMessage
+     * @return
+     */
+    boolean preHandler(ChannelHandlerContext ctx, T coapMessage);
 
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+    /**
+     * doHandler after upstream processor
+     *
+     * @param ctx
+     * @param coapMessage
+     * @param upstreamHookResult
+     */
+    void doHandler(ChannelHandlerContext ctx, T coapMessage, HookResult upstreamHookResult);
+
 }

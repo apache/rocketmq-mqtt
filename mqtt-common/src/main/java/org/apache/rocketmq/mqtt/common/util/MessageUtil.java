@@ -32,6 +32,7 @@ import io.netty.handler.codec.mqtt.MqttPublishVariableHeader;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.netty.util.CharsetUtil;
 import org.apache.rocketmq.common.message.MessageDecoder;
+import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.Message;
 
 import java.nio.ByteBuffer;
@@ -134,6 +135,21 @@ public class MessageUtil {
             }
         }
 
+        return message;
+    }
+
+    public static Message toMessage(CoapRequestMessage coapMessage) {
+        Message message = new Message();
+        message.setFirstTopic(TopicUtils.decode(coapMessage.getTopic()).getFirstTopic());
+        message.setOriginTopic(coapMessage.getTopic());
+        message.setRetained(coapMessage.isReatin());
+        message.putUserProperty(Message.extPropertyQoS, String.valueOf(coapMessage.getQosLevel().value()));
+        int readableBytes = coapMessage.getPayload().length;
+        byte[] body = new byte[readableBytes];
+        System.arraycopy(coapMessage.getPayload(), 0, body, 0, readableBytes);
+        message.setPayload(body);
+
+        // todo: add other properties, topicAlias, expiry, etc
         return message;
     }
 

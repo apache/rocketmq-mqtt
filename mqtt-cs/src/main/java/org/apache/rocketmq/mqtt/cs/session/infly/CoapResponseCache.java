@@ -14,15 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.mqtt.cs.session.infly;
 
-package org.apache.rocketmq.mqtt.common.model;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.springframework.stereotype.Component;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+@Component
+public class CoapResponseCache {
+    private static final int MAX_SIZE = 10000;
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
+    private Cache<Integer, CoapMessage> responseCache = Caffeine.newBuilder().maximumSize(MAX_SIZE).build();
 
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+    public void put(CoapMessage coapMessage) {
+        responseCache.put(coapMessage.getMessageId(), coapMessage);
+    }
+
+    public CoapMessage get(int messageId) {
+        return responseCache.getIfPresent(messageId);
+    }
+
 }

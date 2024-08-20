@@ -49,7 +49,12 @@ public class ConnectConf {
     private int mqttWsPort = 8888;
 
     private int quicPort = 14567;
+
+    private int coapPort = 5683;
+
     private boolean enableQuic = false;
+
+    private boolean enableCoapConnect = false;
 
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
@@ -79,6 +84,8 @@ public class ConnectConf {
     private int topicAliasMaximum = 10;
     private int serverReceiveMaximum = 32767;
     private int maxTransferCountOnMessageInDisk = 8;
+
+    private long coapSessionTimeout = 90000;    //90000ms,90s
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -124,6 +131,14 @@ public class ConnectConf {
 
     public int getMqttWsPort() {
         return mqttWsPort;
+    }
+
+    public int getCoapPort() {
+        return coapPort;
+    }
+
+    public void setCoapPort(int coapPort) {
+        this.coapPort = coapPort;
     }
 
     public boolean isEnableTlsSever() {
@@ -352,5 +367,21 @@ public class ConnectConf {
 
     public void setEnableQuic(boolean enableQuic) {
         this.enableQuic = enableQuic;
+    }
+
+    public long getCoapSessionTimeout() {
+        return coapSessionTimeout;
+    }
+
+    public void setCoapSessionTimeout(long coapSessionTimeout) {
+        this.coapSessionTimeout = coapSessionTimeout;
+    }
+
+    public boolean isEnableCoapConnect() {
+        return enableCoapConnect;
+    }
+
+    public void setEnableCoapConnect(boolean enableCoapConnect) {
+        this.enableCoapConnect = enableCoapConnect;
     }
 }

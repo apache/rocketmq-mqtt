@@ -14,15 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.mqtt.ds.upstream.coap.processor;
 
-package org.apache.rocketmq.mqtt.common.model;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
+import org.apache.rocketmq.mqtt.ds.auth.CoapAuthManager;
+import org.apache.rocketmq.mqtt.ds.upstream.coap.CoapUpstreamProcessor;
+import org.springframework.stereotype.Component;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+import javax.annotation.Resource;
+import java.util.concurrent.CompletableFuture;
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
+@Component
+public class CoapConnectProcessor implements CoapUpstreamProcessor {
 
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+    @Resource
+    private CoapAuthManager coapAuthManager;
+
+    @Override
+    public CompletableFuture<HookResult> process(CoapRequestMessage msg) {
+        return coapAuthManager.doAuth(msg.getUserName(), msg.getPassword());
+    }
 }

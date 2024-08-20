@@ -28,6 +28,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -47,6 +48,7 @@ import io.netty.incubator.codec.quic.QuicStreamChannel;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.mqtt.cs.channel.ConnectHandler;
 import org.apache.rocketmq.mqtt.cs.channel.AdaptiveTlsHandler;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.ChannelPipelineLazyInit;
 import org.apache.rocketmq.mqtt.cs.protocol.MqttVersionHandler;
@@ -55,6 +57,10 @@ import org.apache.rocketmq.mqtt.cs.protocol.mqtt5.Mqtt5PacketDispatcher;
 import org.apache.rocketmq.mqtt.cs.protocol.ssl.SslFactory;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketServerHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.ws.WebSocketEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapRPCHandler;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapDecoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapEncoder;
+import org.apache.rocketmq.mqtt.cs.protocol.coap.CoapPacketDispatcher;
 import org.apache.rocketmq.remoting.common.TlsMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +78,8 @@ public class MqttServer {
     private final ServerBootstrap wsServerBootstrap = new ServerBootstrap();
     private final ServerBootstrap tlsServerBootstrap = new ServerBootstrap();
 
+    private Bootstrap coapBootstrap = new Bootstrap();
+
     private final Bootstrap quicBootstrap = new Bootstrap();
 
     @Resource
@@ -87,6 +95,12 @@ public class MqttServer {
     private Mqtt5PacketDispatcher mqtt5PacketDispatcher;
 
     @Resource
+    private CoapRPCHandler coapRPCHandler;
+
+    @Resource
+    private CoapPacketDispatcher coapPacketDispatcher;
+
+    @Resource
     private WebSocketServerHandler webSocketServerHandler;
 
     @Resource
@@ -95,6 +109,10 @@ public class MqttServer {
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     private NioEventLoopGroup acceptorEventLoopGroup;
 
     private NioEventLoopGroup workerEventLoopGroup;
@@ -112,6 +130,8 @@ public class MqttServer {
         startTls();
 
         startWs();
+
+        startCoap();
 
         // QUIC over DTLS
         if (connectConf.isEnableQuic()) {
@@ -289,6 +309,31 @@ public class MqttServer {
             .bind(new InetSocketAddress(connectConf.getQuicPort()))
             .sync();
         LOGGER.info("MQTT server for QUIC over DTLS started, listening: {}", connectConf.getQuicPort());
+    }
+
+    private void startCoap() {
+        int port = connectConf.getCoapPort();
+        coapBootstrap
+                .group(new NioEventLoopGroup(connectConf.getNettyWorkerThreadNum()))
+                .channel(NioDatagramChannel.class)
+                .option(ChannelOption.SO_BROADCAST, true)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .option(ChannelOption.WRITE_BUFFER_WATER_MARK,new WriteBufferWaterMark(connectConf.getLowWater(), connectConf.getHighWater()))
+                .localAddress(new InetSocketAddress(port))
+                .handler(new ChannelInitializer<DatagramChannel>() {
+                    @Override
+                    protected void initChannel(DatagramChannel ch) throws Exception {
+                        datagramChannelManager.setChannel(ch);
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("coap-handler", coapRPCHandler);
+                        pipeline.addLast("coap-encoder", new CoapEncoder());
+                        pipeline.addLast("coap-decoder", new CoapDecoder());
+                        pipeline.addLast("coap-dispatcher", coapPacketDispatcher);
+                    }
+                });
+        coapBootstrap.bind();
+        LOGGER.info("start coap server , port:{}", port);
+
     }
 
 }

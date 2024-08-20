@@ -14,15 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.rocketmq.mqtt.common.model;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+public class CoapMessageOption {
+    private CoapMessageOptionNumber optionNumber;
+    private byte[] optionValue;
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
+    public CoapMessageOption(CoapMessageOptionNumber optionNumber, byte[] optionValue) {
+        this.optionNumber = optionNumber;
+        this.optionValue = optionValue;
+    }
 
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+    public CoapMessageOption(int optionNumber, byte[] optionValue) {
+        this(CoapMessageOptionNumber.valueOf(optionNumber), optionValue);
+    }
+
+    public CoapMessageOptionNumber getOptionNumber() {
+        return optionNumber;
+    }
+
+    public void setOptionNumber(CoapMessageOptionNumber optionNumber) {
+        this.optionNumber = optionNumber;
+    }
+
+    public byte[] getOptionValue() {
+        return optionValue;
+    }
+
+    public void setOptionValue(byte[] optionValue) {
+        this.optionValue = optionValue;
+    }
 }

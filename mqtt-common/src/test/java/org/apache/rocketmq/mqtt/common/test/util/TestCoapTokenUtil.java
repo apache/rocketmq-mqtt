@@ -14,15 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.mqtt.common.test.util;
 
-package org.apache.rocketmq.mqtt.common.model;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
+import org.junit.Test;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
+public class TestCoapTokenUtil {
 
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+    @Test
+    public void test() throws Exception {
+        String clientId = "client123";
+        String token = CoapTokenUtil.generateToken(clientId);
+        assertNotNull(token);
+        assertTrue(CoapTokenUtil.isValid(clientId, token));
+    }
+
 }

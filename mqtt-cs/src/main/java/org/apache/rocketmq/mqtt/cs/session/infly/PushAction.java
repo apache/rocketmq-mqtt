@@ -27,15 +27,21 @@ import io.netty.handler.codec.mqtt.MqttVersion;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.mqtt.common.facade.LmqQueueStore;
+import org.apache.rocketmq.mqtt.common.model.CoapMessage;
+import org.apache.rocketmq.mqtt.common.model.Constants;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.Queue;
 import org.apache.rocketmq.mqtt.common.model.Subscription;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.Session;
+import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -72,6 +78,9 @@ public class PushAction {
     @Resource
     private LmqQueueStore lmqQueueStore;
 
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     public void messageArrive(Session session, Subscription subscription, Queue queue) {
         if (session == null) {
             return;
@@ -92,6 +101,19 @@ public class PushAction {
         Message message = session.nextSendMessageByOrder(subscription, queue);
         if (message != null) {
             push(message, subscription, session, queue);
+        }
+    }
+
+    public void coapMessageArrive(CoapSession session, Queue queue) {
+        if (session == null) {
+            return;
+        }
+        List<Message> list = session.pendMessageList(queue);
+        if (list != null && !list.isEmpty()) {
+            for (Message message : list) {
+                message.setAck(0);
+                coapPush(message, session, queue);
+            }
         }
     }
 
@@ -130,6 +152,30 @@ public class PushAction {
             retryDriver.mountPublish(mqttId, message, subscription.getQos(), ChannelInfo.getId(session.getChannel()), subscription);
             write(session, message, mqttId, qos, subscription);
         }
+    }
+
+    public void coapPush(Message message, CoapSession session, Queue queue) {
+        try {
+            if (message.getStoreTimestamp() > 0 && message.getStoreTimestamp() < session.getSubscribeTime()) {
+                logger.warn("coap old msg:{},{},{},{}", session.getAddress(), message.getMsgId(),
+                        message.getStoreTimestamp(), session.getSubscribeTime());
+                return;
+            }
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+
+        // Deal with message with empty payload
+        String msgPayLoad = new String(message.getPayload());
+        if (msgPayLoad.equals(MessageUtil.EMPTYSTRING) && message.isEmpty()) {
+            message.setPayload("".getBytes());
+        }
+
+        // Send message to client, and remove from the sendingMessages of session.
+        session.messageNumIncrement();
+        CoapMessage sendMessage = buildCoapMessage(message, session);
+        datagramChannelManager.pushMessage(session, sendMessage);
+        session.ack(queue, message);
     }
 
     public void _sendMessage(Session session, String clientId, Subscription subscription, Message message) {
@@ -330,6 +376,21 @@ public class PushAction {
         if (nextSendOne != null) {
             push(nextSendOne, subscription, session, pendingQueue);
         }
+    }
+
+    private CoapMessage buildCoapMessage(Message message, CoapSession session) {
+        CoapMessage coapMessage = new CoapMessage(
+                Constants.COAP_VERSION,
+                session.getSubscription().getQos() == 0 ? CoapMessageType.NON : CoapMessageType.CON,
+                session.getToken().length,
+                CoapMessageCode.CONTENT,
+                session.getMessageId() + session.getMessageNum(),
+                session.getToken(),
+                message.getPayload(),
+                session.getAddress()
+        );
+        coapMessage.addObserveOption(session.getMessageNum());
+        return coapMessage;
     }
 
 }

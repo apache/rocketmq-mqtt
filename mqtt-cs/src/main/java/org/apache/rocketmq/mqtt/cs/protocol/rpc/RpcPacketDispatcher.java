@@ -19,11 +19,17 @@ package org.apache.rocketmq.mqtt.cs.protocol.rpc;
 
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSON;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
 import org.apache.rocketmq.mqtt.common.model.MessageEvent;
 import org.apache.rocketmq.mqtt.common.model.RpcCode;
 import org.apache.rocketmq.mqtt.common.model.RpcHeader;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
+import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.session.notify.MessageNotifyAction;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
@@ -34,6 +40,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.net.InetSocketAddress;
 
 
 @Component
@@ -46,6 +53,9 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
     @Resource
     private ChannelManager channelManager;
 
+    @Resource
+    private DatagramChannelManager datagramChannelManager;
+
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws Exception {
         RemotingCommand response = RemotingCommand.createResponseCommand(RpcCode.SUCCESS, null);
@@ -56,6 +66,8 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
                 doNotify(request);
             } else if (RpcCode.CMD_CLOSE_CHANNEL == code) {
                 closeChannel(request);
+            } else if (RpcCode.COM_NOTIFY_COAP_MESSAGE == code) {
+                doNotifyCoap(request);
             }
         } catch (Throwable t) {
             logger.error("", t);
@@ -79,6 +91,25 @@ public class RpcPacketDispatcher implements NettyRequestProcessor {
         String channelId = request.getExtFields() != null ?
                 request.getExtFields().get(RpcHeader.MQTT_CHANNEL_ID) : null;
         channelManager.closeConnect(channelId, request.getRemark());
+    }
+
+    private void doNotifyCoap(RemotingCommand request) {
+        String payload = new String(request.getBody(), StandardCharsets.UTF_8);
+        JSONObject jsonObject = JSON.parseObject(payload);
+
+        byte[] data = jsonObject.getBytes("data");
+        String senderAddress = jsonObject.getString("senderAddress");
+        int senderPort = jsonObject.getIntValue("senderPort");
+        String recipientAddress = jsonObject.getString("recipientAddress");
+        int recipientPort = jsonObject.getIntValue("recipientPort");
+        ByteBuf buffer = Unpooled.wrappedBuffer(data);
+
+        InetSocketAddress sender = new InetSocketAddress(senderAddress, senderPort);
+        InetSocketAddress recipient = new InetSocketAddress(recipientAddress, recipientPort);
+        DatagramPacket packet = new DatagramPacket(buffer.retain(), recipient, sender);
+
+        DatagramChannel channel = datagramChannelManager.getChannel();
+        channel.pipeline().context("coap-handler").fireChannelRead(packet); // forward to coap-decoder
     }
 
 }

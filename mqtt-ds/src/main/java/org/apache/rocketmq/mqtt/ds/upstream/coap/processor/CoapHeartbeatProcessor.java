@@ -14,15 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.rocketmq.mqtt.ds.upstream.coap.processor;
 
-package org.apache.rocketmq.mqtt.common.model;
+import org.apache.rocketmq.mqtt.common.hook.HookResult;
+import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
+import org.apache.rocketmq.mqtt.ds.upstream.coap.CoapUpstreamProcessor;
+import org.springframework.stereotype.Component;
 
-public class RpcCode {
-    public static final int SUCCESS = 1;
-    public static final int FAIL = -1;
+import java.util.concurrent.CompletableFuture;
 
-    public static final int CMD_NOTIFY_MQTT_MESSAGE = 201;
-    public static final int CMD_CLOSE_CHANNEL = 203;
-
-    public static final int COM_NOTIFY_COAP_MESSAGE = 301;
+@Component
+public class CoapHeartbeatProcessor implements CoapUpstreamProcessor {
+    @Override
+    public CompletableFuture<HookResult> process(CoapRequestMessage msg) {
+        // todo: RPC broadcast (refresh token alive time)
+        return null;
+    }
 }

@@ -217,6 +217,8 @@ public class CoapDecoder extends MessageToMessageDecoder<DatagramPacket> {
                         coapMessage.setUserName(parts[1]);
                     case Constants.COAP_QUERY_PASSWORD:
                         coapMessage.setPassword(parts[1]);
+                    case Constants.COAP_AUTH_TOKEN:
+                        coapMessage.setAuthToken(parts[1]);
                     default:
                         break;
                 }

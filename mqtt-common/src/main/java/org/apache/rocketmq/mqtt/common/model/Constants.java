@@ -87,4 +87,5 @@ public class Constants {
     public static final String COAP_QUERY_EXPIRY = "expiry";
     public static final String COAP_QUERY_USER_NAME = "username";
     public static final String COAP_QUERY_PASSWORD = "password";
+    public static final String COAP_AUTH_TOKEN = "token";
 }

@@ -26,7 +26,7 @@ public class CoapTokenUtil {
 
     private static final String ALGORITHM = "AES";
     private static final String SECRET_KEY = "mySecretKey12345";
-    private static final long EXPIRATION_TIME = 60000;
+    private static final long EXPIRATION_TIME = 600000;
 
     public static String generateToken(String clientId) throws Exception {
         long timestamp = System.currentTimeMillis();
@@ -61,7 +61,7 @@ public class CoapTokenUtil {
         cipher.init(Cipher.ENCRYPT_MODE, secretKey);
 
         byte[] encryptedBytes = cipher.doFinal(data.getBytes(StandardCharsets.UTF_8));
-        return Base64.getEncoder().encodeToString(encryptedBytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(encryptedBytes);
     }
 
     private static String decrypt(String token, String key) throws Exception {
@@ -69,7 +69,7 @@ public class CoapTokenUtil {
         SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), ALGORITHM);
         cipher.init(Cipher.DECRYPT_MODE, secretKey);
 
-        byte[] decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(token));
+        byte[] decryptedBytes = cipher.doFinal(Base64.getUrlDecoder().decode(token));
         return new String(decryptedBytes, StandardCharsets.UTF_8);
     }
 }

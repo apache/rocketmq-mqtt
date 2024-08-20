@@ -26,7 +26,6 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
-import org.apache.rocketmq.mqtt.cs.session.CoapTokenManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -37,9 +36,6 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class CoapConnectHandler implements CoapPacketHandler<CoapRequestMessage> {
     private static Logger logger = LoggerFactory.getLogger(CoapConnectHandler.class);
-
-    @Resource
-    private CoapTokenManager coapTokenManager;
 
     @Resource
     private DatagramChannelManager datagramChannelManager;

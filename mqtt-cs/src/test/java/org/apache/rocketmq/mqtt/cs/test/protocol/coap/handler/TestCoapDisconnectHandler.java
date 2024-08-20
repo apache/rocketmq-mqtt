@@ -82,6 +82,10 @@ public class TestCoapDisconnectHandler {
 
         coapMessage.setClientId(null);
         assertFalse(coapDisconnectHandler.preHandler(ctx, coapMessage));
+        verify(datagramChannelManager).writeResponse(argThat(response -> {
+            assertEquals(CoapMessageCode.BAD_REQUEST, response.getCode());
+            return true;
+        }));
         verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 

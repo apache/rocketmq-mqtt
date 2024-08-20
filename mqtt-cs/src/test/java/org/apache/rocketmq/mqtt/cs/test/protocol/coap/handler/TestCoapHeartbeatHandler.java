@@ -81,6 +81,10 @@ public class TestCoapHeartbeatHandler {
 
         coapMessage.setClientId(null);
         assertFalse(coapHeartbeatHandler.preHandler(ctx, coapMessage));
+        verify(datagramChannelManager).writeResponse(argThat(response -> {
+            assertEquals(CoapMessageCode.BAD_REQUEST, response.getCode());
+            return true;
+        }));
         verifyNoMoreInteractions(datagramChannelManager, ctx);
     }
 

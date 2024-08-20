@@ -43,6 +43,17 @@ public class CoapHeartbeatHandler implements CoapPacketHandler<CoapRequestMessag
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
         if (coapMessage.getClientId() == null || coapMessage.getAuthToken() == null) {
+            CoapMessage response = new CoapMessage(
+                    Constants.COAP_VERSION,
+                    coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
+                    coapMessage.getTokenLength(),
+                    CoapMessageCode.BAD_REQUEST,
+                    coapMessage.getMessageId(),
+                    coapMessage.getToken(),
+                    "Not complete info for connection mode.".getBytes(StandardCharsets.UTF_8),
+                    coapMessage.getRemoteAddress()
+            );
+            datagramChannelManager.writeResponse(response);
             return false;
         }
         return true;

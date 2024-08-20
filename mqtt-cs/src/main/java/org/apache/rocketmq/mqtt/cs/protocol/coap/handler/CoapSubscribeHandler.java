@@ -66,7 +66,34 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
         if (connectConf.isEnableCoapConnect()) {
-            return (coapMessage.getClientId() != null) && (coapMessage.getAuthToken() != null) && CoapTokenUtil.isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
+            if (coapMessage.getClientId() == null || coapMessage.getAuthToken() == null) {
+                CoapMessage response = new CoapMessage(
+                        Constants.COAP_VERSION,
+                        coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
+                        coapMessage.getTokenLength(),
+                        CoapMessageCode.BAD_REQUEST,
+                        coapMessage.getMessageId(),
+                        coapMessage.getToken(),
+                        "Not complete info for connection mode.".getBytes(StandardCharsets.UTF_8),
+                        coapMessage.getRemoteAddress()
+                );
+                datagramChannelManager.writeResponse(response);
+                return false;
+            }
+            if (!CoapTokenUtil.isValid(coapMessage.getClientId(), coapMessage.getAuthToken())) {
+                CoapMessage response = new CoapMessage(
+                        Constants.COAP_VERSION,
+                        coapMessage.getType() == CoapMessageType.CON ? CoapMessageType.ACK : CoapMessageType.NON,
+                        coapMessage.getTokenLength(),
+                        CoapMessageCode.UNAUTHORIZED,
+                        coapMessage.getMessageId(),
+                        coapMessage.getToken(),
+                        "Invalid authToken.".getBytes(StandardCharsets.UTF_8),
+                        coapMessage.getRemoteAddress()
+                );
+                datagramChannelManager.writeResponse(response);
+                return false;
+            }
         }
         return true;
     }

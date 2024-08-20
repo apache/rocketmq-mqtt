@@ -19,6 +19,8 @@ package org.apache.rocketmq.mqtt.cs.protocol.coap.handler;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.infly.CoapRetryManager;
 import org.springframework.stereotype.Component;
@@ -31,8 +33,14 @@ public class CoapAckHandler implements CoapPacketHandler<CoapRequestMessage> {
     @Resource
     private CoapRetryManager coapRetryManager;
 
+    @Resource
+    private ConnectConf connectConf;
+
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
+        if (connectConf.isEnableCoapConnect()) {
+            return (coapMessage.getClientId() != null) && (coapMessage.getAuthToken() != null) && CoapTokenUtil.isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
+        }
         return true;
     }
 

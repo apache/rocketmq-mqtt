@@ -27,8 +27,10 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
+import org.apache.rocketmq.mqtt.common.util.CoapTokenUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.CoapPacketHandler;
 import org.apache.rocketmq.mqtt.cs.session.CoapSession;
 import org.apache.rocketmq.mqtt.cs.session.loop.CoapSessionLoop;
@@ -56,11 +58,16 @@ public class CoapSubscribeHandler implements CoapPacketHandler<CoapRequestMessag
     @Resource
     private DatagramChannelManager datagramChannelManager;
 
+    @Resource
+    private ConnectConf connectConf;
+
     private ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("check_coap_subscribe_future"));
 
     @Override
     public boolean preHandler(ChannelHandlerContext ctx, CoapRequestMessage coapMessage) {
-        // todo: check token if connection mode
+        if (connectConf.isEnableCoapConnect()) {
+            return (coapMessage.getClientId() != null) && (coapMessage.getAuthToken() != null) && CoapTokenUtil.isValid(coapMessage.getClientId(), coapMessage.getAuthToken());
+        }
         return true;
     }
 

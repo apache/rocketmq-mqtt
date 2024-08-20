@@ -23,6 +23,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapPublishHandler;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -51,10 +53,14 @@ public class TestCoapPublishHandler {
     @Mock
     private ChannelHandlerContext ctx;
 
+    @Mock
+    private ConnectConf connectConf;
+
     @Before
     public void setUp() throws IllegalAccessException {
         coapPublishHandler = new CoapPublishHandler();
         FieldUtils.writeDeclaredField(coapPublishHandler, "datagramChannelManager", datagramChannelManager, true);
+        FieldUtils.writeDeclaredField(coapPublishHandler, "connectConf", connectConf, true);
         coapMessage = new CoapRequestMessage(
                 1,
                 CoapMessageType.CON,
@@ -69,6 +75,7 @@ public class TestCoapPublishHandler {
 
     @Test
     public void testPreHandler() {
+        when(connectConf.isEnableCoapConnect()).thenReturn(false);
         boolean result = coapPublishHandler.preHandler(ctx, coapMessage);
         assertTrue(result);
     }
@@ -83,7 +90,7 @@ public class TestCoapPublishHandler {
             assertEquals(response.getCode(), CoapMessageCode.INTERNAL_SERVER_ERROR);
             return true;
         }));
-        verifyNoMoreInteractions(ctx, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, datagramChannelManager, connectConf);
     }
 
     @Test
@@ -96,6 +103,6 @@ public class TestCoapPublishHandler {
             assertEquals(response.getCode(), CoapMessageCode.CREATED);
             return true;
         }));
-        verifyNoMoreInteractions(ctx, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, datagramChannelManager, connectConf);
     }
 }

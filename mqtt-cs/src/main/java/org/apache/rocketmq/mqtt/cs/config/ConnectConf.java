@@ -54,6 +54,8 @@ public class ConnectConf {
 
     private boolean enableQuic = false;
 
+    private boolean enableCoapConnect = false;
+
     private boolean enableTlsSever = false;
     private boolean needClientAuth = false;
     private String sslCaCertFile;
@@ -373,5 +375,13 @@ public class ConnectConf {
 
     public void setCoapSessionTimeout(long coapSessionTimeout) {
         this.coapSessionTimeout = coapSessionTimeout;
+    }
+
+    public boolean isEnableCoapConnect() {
+        return enableCoapConnect;
+    }
+
+    public void setEnableCoapConnect(boolean enableCoapConnect) {
+        this.enableCoapConnect = enableCoapConnect;
     }
 }

@@ -26,6 +26,7 @@ import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
 import org.apache.rocketmq.mqtt.common.model.Constants;
 import org.apache.rocketmq.mqtt.cs.channel.DatagramChannelManager;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapSubscribeHandler;
 
 import static org.junit.Assert.assertEquals;
@@ -69,12 +70,16 @@ public class TestCoapSubscribeHandler {
     @Mock
     private CoapSession session;
 
+    @Mock
+    private ConnectConf connectConf;
+
     @Before
     public void setUp() throws IllegalAccessException {
         coapSubscribeHandler = new CoapSubscribeHandler();
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "sessionLoop", sessionLoop, true);
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "retainedPersistManager", retainedPersistManager, true);
         FieldUtils.writeDeclaredField(coapSubscribeHandler, "datagramChannelManager", datagramChannelManager, true);
+        FieldUtils.writeDeclaredField(coapSubscribeHandler, "connectConf", connectConf, true);
         coapMessage = new CoapRequestMessage(
                 Constants.COAP_VERSION,
                 CoapMessageType.CON,
@@ -91,6 +96,7 @@ public class TestCoapSubscribeHandler {
 
     @Test
     public void testPreHandler() {
+        when(connectConf.isEnableCoapConnect()).thenReturn(false);
         boolean result = coapSubscribeHandler.preHandler(ctx, coapMessage);
         assertTrue(result);
     }
@@ -105,7 +111,7 @@ public class TestCoapSubscribeHandler {
             assertEquals(response.getCode(), CoapMessageCode.INTERNAL_SERVER_ERROR);
             return true;
         }));
-        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager, connectConf);
     }
 
     @Test
@@ -121,7 +127,7 @@ public class TestCoapSubscribeHandler {
             assertEquals(response.getCode(), CoapMessageCode.CONTENT);
             return true;
         }));
-        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager, connectConf);
     }
 
     @Test
@@ -133,7 +139,7 @@ public class TestCoapSubscribeHandler {
 
         verify(sessionLoop).getSession(any(InetSocketAddress.class));
         verify(sessionLoop).addSession(any(CoapSession.class), any());
-        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager, connectConf);
     }
 
     @Test
@@ -144,7 +150,7 @@ public class TestCoapSubscribeHandler {
             assertEquals(response.getCode(), CoapMessageCode.INTERNAL_SERVER_ERROR);
             return true;
         }));
-        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager);
+        verifyNoMoreInteractions(ctx, sessionLoop, retainedPersistManager, datagramChannelManager, connectConf);
     }
 
     @Test

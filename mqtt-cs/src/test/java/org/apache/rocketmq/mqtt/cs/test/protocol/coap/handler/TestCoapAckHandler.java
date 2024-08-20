@@ -22,6 +22,7 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageCode;
 import org.apache.rocketmq.mqtt.common.model.CoapMessageType;
 import org.apache.rocketmq.mqtt.common.model.CoapRequestMessage;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.coap.handler.CoapAckHandler;
 import org.apache.rocketmq.mqtt.cs.session.infly.CoapRetryManager;
 import org.junit.Before;
@@ -34,7 +35,9 @@ import java.net.InetSocketAddress;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestCoapAckHandler {
@@ -47,12 +50,16 @@ public class TestCoapAckHandler {
     @Mock
     private ChannelHandlerContext ctx;
 
+    @Mock
+    private ConnectConf connectConf;
+
     private CoapRequestMessage coapMessage;
 
     @Before
     public void setUp() throws IllegalAccessException {
         coapAckHandler = new CoapAckHandler();
         FieldUtils.writeDeclaredField(coapAckHandler, "coapRetryManager", coapRetryManager, true);
+        FieldUtils.writeDeclaredField(coapAckHandler, "connectConf", connectConf, true);
         coapMessage = new CoapRequestMessage(
                 1,
                 CoapMessageType.ACK,
@@ -67,6 +74,7 @@ public class TestCoapAckHandler {
 
     @Test
     public void testPreHandler() {
+        when(connectConf.isEnableCoapConnect()).thenReturn(false);
         boolean result = coapAckHandler.preHandler(ctx, coapMessage);
         assertTrue(result);
     }
@@ -80,6 +88,6 @@ public class TestCoapAckHandler {
 
         verify(coapRetryManager).contains(anyInt());
         verify(coapRetryManager).ackMessage(anyInt());
-        verifyNoMoreInteractions(ctx, coapRetryManager);
+        verifyNoMoreInteractions(ctx, coapRetryManager, connectConf);
     }
 }

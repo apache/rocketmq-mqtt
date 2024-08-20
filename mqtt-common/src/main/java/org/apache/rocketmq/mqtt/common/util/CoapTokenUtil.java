@@ -48,7 +48,7 @@ public class CoapTokenUtil {
                 return false;
             }
             long currentTime = System.currentTimeMillis();
-            return currentTime - timestamp<= EXPIRATION_TIME;
+            return currentTime - timestamp <= EXPIRATION_TIME;
 
         } catch (Exception e) {
             return false;

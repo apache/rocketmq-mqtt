@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
@@ -31,10 +32,13 @@ import io.netty.util.ReferenceCountUtil;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.common.model.Remark;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelDecodeException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
@@ -90,6 +94,9 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
 
     @Resource
     private UpstreamHookManager upstreamHookManager;
+
+    @Resource
+    private ChannelManager channelManager;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {
@@ -180,6 +187,13 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
     }
 
     private boolean preHandler(ChannelHandlerContext ctx, MqttMessage msg) {
+        if (!msg.fixedHeader().messageType().equals(MqttMessageType.CONNECT)) {
+            Boolean connected = ctx.channel().attr(ChannelInfo.CHANNEL_CONNECTED_ATTRIBUTE_KEY).get();
+            if (connected == null || !connected) {
+                channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.SERVER, Remark.NOT_CONNECTED);
+                return false;
+            }
+        }
         switch (msg.fixedHeader().messageType()) {
             case CONNECT:
                 return mqttConnectHandler.preHandler(ctx, (MqttConnectMessage) msg);

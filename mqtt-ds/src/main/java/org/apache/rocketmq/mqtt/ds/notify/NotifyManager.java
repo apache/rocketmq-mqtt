@@ -73,7 +73,6 @@ public class NotifyManager {
     private NettyRemotingClient remotingClient;
     private DefaultMQProducer defaultMQProducer;
 
-
     @Resource
     private ServiceConf serviceConf;
 
@@ -85,6 +84,12 @@ public class NotifyManager {
 
     @PostConstruct
     public void init() throws MQClientException {
+
+        if (!serviceConf.isEnableMetaModule()) {
+            logger.info("Meta module is disabled, NotifyManager will not be initialized.");
+            return; 
+        }
+
         defaultMQPushConsumer = MqFactory.buildDefaultMQPushConsumer(dispatcherConsumerGroup, serviceConf.getProperties(), new Dispatcher());
         defaultMQPushConsumer.setPullInterval(1);
         defaultMQPushConsumer.setConsumeMessageBatchMaxSize(64);

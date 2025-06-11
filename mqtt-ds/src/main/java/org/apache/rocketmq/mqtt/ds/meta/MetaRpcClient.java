@@ -59,6 +59,12 @@ public class MetaRpcClient {
 
     @PostConstruct
     public void init() throws InterruptedException, TimeoutException {
+
+        if (!serviceConf.isEnableMetaModule()) {
+            logger.info("Meta module is disabled, MetaRpcClient will not be initialized.");
+            return; 
+        }
+
         initRpcServer();
         cliClientService = new CliClientServiceImpl();
         cliClientService.init(new CliOptions());

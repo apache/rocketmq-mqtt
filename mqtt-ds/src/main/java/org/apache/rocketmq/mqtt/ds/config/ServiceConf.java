@@ -46,6 +46,8 @@ public class ServiceConf {
     private String metaAddr;
     private long retainMsgExpire = 3 * 24 * 60 * 60 * 1000L;
 
+    private boolean enableMetaModule = true;
+
     @PostConstruct
     public void init() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -157,5 +159,13 @@ public class ServiceConf {
 
     public void setRetainMsgExpire(long retainMsgExpire) {
         this.retainMsgExpire = retainMsgExpire;
+    }
+
+    public boolean isEnableMetaModule() {
+        return enableMetaModule;
+    }
+
+    public void setEnableMetaModule(boolean enableMetaModule) {
+        this.enableMetaModule = enableMetaModule;
     }
 }

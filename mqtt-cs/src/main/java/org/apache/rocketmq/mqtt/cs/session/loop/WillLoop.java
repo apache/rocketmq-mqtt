@@ -29,6 +29,7 @@ import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.config.WillLoopConf;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
 import org.slf4j.Logger;
@@ -63,12 +64,21 @@ public class WillLoop {
     @Resource
     private WillMsgSender willMsgSender;
 
+    @Resource
+    private ConnectConf connectConf;
+
     public void setWillLoopConf(WillLoopConf willLoopConf) {
         this.willLoopConf = willLoopConf;
     }
 
     @PostConstruct
     public void init() {
+
+        if (!connectConf.isEnableMetaModule()) {
+            logger.info("Meta module is disabled, WillLoop will not be initialized.");
+            return; 
+        }
+        
         aliveService.scheduleWithFixedDelay(() -> csLoop(), 15 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
         aliveService.scheduleWithFixedDelay(() -> masterLoop(), 10 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
 

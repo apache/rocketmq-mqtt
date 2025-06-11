@@ -249,6 +249,11 @@ public class WillLoop {
     }
 
     public void closeConnect(Channel channel, String clientId, String reason) {
+
+        if (!connectConf.isEnableMetaModule()) {     
+            return;
+        }
+
         String ip = IpUtil.getLocalAddressCompatible();
         String willKey = ip + Constants.CTRL_1 + clientId;
         CompletableFuture<byte[]> willMessageFuture = willMsgPersistManager.get(willKey);

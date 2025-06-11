@@ -46,6 +46,7 @@ public class ServiceConf {
     private String metaAddr;
     private long retainMsgExpire = 3 * 24 * 60 * 60 * 1000L;
 
+    private String staticFirstTopics;
     private boolean enableMetaModule = true;
 
     @PostConstruct
@@ -64,8 +65,14 @@ public class ServiceConf {
         if (StringUtils.isBlank(eventNotifyRetryTopic)) {
             throw new RemoteException("eventNotifyRetryTopic is blank");
         }
-        if (StringUtils.isBlank(metaAddr)) {
-            throw new RemoteException("metaAddr is blank");
+        if (this.enableMetaModule) {
+            if (StringUtils.isBlank(metaAddr)) {
+                throw new IOException("metaAddr is blank when meta module is enabled");
+            }
+        } else {
+            if (StringUtils.isBlank(staticFirstTopics)) {
+                throw new IOException("When meta module is disabled, staticFirstTopics cannot be blank.");
+            }
         }
     }
 
@@ -159,6 +166,14 @@ public class ServiceConf {
 
     public void setRetainMsgExpire(long retainMsgExpire) {
         this.retainMsgExpire = retainMsgExpire;
+    }
+
+    public String getStaticFirstTopics() {
+        return staticFirstTopics;
+    }
+
+    public void setStaticFirstTopics(String staticFirstTopics) {
+        this.staticFirstTopics = staticFirstTopics;
     }
 
     public boolean isEnableMetaModule() {

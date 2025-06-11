@@ -46,8 +46,9 @@ public class ServiceConf {
     private String metaAddr;
     private long retainMsgExpire = 3 * 24 * 60 * 60 * 1000L;
 
-    private String staticFirstTopics;
     private boolean enableMetaModule = true;
+    private String staticFirstTopics;
+    private String localAddress;
 
     @PostConstruct
     public void init() throws IOException {
@@ -182,5 +183,13 @@ public class ServiceConf {
 
     public void setEnableMetaModule(boolean enableMetaModule) {
         this.enableMetaModule = enableMetaModule;
+    }
+
+    public String getLocalAddress() {
+        return localAddress;
+    }
+
+    public void setLocalAddress(String localAddress) {
+        this.localAddress = localAddress;
     }
 }

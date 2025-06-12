@@ -106,15 +106,15 @@ public class NotifyManager {
         }
 
         if (serviceConf.isEnableMetaModule()) {
-                logger.info("Meta module is enabled. Topics will be discovered dynamically.");
-                scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("Refresh_Notify_Topic_"));
-                scheduler.scheduleWithFixedDelay(() -> {
-                    try {
-                        refresh();
-                    } catch (Exception e) {
-                        logger.error("Error during scheduled topic refresh", e);
-                    }
-                }, 0, 5, TimeUnit.SECONDS);
+            logger.info("Meta module is enabled. Topics will be discovered dynamically.");
+            scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("Refresh_Notify_Topic_"));
+            scheduler.scheduleWithFixedDelay(() -> {
+                try {
+                    refresh();
+                } catch (Exception e) {
+                    logger.error("Error during scheduled topic refresh", e);
+                }
+            }, 0, 5, TimeUnit.SECONDS);
         } else {
             logger.info("Meta module is disabled. Subscribing to statically configured topics.");
             String staticTopicsConfig = serviceConf.getStaticFirstTopics();

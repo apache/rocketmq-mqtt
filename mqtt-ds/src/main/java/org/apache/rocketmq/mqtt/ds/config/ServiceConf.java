@@ -74,6 +74,9 @@ public class ServiceConf {
             if (StringUtils.isBlank(staticFirstTopics)) {
                 throw new IOException("When meta module is disabled, staticFirstTopics cannot be blank.");
             }
+            if (StringUtils.isBlank(localAddress)) {
+                throw new IOException("When meta module is disabled, localAddress cannnot be blank.");
+            }
         }
     }
 

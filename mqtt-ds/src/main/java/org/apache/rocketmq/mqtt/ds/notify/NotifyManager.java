@@ -291,13 +291,11 @@ public class NotifyManager {
 
     protected boolean doNotify(String node, Set<MessageEvent> messageEvents) {
         if (serviceConf.isEnableMetaModule()) {
-            // 这个检查的目的是防止向一个刚刚下线的节点发送 RPC，这只在动态的集群（Meta模式）中有意义。
             Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
             if (connectorNodes == null || connectorNodes.isEmpty()) {
                 return false;
             }
             if (!connectorNodes.contains(node)) {
-                // 节点已不在集群中，认为通知成功（无需再通知）
                 return true;
             }
         }

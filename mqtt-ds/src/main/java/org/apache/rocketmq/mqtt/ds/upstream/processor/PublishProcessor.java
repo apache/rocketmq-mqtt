@@ -90,26 +90,20 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         long bornTime = System.currentTimeMillis();
 
         if (mqttPublishMessage.fixedHeader().isRetain()) {
-
-            if (serviceConf.isEnableMetaModule()) {
-                MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
-                //Change the retained flag of message that will send MQ is 0
-                mqttPublishMessage = MessageUtil.removeRetainedFlag(mqttPublishMessage);
-                //Keep the retained flag of message that will store meta
-                Message metaMessage = MessageUtil.toMessage(retainedMqttPublishMessage);
-                metaMessage.setMsgId(msgId);
-                metaMessage.setBornTimestamp(bornTime);
-                metaMessage.setEmpty(isEmpty);
-                CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
-                storeRetainedFuture.whenComplete((res, throwable) -> {
-                    if (throwable != null) {
-                        logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(), throwable);
-                    }
-                });
-            } else {
-                logger.warn("Client [{}] sent a retain message on topic [{}], but the meta module is disabled. The retain flag will be ignored.",
-                    context.getClientId(), mqttPublishMessage.variableHeader().topicName());
-            }
+            MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
+            //Change the retained flag of message that will send MQ is 0
+            mqttPublishMessage = MessageUtil.removeRetainedFlag(mqttPublishMessage);
+            //Keep the retained flag of message that will store meta
+            Message metaMessage = MessageUtil.toMessage(retainedMqttPublishMessage);
+            metaMessage.setMsgId(msgId);
+            metaMessage.setBornTimestamp(bornTime);
+            metaMessage.setEmpty(isEmpty);
+            CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
+            storeRetainedFuture.whenComplete((res, throwable) -> {
+                if (throwable != null) {
+                    logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(), throwable);
+                }
+            });
         }
 
         Message message = MessageUtil.toMessage(mqttPublishMessage);

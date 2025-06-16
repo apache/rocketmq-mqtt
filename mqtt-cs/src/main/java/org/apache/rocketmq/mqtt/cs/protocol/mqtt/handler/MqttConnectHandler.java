@@ -35,6 +35,7 @@ import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -51,6 +52,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
     @Resource
     private ChannelManager channelManager;
+
+    @Resource
+    private ServiceConf serviceConf;
 
     @Resource
     private SessionLoop sessionLoop;
@@ -111,15 +115,21 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             sessionLoop.loadSession(ChannelInfo.getClientId(channel), channel);
 
             // save will message
-            WillMessage willMessage = null;
             if (variableHeader.isWillFlag()) {
+                if (!serviceConf.isEnableMetaModule()) {
+                    String clientId = ChannelInfo.getClientId(channel);
+                    logger.error("Client [{}] trying to set a Will Message, but the meta module is disabled. Connection refused.", clientId);
+                    channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will Message feature is disabled");
+                    return; 
+                }
+
                 if (payload.willTopic() == null || payload.willMessageInBytes() == null) {
                     logger.error("Will message and will topic can not be empty");
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will message and will topic can not be empty");
                     return;
                 }
 
-                willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
+                WillMessage willMessage = new WillMessage(payload.willTopic(), payload.willMessageInBytes(), variableHeader.isWillRetain(), variableHeader.willQos());
                 willLoop.addWillMessage(channel, willMessage);
             }
 

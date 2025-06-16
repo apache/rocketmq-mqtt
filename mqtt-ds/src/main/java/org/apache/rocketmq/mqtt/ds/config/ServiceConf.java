@@ -46,6 +46,10 @@ public class ServiceConf {
     private String metaAddr;
     private long retainMsgExpire = 3 * 24 * 60 * 60 * 1000L;
 
+    private boolean enableMetaModule = true;
+    private String staticFirstTopics;
+    private String localAddress;
+
     @PostConstruct
     public void init() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -62,8 +66,17 @@ public class ServiceConf {
         if (StringUtils.isBlank(eventNotifyRetryTopic)) {
             throw new RemoteException("eventNotifyRetryTopic is blank");
         }
-        if (StringUtils.isBlank(metaAddr)) {
-            throw new RemoteException("metaAddr is blank");
+        if (this.enableMetaModule) {
+            if (StringUtils.isBlank(metaAddr)) {
+                throw new IOException("metaAddr is blank when meta module is enabled");
+            }
+        } else {
+            if (StringUtils.isBlank(staticFirstTopics)) {
+                throw new IOException("When meta module is disabled, staticFirstTopics cannot be blank.");
+            }
+            if (StringUtils.isBlank(localAddress)) {
+                throw new IOException("When meta module is disabled, localAddress cannnot be blank.");
+            }
         }
     }
 
@@ -157,5 +170,29 @@ public class ServiceConf {
 
     public void setRetainMsgExpire(long retainMsgExpire) {
         this.retainMsgExpire = retainMsgExpire;
+    }
+
+    public String getStaticFirstTopics() {
+        return staticFirstTopics;
+    }
+
+    public void setStaticFirstTopics(String staticFirstTopics) {
+        this.staticFirstTopics = staticFirstTopics;
+    }
+
+    public boolean isEnableMetaModule() {
+        return enableMetaModule;
+    }
+
+    public void setEnableMetaModule(boolean enableMetaModule) {
+        this.enableMetaModule = enableMetaModule;
+    }
+
+    public String getLocalAddress() {
+        return localAddress;
+    }
+
+    public void setLocalAddress(String localAddress) {
+        this.localAddress = localAddress;
     }
 }

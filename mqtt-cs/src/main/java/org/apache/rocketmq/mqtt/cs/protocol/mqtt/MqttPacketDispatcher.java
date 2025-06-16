@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttMessage;
+import io.netty.handler.codec.mqtt.MqttMessageType;
 import io.netty.handler.codec.mqtt.MqttPubAckMessage;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.netty.handler.codec.mqtt.MqttSubscribeMessage;
@@ -32,9 +33,11 @@ import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.hook.UpstreamHookManager;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
 import org.apache.rocketmq.mqtt.common.util.HostInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelDecodeException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
+import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
@@ -90,6 +93,9 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
 
     @Resource
     private UpstreamHookManager upstreamHookManager;
+    
+    @Resource
+    private ChannelManager channelManager;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {
@@ -133,6 +139,14 @@ public class MqttPacketDispatcher extends SimpleChannelInboundHandler<MqttMessag
             if (hookResult == null) {
                 ctx.fireExceptionCaught(new ChannelException("UpstreamHook Result Unknown"));
                 return;
+            }
+
+            if (!hookResult.isSuccess() && msg.fixedHeader().messageType() == MqttMessageType.PUBLISH) {
+                logger.warn("Request (PUBLISH) from client {} was rejected by hook chain. Reason: {}. Closing connection.",
+                        ChannelInfo.getClientId(ctx.channel()), hookResult.getRemark());
+                
+                channelManager.closeConnect(ctx.channel(), ChannelCloseFrom.SERVER, hookResult.getRemark());
+                return; 
             }
             try {
                 _channelRead0(ctx, msg, hookResult);

@@ -31,6 +31,7 @@ import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.config.WillLoopConf;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -63,12 +64,21 @@ public class WillLoop {
     @Resource
     private WillMsgSender willMsgSender;
 
+    @Resource
+    private ServiceConf serviceConf;
+
     public void setWillLoopConf(WillLoopConf willLoopConf) {
         this.willLoopConf = willLoopConf;
     }
 
     @PostConstruct
     public void init() {
+
+        if (!serviceConf.isEnableMetaModule()) {
+            logger.info("Meta module is disabled, WillLoop will not be initialized.");
+            return; 
+        }
+        
         aliveService.scheduleWithFixedDelay(() -> csLoop(), 15 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
         aliveService.scheduleWithFixedDelay(() -> masterLoop(), 10 * 1000, 10 * 1000, TimeUnit.MILLISECONDS);
 
@@ -239,6 +249,11 @@ public class WillLoop {
     }
 
     public void closeConnect(Channel channel, String clientId, String reason) {
+
+        if (!serviceConf.isEnableMetaModule()) {     
+            return;
+        }
+
         String ip = IpUtil.getLocalAddressCompatible();
         String willKey = ip + Constants.CTRL_1 + clientId;
         CompletableFuture<byte[]> willMessageFuture = willMsgPersistManager.get(willKey);

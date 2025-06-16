@@ -29,10 +29,12 @@ import org.apache.rocketmq.mqtt.common.facade.WillMsgSender;
 import org.apache.rocketmq.mqtt.common.hook.HookResult;
 import org.apache.rocketmq.mqtt.common.model.Message;
 import org.apache.rocketmq.mqtt.common.model.MqttMessageUpContext;
+import org.apache.rocketmq.mqtt.common.model.MqttRetainException;
 import org.apache.rocketmq.mqtt.common.model.MqttTopic;
 import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.common.util.TopicUtils;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.apache.rocketmq.mqtt.ds.meta.FirstTopicManager;
 import org.apache.rocketmq.mqtt.ds.meta.WildcardManager;
 import org.apache.rocketmq.mqtt.ds.upstream.UpstreamProcessor;
@@ -43,11 +45,16 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 
 @Component
 public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
     private static Logger logger = LoggerFactory.getLogger(PublishProcessor.class);
+
+    @Resource
+    private ServiceConf serviceConf;
+
     @Resource
     private LmqQueueStore lmqQueueStore;
 
@@ -62,13 +69,57 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
 
     @Override
     public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage mqttMessage) {
-        CompletableFuture<StoreResult> r = put(context, mqttMessage);
-        return r.thenCompose(storeResult -> HookResult.newHookResult(HookResult.SUCCESS, null,
-                JSON.toJSONBytes(storeResult)));
+        CompletableFuture<StoreResult> storeFuture = put(context, mqttMessage);
+
+        return storeFuture
+            .thenCompose(storeResult -> {
+                return HookResult.newHookResult(HookResult.SUCCESS, null, JSON.toJSONBytes(storeResult));
+            })
+            .exceptionally(throwable -> {
+                Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
+
+                if (cause instanceof MqttRetainException) {
+                    logger.warn("A defined business rejection occurred: {}", cause.getMessage());
+                    return new HookResult(HookResult.FAIL, cause.getMessage(), null);
+                }
+                logger.error("An unexpected error will be propagated up.", cause);
+                throw new CompletionException(cause);
+            });
     }
 
     public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {
         MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
+
+        if (mqttPublishMessage.fixedHeader().isRetain()) {
+            if (!serviceConf.isEnableMetaModule()) {
+                logger.error("Client [{}] on topic [{}] tried to publish a Retain Message, but the meta module is disabled. Rejecting request.",
+                        context.getClientId(), mqttPublishMessage.variableHeader().topicName());
+
+                MqttRetainException exception = new MqttRetainException("Retain Message feature is disabled.");
+                
+                CompletableFuture<StoreResult> failedFuture = new CompletableFuture<>();
+                failedFuture.completeExceptionally(exception);
+                return failedFuture;
+            } else {
+                MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
+                //Change the retained flag of message that will send MQ is 0
+                mqttPublishMessage = MessageUtil.removeRetainedFlag(mqttPublishMessage);
+                //Keep the retained flag of message that will store meta
+                Message metaMessage = MessageUtil.toMessage(retainedMqttPublishMessage);
+                String msgIdForMeta = MessageClientIDSetter.createUniqID(); 
+                long bornTimeForMeta = System.currentTimeMillis();
+                metaMessage.setMsgId(msgIdForMeta);
+                metaMessage.setBornTimestamp(bornTimeForMeta);
+                metaMessage.setEmpty(ByteBufUtil.getBytes(retainedMqttPublishMessage.content()).length == 0);
+                CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
+                storeRetainedFuture.whenComplete((res, throwable) -> {
+                    if (throwable != null) {
+                        logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(), throwable);
+                    }
+                });
+            }
+        }
+
         boolean isEmpty = false;
         //deal empty payload
         if (ByteBufUtil.getBytes(mqttPublishMessage.content()).length == 0) {
@@ -83,23 +134,6 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
         firstTopicManager.checkFirstTopicIfCreated(mqttTopic.getFirstTopic());      // Check the firstTopic is existed
         Set<String> queueNames = wildcardManager.matchQueueSetByMsgTopic(pubTopic, context.getNamespace()); //According to topic to find queue
         long bornTime = System.currentTimeMillis();
-
-        if (mqttPublishMessage.fixedHeader().isRetain()) {
-            MqttPublishMessage retainedMqttPublishMessage = mqttPublishMessage.copy();
-            //Change the retained flag of message that will send MQ is 0
-            mqttPublishMessage = MessageUtil.removeRetainedFlag(mqttPublishMessage);
-            //Keep the retained flag of message that will store meta
-            Message metaMessage = MessageUtil.toMessage(retainedMqttPublishMessage);
-            metaMessage.setMsgId(msgId);
-            metaMessage.setBornTimestamp(bornTime);
-            metaMessage.setEmpty(isEmpty);
-            CompletableFuture<Boolean> storeRetainedFuture = retainedPersistManager.storeRetainedMessage(TopicUtils.normalizeTopic(metaMessage.getOriginTopic()), metaMessage);
-            storeRetainedFuture.whenComplete((res, throwable) -> {
-                if (throwable != null) {
-                    logger.error("Store topic:{} retained message error.{}", metaMessage.getOriginTopic(), throwable);
-                }
-            });
-        }
 
         Message message = MessageUtil.toMessage(mqttPublishMessage);
         message.setMsgId(msgId);

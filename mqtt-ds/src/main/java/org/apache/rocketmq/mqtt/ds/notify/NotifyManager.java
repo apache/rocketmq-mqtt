@@ -73,7 +73,6 @@ public class NotifyManager {
     private NettyRemotingClient remotingClient;
     private DefaultMQProducer defaultMQProducer;
 
-
     @Resource
     private ServiceConf serviceConf;
 
@@ -85,6 +84,7 @@ public class NotifyManager {
 
     @PostConstruct
     public void init() throws MQClientException {
+
         defaultMQPushConsumer = MqFactory.buildDefaultMQPushConsumer(dispatcherConsumerGroup, serviceConf.getProperties(), new Dispatcher());
         defaultMQPushConsumer.setPullInterval(1);
         defaultMQPushConsumer.setConsumeMessageBatchMaxSize(64);
@@ -94,28 +94,57 @@ public class NotifyManager {
 
         defaultMQProducer = MqFactory.buildDefaultMQProducer(MixAll.CID_RMQ_SYS_PREFIX + "NotifyRetrySend", serviceConf.getProperties());
 
-        try {
-            defaultMQPushConsumer.start();
-            defaultMQProducer.start();
-        } catch (Exception e) {
-            logger.error("", e);
-        }
-
-        scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("Refresh_Notify_Topic_"));
-        scheduler.scheduleWithFixedDelay(() -> {
-            try {
-                refresh();
-            } catch (Exception e) {
-                logger.error("", e);
-            }
-        }, 0, 5, TimeUnit.SECONDS);
-
         NettyClientConfig config = new NettyClientConfig();
         remotingClient = new NettyRemotingClient(config);
-        remotingClient.start();
+
+        try {
+            defaultMQProducer.start();
+            remotingClient.start();
+        } catch (Exception e) {
+            logger.error("Fatal: NotifyManager failed to start producer or remoting client.", e);
+            throw new MQClientException("Failed to start producer or remoting client", e);
+        }
+
+        if (serviceConf.isEnableMetaModule()) {
+            logger.info("Meta module is enabled. Topics will be discovered dynamically.");
+            scheduler = new ScheduledThreadPoolExecutor(1, new ThreadFactoryImpl("Refresh_Notify_Topic_"));
+            scheduler.scheduleWithFixedDelay(() -> {
+                try {
+                    refresh();
+                } catch (Exception e) {
+                    logger.error("Error during scheduled topic refresh", e);
+                }
+            }, 0, 5, TimeUnit.SECONDS);
+        } else {
+            logger.info("Meta module is disabled. Subscribing to statically configured topics.");
+            String staticTopicsConfig = serviceConf.getStaticFirstTopics();
+
+            if (StringUtils.isNotBlank(staticTopicsConfig)) {
+                String[] topicArray = staticTopicsConfig.split(",");
+                for (String topic : topicArray) {
+                    String trimmedTopic = topic.trim();
+                    if (StringUtils.isNotBlank(trimmedTopic)) {
+                        subscribe(trimmedTopic);
+                        this.topics.add(trimmedTopic);
+                        logger.info("Successfully configured subscription for static topic: {}", trimmedTopic);
+                    }
+                }
+            } else {
+                logger.warn("Meta module is disabled, but 'mqtt.static.first.topics' is not configured. NotifyManager may not receive any application messages.");
+            }
+        }
+
+        try {
+            defaultMQPushConsumer.start();
+            logger.info("NotifyManager's DefaultMQPushConsumer started successfully.");
+        } catch (Exception e) {
+            logger.error("Fatal: NotifyManager failed to start the core message consumer.", e);
+            throw new MQClientException("Failed to start the core message consumer", e);
+        }
     }
 
     private void refresh() throws MQClientException {
+        
         Set<String> tmp = metaPersistManager.getAllFirstTopics();
         logger.info("Notify Manager is refreshing, all first topic is " + tmp);
 
@@ -214,7 +243,18 @@ public class NotifyManager {
 
     public void notifyMessage(Set<MessageEvent> messageEvents) throws
             MQBrokerException, RemotingException, InterruptedException, MQClientException {
-        Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
+        Set<String> connectorNodes;
+        if (serviceConf.isEnableMetaModule()) {
+            connectorNodes = metaPersistManager.getConnectNodeSet();
+        } else {
+            String localAddress = serviceConf.getLocalAddress();
+            if (StringUtils.isBlank(localAddress)) {
+                logger.error("Meta module is disabled, but 'mqtt.local.address' is not configured. Cannot notify messages.");
+                return; 
+            }
+            connectorNodes = java.util.Collections.singleton(localAddress);
+        }
+
         if (connectorNodes == null || connectorNodes.isEmpty()) {
             throw new RemotingException("No Connect Nodes");
         }
@@ -250,12 +290,14 @@ public class NotifyManager {
     }
 
     protected boolean doNotify(String node, Set<MessageEvent> messageEvents) {
-        Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
-        if (connectorNodes == null || connectorNodes.isEmpty()) {
-            return false;
-        }
-        if (!connectorNodes.contains(node)) {
-            return true;
+        if (serviceConf.isEnableMetaModule()) {
+            Set<String> connectorNodes = metaPersistManager.getConnectNodeSet();
+            if (connectorNodes == null || connectorNodes.isEmpty()) {
+                return false;
+            }
+            if (!connectorNodes.contains(node)) {
+                return true;
+            }
         }
         try {
             RemotingCommand eventCommand = createMsgEventCommand(messageEvents);

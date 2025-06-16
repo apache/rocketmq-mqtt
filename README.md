@@ -90,6 +90,7 @@ sh mqadmin updateKvConfig -s LMQ -k ALL_FIRST_TOPICS -v {topic1,topic2} -n {name
 sh mqadmin updateKvConfig  -s LMQ -k {topic} -v {topic/+}  -n {namesrv}
 ```
 6. Start Process
+Note: In standalone mode, Only mqtt.sh is needed to start.
 ```shell
 cd bin
 sh meta.sh start

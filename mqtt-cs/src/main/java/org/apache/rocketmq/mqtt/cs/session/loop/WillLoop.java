@@ -29,9 +29,9 @@ import org.apache.rocketmq.mqtt.common.model.StoreResult;
 import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.common.util.MessageUtil;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
-import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.config.WillLoopConf;
 import org.apache.rocketmq.mqtt.cs.session.infly.MqttMsgId;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -65,7 +65,7 @@ public class WillLoop {
     private WillMsgSender willMsgSender;
 
     @Resource
-    private ConnectConf connectConf;
+    private ServiceConf serviceConf;
 
     public void setWillLoopConf(WillLoopConf willLoopConf) {
         this.willLoopConf = willLoopConf;
@@ -74,7 +74,7 @@ public class WillLoop {
     @PostConstruct
     public void init() {
 
-        if (!connectConf.isEnableMetaModule()) {
+        if (!serviceConf.isEnableMetaModule()) {
             logger.info("Meta module is disabled, WillLoop will not be initialized.");
             return; 
         }
@@ -250,7 +250,7 @@ public class WillLoop {
 
     public void closeConnect(Channel channel, String clientId, String reason) {
 
-        if (!connectConf.isEnableMetaModule()) {     
+        if (!serviceConf.isEnableMetaModule()) {     
             return;
         }
 

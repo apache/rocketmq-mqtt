@@ -45,6 +45,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.Resource;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 
 @Component
@@ -70,22 +71,20 @@ public class PublishProcessor implements UpstreamProcessor, WillMsgSender {
     public CompletableFuture<HookResult> process(MqttMessageUpContext context, MqttMessage mqttMessage) {
         CompletableFuture<StoreResult> storeFuture = put(context, mqttMessage);
 
-        CompletableFuture<CompletableFuture<HookResult>> nestedFuture = storeFuture.handle((storeResult, throwable) -> {
-            if (throwable != null) {
-                String remark = "Processing error";
+        return storeFuture
+            .thenCompose(storeResult -> {
+                return HookResult.newHookResult(HookResult.SUCCESS, null, JSON.toJSONBytes(storeResult));
+            })
+            .exceptionally(throwable -> {
                 Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
 
                 if (cause instanceof MqttRetainException) {
-                    remark = cause.getMessage();
-                } else {
-                    logger.error("Unexpected error in PublishProcessor.put", cause);
+                    logger.warn("A defined business rejection occurred: {}", cause.getMessage());
+                    return new HookResult(HookResult.FAIL, cause.getMessage(), null);
                 }
-                return HookResult.newHookResult(HookResult.FAIL, remark, null); 
-            } else {
-                return HookResult.newHookResult(HookResult.SUCCESS, null, JSON.toJSONBytes(storeResult));
-            }
-        });
-        return nestedFuture.thenCompose(innerFuture -> innerFuture);
+                logger.error("An unexpected error will be propagated up.", cause);
+                throw new CompletionException(cause);
+            });
     }
 
     public CompletableFuture<StoreResult> put(MqttMessageUpContext context, MqttMessage mqttMessage) {

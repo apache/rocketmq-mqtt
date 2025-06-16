@@ -39,7 +39,6 @@ import org.apache.rocketmq.mqtt.cs.channel.ChannelException;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
-import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttConnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttDisconnectHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPingHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.handler.MqttPubAckHandler;

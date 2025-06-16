@@ -23,6 +23,14 @@ For example, set the following parameters to true in broker.conf
 enableLmq = true
 enableMultiDispatch = true
 ```
+
+### Deployment Modes
+RocketMQ-MQTT supports two deployment modes:
+
++ Cluster-Ready Mode (Meta Enabled, Default): This is the default and full-featured mode. It relies on a meta service (based on RocketMQ's KV storage) for dynamic configuration, cluster node discovery, and advanced features like Retain Messages and Will Messages. This mode is suitable for production and high-availability environments.
+
++ Standalone Mode (Meta Disabled): This is a simplified mode designed for single-node deployments or scenarios where advanced features are not required. It operates without any dependency on the meta service, making configuration and deployment much simpler. In this mode, features like Retain Messages and Will Messages are disabled.
+
 ### Build Requirements
 The current project requires JDK 1.8.x.  When building on MAC arm64 the recommended JDK 1.8 must be based on 386 architecture or use Maven flag `-Dos.arch=x86_64` when building with Maven.
 
@@ -43,15 +51,17 @@ cd conf
 ```
 Some important configuration items in the **service.conf** configuration file 
 
-| **Config Key**        | **Instruction**                                               |
-|-----------------------|---------------------------------------------------------------|
-| username              | used for auth                                                 |
-| secretKey             | used for auth                                                 |
-| NAMESRV_ADDR          | specify namesrv address                                       |
-| eventNotifyRetryTopic | notify event retry topic                                      |
-| clientRetryTopic      | client retry topic                                            |
-| metaAddr              | meta all nodes ip:port. Same as membersAddress in meta.config |
-
+| **Config Key**        | **Instruction**                                                                                                                  |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| username              | used for auth                                                                                                                    |
+| secretKey             | used for auth                                                                                                                    |
+| NAMESRV_ADDR          | specify namesrv address                                                                                                          |
+| eventNotifyRetryTopic | notify event retry topic                                                                                                         |
+| clientRetryTopic      | client retry topic                                                                                                               |
+| enableMetaModule   	| (Optional) Switch for meta module. Defaults to true. Set to `false` to enable Standalone Mode.                                   |
+| metaAddr              | meta all nodes ip:port. Same as membersAddress in meta.config. **Required when `enableMetaModule` is `true`.**                   |
+| staticFirstTopics     | A comma-separated list of all first-level MQTT topics. E.g., `chat,iot`. **Required when `enableMetaModule` is `false`.**        |
+| localAddress          | The address for the server's internal RPC loopback. `127.0.0.1` is recommended. **Required when `enableMetaModule` is `false`.** |
 
 And some configuration items in the **meta.conf** configuration file
 

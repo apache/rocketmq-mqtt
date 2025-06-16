@@ -31,11 +31,11 @@ import org.apache.rocketmq.mqtt.common.model.WillMessage;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelCloseFrom;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelInfo;
 import org.apache.rocketmq.mqtt.cs.channel.ChannelManager;
-import org.apache.rocketmq.mqtt.cs.config.ConnectConf;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.MqttPacketHandler;
 import org.apache.rocketmq.mqtt.cs.protocol.mqtt.facotry.MqttMessageFactory;
 import org.apache.rocketmq.mqtt.cs.session.loop.SessionLoop;
 import org.apache.rocketmq.mqtt.cs.session.loop.WillLoop;
+import org.apache.rocketmq.mqtt.ds.config.ServiceConf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -54,7 +54,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
     private ChannelManager channelManager;
 
     @Resource
-    private ConnectConf connectConf;
+    private ServiceConf serviceConf;
 
     @Resource
     private SessionLoop sessionLoop;
@@ -116,11 +116,9 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
 
             // save will message
             if (variableHeader.isWillFlag()) {
-                if (!connectConf.isEnableMetaModule()) {
+                if (!serviceConf.isEnableMetaModule()) {
                     String clientId = ChannelInfo.getClientId(channel);
                     logger.error("Client [{}] trying to set a Will Message, but the meta module is disabled. Connection refused.", clientId);
-                    MqttConnAckMessage connAckMessage = MqttMessageFactory.buildConnAckMessage(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
-                    channel.writeAndFlush(connAckMessage);
                     channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, "Will Message feature is disabled");
                     return; 
                 }

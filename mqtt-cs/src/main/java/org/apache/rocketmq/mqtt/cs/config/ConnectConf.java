@@ -51,7 +51,6 @@ public class ConnectConf {
     private int exporterPort = 9090;
     private boolean enablePrometheus = false;
     private boolean exportJvmInfo = true;
-    private boolean enableMetaModule = true;
 
     public ConnectConf() throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(CONF_FILE_NAME);
@@ -221,13 +220,5 @@ public class ConnectConf {
 
     public void setExportJvmInfo(boolean exportJvmInfo) {
         this.exportJvmInfo = exportJvmInfo;
-    }
-
-    public boolean isEnableMetaModule() {
-        return enableMetaModule;
-    }
-
-    public void setEnableMetaModule(boolean enableMetaModule) {
-        this.enableMetaModule = enableMetaModule;
     }
 }

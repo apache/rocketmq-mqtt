@@ -88,6 +88,7 @@ public class MqttConnectHandler implements MqttPacketHandler<MqttConnectMessage>
             channelManager.closeConnect(channel, ChannelCloseFrom.SERVER, remark);
             return;
         }
+        channel.attr(ChannelInfo.CHANNEL_CONNECTED_ATTRIBUTE_KEY).set(true);
 
         CompletableFuture<Void> future = new CompletableFuture<>();
         ChannelInfo.setFuture(channel, ChannelInfo.FUTURE_CONNECT, future);

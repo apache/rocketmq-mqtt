@@ -57,6 +57,8 @@ public class ChannelInfo {
 
     public static final AttributeKey<String> CHANNEL_GA_ATTRIBUTE_KEY = AttributeKey.valueOf("GA");
 
+    public static final AttributeKey<Boolean> CHANNEL_CONNECTED_ATTRIBUTE_KEY = AttributeKey.valueOf("C");
+
 
     public static Map<String, String> getExtData(Channel channel) {
         Attribute<ConcurrentMap<String, String>> extAttribute = channel.attr(CHANNEL_EXTDATA_ATTRIBUTE_KEY);

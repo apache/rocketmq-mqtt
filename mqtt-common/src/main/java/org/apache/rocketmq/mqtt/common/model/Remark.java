@@ -28,4 +28,5 @@ public class Remark {
     public static final String OVERFLOW = "overflow";
     public static final String EXCEPTION = "exception";
     public static final String EXPIRED = "expire";
+    public static final String NOT_CONNECTED = "Not Connected";
 }
